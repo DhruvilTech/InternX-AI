@@ -50,13 +50,7 @@ export default function SkillEvolution() {
 
   return (
     <section ref={ref} id="skills" className="relative py-32 overflow-hidden min-h-screen flex items-center">
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            'radial-gradient(ellipse 60% 50% at 50% 50%, rgba(139,92,246,0.12), transparent 70%)',
-        }}
-      />
+
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full">
         <motion.div

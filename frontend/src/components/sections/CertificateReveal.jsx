@@ -56,16 +56,7 @@ export default function CertificateReveal() {
       id="certificate"
       className="relative py-24 lg:py-32 min-h-0 flex items-center"
     >
-      {/* Cinematic dark bg */}
-      <div className="absolute inset-0 bg-void" />
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            'radial-gradient(ellipse 40% 50% at 50% 50%, rgba(129,140,248,0.15), transparent 70%)',
-        }}
-      />
-      <div className="absolute inset-0 noise opacity-50" />
+
 
       <div className="relative z-10 mx-auto max-w-4xl px-4 sm:px-6 lg:px-8 w-full text-center">
         <motion.p

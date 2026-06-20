@@ -151,7 +151,6 @@ export default function ProductJourney() {
       ref={sectionRef}
       className="relative bg-deep overflow-hidden"
     >
-      <div className="absolute inset-0 grid-fine opacity-40" />
       <div className="relative z-10 pt-24 pb-8 px-4 sm:px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

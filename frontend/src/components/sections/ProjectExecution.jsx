@@ -60,13 +60,7 @@ export default function ProjectExecution() {
 
   return (
     <section id="execution" className="relative py-32 overflow-hidden">
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            'radial-gradient(ellipse 50% 40% at 80% 60%, rgba(34,211,238,0.08), transparent)',
-        }}
-      />
+
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div

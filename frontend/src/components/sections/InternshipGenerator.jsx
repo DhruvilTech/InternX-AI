@@ -66,13 +66,7 @@ export default function InternshipGenerator() {
 
   return (
     <section id="generator" className="relative py-32 overflow-hidden">
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            'radial-gradient(ellipse 60% 50% at 50% 50%, rgba(139,92,246,0.1), transparent)',
-        }}
-      />
+
 
       <div className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <motion.div

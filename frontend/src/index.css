@@ -1,8 +1,8 @@
 @import "tailwindcss";
 
 @theme {
-  --color-void: #030712;
-  --color-deep: #0a0f1a;
+  --color-void: #050816;
+  --color-deep: #050816;
   --color-surface: #0f1629;
   --color-surface-muted: #121a2e;
   --color-elevated: #151d32;
@@ -25,8 +25,8 @@
 }
 
 .light {
-  --color-void: #f8fafc;
-  --color-deep: #f1f5f9;
+  --color-void: #ffffff;
+  --color-deep: #ffffff;
   --color-surface: #ffffff;
   --color-surface-muted: #e2e8f0;
   --color-elevated: #ffffff;

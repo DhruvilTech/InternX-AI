@@ -23,7 +23,7 @@ export default function App() {
   useLenis()
 
   return (
-    <div className="relative min-h-screen bg-void text-text overflow-hidden">
+    <div className="relative min-h-screen bg-void text-text overflow-x-hidden">
       {/* Background/Futuristic Canvas and Glow layers */}
       <LiquidGlass />
       <MatrixRain />
@@ -44,8 +44,8 @@ export default function App() {
         <FadeInView direction="up"><RecruiterExperience /></FadeInView>
         <FadeInView direction="up"><BentoShowcase /></FadeInView>
         <FadeInView direction="up"><FinalCTA /></FadeInView>
+        <Footer />
       </main>
-      <Footer />
     </div>
   )
 }

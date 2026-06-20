@@ -113,7 +113,6 @@ const features = [
 export default function BentoShowcase() {
   return (
     <section id="features" className="relative py-32 bg-deep overflow-hidden">
-      <div className="absolute inset-0 grid-fine opacity-30" />
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div

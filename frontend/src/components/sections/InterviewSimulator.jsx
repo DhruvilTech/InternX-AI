@@ -38,14 +38,7 @@ export default function InterviewSimulator() {
 
   return (
     <section id="interview" className="relative py-32 bg-deep overflow-hidden">
-      <div className="absolute inset-0 grid-fine opacity-30" />
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            'radial-gradient(ellipse 50% 40% at 70% 30%, rgba(34,211,238,0.08), transparent)',
-        }}
-      />
+
 
       <div className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
         <motion.div

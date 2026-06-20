@@ -69,14 +69,7 @@ export default function HeroExperience() {
       id="hero"
       className="relative min-h-screen flex items-center overflow-x-clip pt-20"
     >
-      <div className="absolute inset-0 grid-fine opacity-60" />
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            'radial-gradient(ellipse 70% 60% at 70% 40%, rgba(129,140,248,0.12), transparent 60%), radial-gradient(ellipse 50% 40% at 20% 80%, rgba(34,211,238,0.06), transparent)',
-        }}
-      />
+
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 w-full">
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center min-h-[calc(100vh-5rem)]">

@@ -46,14 +46,7 @@ export default function RecruiterExperience() {
 
   return (
     <section id="recruiters" className="relative py-32 overflow-hidden">
-      <div className="absolute inset-0 grid-fine opacity-30" />
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            'radial-gradient(ellipse 50% 40% at 20% 60%, rgba(251,191,36,0.06), transparent)',
-        }}
-      />
+
 
       <div className="relative z-10 mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <motion.div
