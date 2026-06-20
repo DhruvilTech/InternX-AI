@@ -15,11 +15,16 @@ passport.deserializeUser((obj, done) => {
 });
 
 // Configure Passport Strategy
+const hasGithubCredentials = process.env.GITHUB_CLIENT_ID && process.env.GITHUB_CLIENT_SECRET;
+if (!hasGithubCredentials) {
+  console.warn('[Passport GitHub] WARNING: GITHUB_CLIENT_ID or GITHUB_CLIENT_SECRET is missing. GitHub integration is disabled or will fail.');
+}
+
 passport.use(
   new GitHubStrategy(
     {
-      clientID: process.env.GITHUB_CLIENT_ID,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET,
+      clientID: process.env.GITHUB_CLIENT_ID || 'dummy_client_id',
+      clientSecret: process.env.GITHUB_CLIENT_SECRET || 'dummy_client_secret',
       callbackURL: process.env.GITHUB_CALLBACK_URL || 'http://localhost:5000/api/github/callback',
       passReqToCallback: true,
     },
