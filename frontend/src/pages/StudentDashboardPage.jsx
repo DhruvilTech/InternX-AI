@@ -1,0 +1,329 @@
+import { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
+import {
+  AreaChart,
+  Area,
+  ResponsiveContainer,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+} from 'recharts'
+import {
+  Building2,
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  Eye,
+  TrendingUp,
+  User,
+  ArrowRight,
+  Sparkles,
+  Calendar,
+  MessageSquare,
+  Award,
+} from 'lucide-react'
+import { useNavigation } from '../context/NavigationContext'
+import { useTheme } from '../context/ThemeContext'
+import ScoreRing from '../components/ui/ScoreRing'
+import PulseDot from '../components/ui/PulseDot'
+
+const chartData = [
+  { day: 'Mon', views: 4 },
+  { day: 'Tue', views: 8 },
+  { day: 'Wed', views: 6 },
+  { day: 'Thu', views: 12 },
+  { day: 'Fri', views: 10 },
+  { day: 'Sat', views: 18 },
+  { day: 'Sun', views: 22 },
+]
+
+export default function StudentDashboardPage() {
+  const { navigate, internship, tasks, setSelectedTaskId, addToast } = useNavigation()
+  const { isDark } = useTheme()
+  const [score, setScore] = useState(89)
+  const [progress, setProgress] = useState(67)
+
+  // Demo fallback
+  const companyInfo = internship || {
+    name: 'NeuralMind Technologies',
+    manager: 'Sarah Johnson',
+    department: 'Artificial Intelligence',
+    project: 'Resume Intelligence Platform',
+    roleTitle: 'AI Research Intern',
+    team: ['Alex Rivera', 'Sophia Patel', 'David Kim']
+  }
+
+  const activeTasks = tasks.filter(t => t.status !== 'completed')
+  const completedTasks = tasks.filter(t => t.status === 'completed')
+
+  return (
+    <div className="min-h-screen pt-24 pb-16 px-4 sm:px-6 lg:px-8 bg-void relative overflow-hidden">
+      {/* Glow overlays */}
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-violet/5 rounded-full blur-[120px]" />
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/5 rounded-full blur-[120px]" />
+
+      <div className="max-w-7xl mx-auto space-y-8 relative z-10">
+        
+        {/* Company Header Widget */}
+        <div className="glass-bright rounded-2xl p-6 border border-border flex flex-col md:flex-row items-start md:items-center justify-between gap-6 glow-accent bg-void/50">
+          <div className="flex items-center gap-4">
+            <div className="h-12 w-12 bg-gradient-to-br from-accent to-violet rounded-xl flex items-center justify-center text-white text-base font-bold font-display shadow-md shadow-accent/15">
+              {companyInfo.name.slice(0, 2).toUpperCase()}
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="font-display font-bold text-lg text-text">{companyInfo.name}</h2>
+                <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald/10 border border-emerald/20 text-[9px] text-emerald font-semibold uppercase tracking-wider">
+                  <PulseDot color="emerald" size={5} /> Active Internship
+                </span>
+              </div>
+              <p className="text-xs text-muted mt-0.5">
+                {companyInfo.roleTitle} · {companyInfo.department}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+            <button
+              onClick={() => navigate('company')}
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 border border-border rounded-xl text-xs text-muted hover:text-text hover:border-border-strong transition-all bg-surface-muted/10 font-semibold"
+            >
+              <Building2 size={13} className="text-accent" />
+              <span>AI Company Hub</span>
+            </button>
+            <button
+              onClick={() => navigate('kanban')}
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-accent to-violet text-white rounded-xl text-xs font-semibold hover:shadow-lg hover:shadow-accent/25 transition-all"
+            >
+              <span>Work Sprint Board</span>
+              <ArrowRight size={13} />
+            </button>
+          </div>
+        </div>
+
+        {/* Dashboard Grid */}
+        <div className="grid grid-cols-12 gap-6">
+          
+          {/* LEFT COLUMN: Progress & Tasks & Skill Growth */}
+          <div className="col-span-12 lg:col-span-8 space-y-6">
+            
+            {/* Internship Progress Widget */}
+            <div className="glass rounded-2xl p-6 border border-border bg-void/30">
+              <div className="flex justify-between items-center mb-4">
+                <div>
+                  <h3 className="text-sm font-bold text-text">Internship Progress</h3>
+                  <p className="text-[10px] text-muted">Weekly deliverables timeline</p>
+                </div>
+                <span className="text-sm font-semibold text-accent">{Math.round(progress)}% Complete</span>
+              </div>
+              
+              {/* Progress bar */}
+              <div className="h-2 w-full bg-surface-muted rounded-full overflow-hidden border border-border mb-6">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ duration: 1 }}
+                  className="h-full bg-gradient-to-r from-accent to-violet"
+                />
+              </div>
+
+              {/* Progress Steps */}
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div className="p-3 bg-surface-muted/20 border border-border/60 rounded-xl">
+                  <span className="text-[9px] uppercase tracking-wider text-muted block mb-1">Week 1-2</span>
+                  <span className="text-xs font-semibold text-text">Onboarding & Setup</span>
+                  <span className="text-[9px] font-semibold text-emerald bg-emerald/10 border border-emerald/20 px-2 py-0.5 rounded-full mt-2 inline-block">Complete</span>
+                </div>
+                <div className="p-3 bg-surface-muted/20 border border-border/60 rounded-xl">
+                  <span className="text-[9px] uppercase tracking-wider text-muted block mb-1">Week 3-4</span>
+                  <span className="text-xs font-semibold text-text">Core Tasks Sprint</span>
+                  <span className="text-[9px] font-semibold text-amber bg-amber/10 border border-amber/20 px-2 py-0.5 rounded-full mt-2 inline-block">Active Sprint</span>
+                </div>
+                <div className="p-3 bg-surface-muted/20 border border-border/60 rounded-xl opacity-50">
+                  <span className="text-[9px] uppercase tracking-wider text-muted block mb-1">Week 5-6</span>
+                  <span className="text-xs font-semibold text-text">Final Review & Cert</span>
+                  <span className="text-[9px] font-semibold text-dim bg-void border border-border px-2 py-0.5 rounded-full mt-2 inline-block">Locked</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Current Tasks Widget */}
+            <div className="glass rounded-2xl p-6 border border-border bg-void/30 space-y-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-sm font-bold text-text">Current Sprint Backlog</h3>
+                  <p className="text-[10px] text-muted">{activeTasks.length} tasks remaining</p>
+                </div>
+                <button onClick={() => navigate('kanban')} className="text-xs text-accent hover:underline flex items-center gap-1">
+                  View Kanban <ArrowRight size={12} />
+                </button>
+              </div>
+
+              <div className="space-y-2.5">
+                {activeTasks.length === 0 ? (
+                  <div className="text-center py-6 text-xs text-muted">
+                    No active tasks in current backlog. Good job!
+                  </div>
+                ) : (
+                  activeTasks.map((t) => (
+                    <div
+                      key={t.id}
+                      onClick={() => {
+                        setSelectedTaskId(t.id)
+                        navigate('task_details')
+                      }}
+                      className="p-4 rounded-xl border border-border bg-void/50 hover:border-accent/40 cursor-pointer flex items-center justify-between transition-all group"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-1.5 rounded-lg bg-surface-muted border border-border text-muted shrink-0">
+                          <Clock size={14} className="text-accent" />
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-text group-hover:text-accent transition-colors">{t.title}</h4>
+                          <span className="text-[9px] text-dim font-mono">{t.category} · Deadline: {t.deadline}</span>
+                        </div>
+                      </div>
+                      <span className="text-[9px] font-semibold text-amber bg-amber/10 border border-amber/20 px-2.5 py-0.5 rounded-full uppercase">
+                        {t.status.replace('_', ' ')}
+                      </span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* Recent Feedback Widget */}
+            <div className="glass rounded-2xl p-6 border border-border bg-void/30 space-y-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-sm font-bold text-text">Recent Manager Audits</h3>
+                  <p className="text-[10px] text-muted">Evaluation highlights from Sarah Johnson</p>
+                </div>
+                <button onClick={() => navigate('feedback_center')} className="text-xs text-accent hover:underline flex items-center gap-1">
+                  Feedback Center <ArrowRight size={12} />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div className="p-4 rounded-xl border border-border bg-surface-muted/10 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-text">Sarah Johnson (AI Lead Manager)</span>
+                    <span className="text-[9px] text-dim font-mono">2 days ago</span>
+                  </div>
+                  <p className="text-xs text-muted leading-relaxed">
+                    "Arjun's vector schema optimization details are superb. The search route streaming tokens will be the next major milestone. Let's make sure the prompt template fallback code is well audited."
+                  </p>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* RIGHT COLUMN: Scores & Analytics Charts */}
+          <div className="col-span-12 lg:col-span-4 space-y-6">
+            
+            {/* Circular Scores Row */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="glass rounded-2xl p-4 border border-border bg-void/30 text-center flex flex-col items-center">
+                <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block mb-3">Eval Index</span>
+                <ScoreRing score={score} size={85} strokeWidth={5} />
+                <span className="text-[9px] text-emerald font-semibold mt-2 block">Top 8% Cohort</span>
+              </div>
+              
+              <div className="glass rounded-2xl p-4 border border-border bg-void/30 text-center flex flex-col items-center">
+                <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block mb-3">Interview Ready</span>
+                <ScoreRing score={74} size={85} strokeWidth={5} />
+                <span className="text-[9px] text-accent font-semibold mt-2 block">Practice Needed</span>
+              </div>
+            </div>
+
+            {/* Recruiter Interest Trends Widget */}
+            <div className="glass rounded-2xl p-5 border border-border bg-void/30 space-y-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-xs font-bold text-text uppercase tracking-wider">Recruiter Discovery</h3>
+                  <p className="text-[10px] text-muted">Weekly profile views index</p>
+                </div>
+                <div className="flex items-center gap-1.5 text-xs text-emerald font-semibold">
+                  <TrendingUp size={14} />
+                  <span>+18%</span>
+                </div>
+              </div>
+
+              {/* Chart container */}
+              <div className="h-32 w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={chartData} margin={{ left: -30, right: 5, top: 5, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="viewsGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.3} />
+                        <stop offset="100%" stopColor="#38bdf8" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <XAxis dataKey="day" tick={{ fill: '#64748b', fontSize: 9 }} stroke="rgba(255,255,255,0.05)" />
+                    <YAxis tick={{ fill: '#64748b', fontSize: 9 }} stroke="rgba(255,255,255,0.05)" />
+                    <Tooltip
+                      contentStyle={{
+                        borderRadius: '8px',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        backgroundColor: isDark ? '#050816' : '#ffffff',
+                        color: isDark ? '#f1f5f9' : '#0f172a',
+                        fontSize: '11px',
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="views"
+                      stroke="#38bdf8"
+                      strokeWidth={2}
+                      fill="url(#viewsGrad)"
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+
+              <div className="flex items-center justify-between text-[10px] text-muted border-t border-border pt-3">
+                <div className="flex items-center gap-1.5">
+                  <Eye size={12} className="text-accent" />
+                  <span>24 views this week</span>
+                </div>
+                <button onClick={() => navigate('profile')} className="hover:text-text font-semibold flex items-center gap-1">
+                  View Profile <ArrowRight size={10} />
+                </button>
+              </div>
+            </div>
+
+            {/* Upcoming Deadlines Widget */}
+            <div className="glass rounded-2xl p-5 border border-border bg-void/30 space-y-3">
+              <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block">Upcoming Sprints</span>
+              
+              <div className="space-y-2">
+                <div className="p-3 bg-rose/5 border border-rose/15 rounded-xl flex items-center gap-3">
+                  <AlertCircle size={14} className="text-rose shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-[11px] font-bold text-text truncate">Implement RAG Search Route</h4>
+                    <span className="text-[9px] text-rose-300 font-semibold block mt-0.5">Due in 3 hours</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setSelectedTaskId('ai-3')
+                      navigate('submit_task')
+                    }}
+                    className="px-2.5 py-1 bg-rose/10 border border-rose/30 text-rose-300 rounded-lg text-[9px] font-semibold hover:bg-rose/20 transition-colors"
+                  >
+                    Submit
+                  </button>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  )
+}

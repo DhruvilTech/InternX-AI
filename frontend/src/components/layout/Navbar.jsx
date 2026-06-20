@@ -1,20 +1,26 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence, useScroll, useSpring } from 'framer-motion'
-import { Menu, X } from 'lucide-react'
+import { Menu, X, Bell, User, Settings, LogOut, Search, ShieldCheck } from 'lucide-react'
 import MagneticButton from '../ui/MagneticButton'
 import ThemeToggle from '../ui/ThemeToggle'
-
-const navLinks = [
-  { label: 'Product', href: '#journey' },
-  { label: 'Generator', href: '#generator' },
-  { label: 'Evaluation', href: '#evaluation' },
-  { label: 'Skills', href: '#skills' },
-  { label: 'Recruiters', href: '#recruiters' },
-]
+import { useNavigation } from '../../context/NavigationContext'
+import PulseDot from '../ui/PulseDot'
 
 export default function Navbar() {
+  const {
+    page,
+    navigate,
+    role,
+    user,
+    handleLogout,
+    setNotificationsOpen,
+    setCommandPaletteOpen,
+  } = useNavigation()
+
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false)
+
   const { scrollYProgress } = useScroll()
   const scaleX = useSpring(scrollYProgress, { stiffness: 100, damping: 30 })
 
@@ -24,63 +30,234 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  const handleLogoClick = (e) => {
+    e.preventDefault()
+    navigate('landing')
+  }
+
+  // Determine navigation links based on user status
+  const getNavLinks = () => {
+    if (role === 'student') {
+      return [
+        { label: 'Dashboard', id: 'dashboard' },
+        { label: 'AI Company', id: 'company' },
+        { label: 'Sprints', id: 'kanban' },
+        { label: 'Interview Prep', id: 'interview_simulator' },
+        { label: 'Certs', id: 'certificates' },
+      ]
+    } else if (role === 'recruiter') {
+      return [
+        { label: 'Talent Discovery', id: 'recruiter_dashboard' },
+        { label: 'Audit Profiles', id: 'candidate_profile' },
+      ]
+    } else if (role === 'college_admin') {
+      return [
+        { label: 'Oversight Dashboard', id: 'college_dashboard' },
+      ]
+    } else if (role === 'admin') {
+      return [
+        { label: 'Approvals Queue', id: 'admin_panel' },
+      ]
+    } else {
+      return [
+        { label: 'Product Journey', id: 'landing', hash: '#journey' },
+        { label: 'AI Generator', id: 'landing', hash: '#generator' },
+        { label: 'AI Evaluation', id: 'landing', hash: '#evaluation' },
+        { label: 'Recruiters', id: 'landing', hash: '#recruiters' },
+      ]
+    }
+  }
+
+  const navLinks = getNavLinks()
+
+  const handleLinkClick = (e, link) => {
+    e.preventDefault()
+    setMobileOpen(false)
+    if (link.hash) {
+      // Go to landing and scroll to hash
+      navigate('landing')
+      setTimeout(() => {
+        const el = document.getElementById(link.hash.replace('#', ''))
+        if (el) el.scrollIntoView({ behavior: 'smooth' })
+      }, 100)
+    } else {
+      navigate(link.id)
+    }
+  }
+
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-        scrolled ? 'glass border-b border-border' : 'bg-transparent'
+        scrolled || page !== 'landing' ? 'glass border-b border-border' : 'bg-transparent'
       }`}
     >
-      <motion.div
-        className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent to-transparent origin-left"
-        style={{ scaleX }}
-      />
+      {/* Scroll indicator - only on Landing Page */}
+      {page === 'landing' && (
+        <motion.div
+          className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-accent to-transparent origin-left"
+          style={{ scaleX }}
+        />
+      )}
 
       <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
-          <a href="#" className="flex items-center gap-2.5 shrink-0 group">
+          
+          {/* Logo */}
+          <a href="#/" onClick={handleLogoClick} className="flex items-center gap-2.5 shrink-0 group">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-violet shadow-lg shadow-accent/20 group-hover:scale-105 transition-transform">
               <span className="text-sm font-bold text-white font-display">IX</span>
             </div>
-            <span className="text-lg font-display font-semibold tracking-tight">
+            <span className="text-lg font-display font-semibold tracking-tight text-text">
               InternX AI
             </span>
           </a>
 
-          <div className="hidden lg:flex items-center gap-8">
-            {navLinks.map((link) => (
+          {/* Links */}
+          <div className="hidden lg:flex items-center gap-6">
+            {navLinks.map((link, idx) => (
               <a
-                key={link.href}
-                href={link.href}
-                className="text-sm text-muted hover:text-text transition-colors relative after:absolute after:bottom-0 after:left-0 after:h-px after:w-0 after:bg-accent after:transition-all hover:after:w-full"
+                key={idx}
+                href={link.hash || `#/${link.id}`}
+                onClick={(e) => handleLinkClick(e, link)}
+                className="text-xs font-semibold uppercase tracking-wider text-muted hover:text-text transition-colors relative after:absolute after:bottom-[-4px] after:left-0 after:h-px after:w-0 after:bg-accent after:transition-all hover:after:w-full"
               >
                 {link.label}
               </a>
             ))}
           </div>
 
+          {/* Right Action buttons */}
           <div className="hidden lg:flex items-center gap-3">
             <ThemeToggle />
-            <MagneticButton variant="ghost" className="!px-4 !py-2">
-              Login
-            </MagneticButton>
-            <MagneticButton href="#cta" className="!px-5 !py-2.5">
-              Start Internship
-            </MagneticButton>
+            
+            {/* Search command shortcut trigger button */}
+            <button
+              onClick={() => setCommandPaletteOpen(true)}
+              className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface-muted/50 text-muted hover:text-text hover:border-border-strong transition-colors"
+              title="Search dashboard Ctrl+K"
+            >
+              <Search size={15} />
+            </button>
+
+            {role === 'guest' ? (
+              <>
+                <button
+                  onClick={() => navigate('login')}
+                  className="px-4 py-2 text-xs font-semibold text-muted hover:text-text transition-colors"
+                >
+                  Sign In
+                </button>
+                <MagneticButton
+                  onClick={() => navigate('career_selection')}
+                  className="!px-4 !py-2 text-xs"
+                >
+                  Start Internship
+                </MagneticButton>
+              </>
+            ) : (
+              <div className="flex items-center gap-3">
+                {/* Notification bell */}
+                <button
+                  onClick={() => setNotificationsOpen(true)}
+                  className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface-muted/50 text-muted hover:text-text hover:border-border-strong transition-colors"
+                >
+                  <Bell size={15} />
+                  <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 bg-accent rounded-full animate-pulse" />
+                </button>
+
+                {/* Avatar menu */}
+                <div className="relative">
+                  <button
+                    onClick={() => setProfileMenuOpen(!profileMenuOpen)}
+                    className="h-9 w-9 rounded-full bg-gradient-to-br from-accent to-violet flex items-center justify-center text-white text-xs font-bold font-display shadow-md shadow-accent/10 border border-white/10"
+                  >
+                    {user?.avatar || 'AK'}
+                  </button>
+
+                  <AnimatePresence>
+                    {profileMenuOpen && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setProfileMenuOpen(false)} />
+                        <motion.div
+                          initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                          className="absolute right-0 mt-2.5 w-48 rounded-xl border border-border glass bg-void/90 p-1.5 shadow-2xl z-50 text-left"
+                        >
+                          <div className="px-3 py-2 border-b border-border/60 mb-1.5">
+                            <p className="text-xs font-bold text-text truncate">{user?.name || 'Arjun Kapoor'}</p>
+                            <p className="text-[9px] text-muted truncate mt-0.5">{user?.email || 'arjun@university.edu'}</p>
+                          </div>
+
+                          {role === 'admin' ? (
+                            <button
+                              onClick={() => {
+                                setProfileMenuOpen(false)
+                                navigate('admin_panel')
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-muted hover:text-text hover:bg-surface-muted/30 rounded-lg text-left"
+                            >
+                              <ShieldCheck size={13} className="text-accent" />
+                              <span>Approvals Panel</span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                setProfileMenuOpen(false)
+                                navigate('profile')
+                              }}
+                              className="w-full flex items-center gap-2 px-3 py-2 text-xs text-muted hover:text-text hover:bg-surface-muted/30 rounded-lg text-left"
+                            >
+                              <User size={13} />
+                              <span>My Portfolio</span>
+                            </button>
+                          )}
+                          
+                          <button
+                            onClick={() => {
+                              setProfileMenuOpen(false)
+                              navigate('settings')
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-muted hover:text-text hover:bg-surface-muted/30 rounded-lg text-left"
+                          >
+                            <Settings size={13} />
+                            <span>Preferences</span>
+                          </button>
+
+                          <button
+                            onClick={() => {
+                              setProfileMenuOpen(false)
+                              handleLogout()
+                            }}
+                            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-rose-300 hover:bg-rose/10 hover:text-rose rounded-lg text-left border-t border-border/40 mt-1.5 pt-2"
+                          >
+                            <LogOut size={13} />
+                            <span>Sign Out</span>
+                          </button>
+                        </motion.div>
+                      </>
+                    )}
+                  </AnimatePresence>
+                </div>
+              </div>
+            )}
           </div>
 
-          <div className="flex lg:hidden items-center gap-1">
+          {/* Mobile menu triggers */}
+          <div className="flex lg:hidden items-center gap-1.5">
             <ThemeToggle />
             <button
               className="p-2 text-muted hover:text-text"
               onClick={() => setMobileOpen(!mobileOpen)}
               aria-label="Toggle menu"
             >
-              {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+              {mobileOpen ? <X size={20} /> : <Menu size={20} />}
             </button>
           </div>
         </div>
       </nav>
 
+      {/* Mobile Drawer */}
       <AnimatePresence>
         {mobileOpen && (
           <motion.div
@@ -89,24 +266,54 @@ export default function Navbar() {
             exit={{ opacity: 0, height: 0 }}
             className="lg:hidden glass border-t border-border overflow-hidden"
           >
-            <div className="px-4 py-4 space-y-1">
-              {navLinks.map((link, i) => (
-                <motion.a
-                  key={link.href}
-                  href={link.href}
-                  onClick={() => setMobileOpen(false)}
-                  initial={{ opacity: 0, x: -8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: i * 0.04 }}
-                  className="block px-3 py-2.5 text-sm text-muted hover:text-text rounded-lg"
+            <div className="px-4 py-4 space-y-1.5">
+              {navLinks.map((link, idx) => (
+                <a
+                  key={idx}
+                  href={link.hash || `#/${link.id}`}
+                  onClick={(e) => handleLinkClick(e, link)}
+                  className="block px-3 py-2.5 text-xs font-semibold uppercase tracking-wider text-muted hover:text-text rounded-lg"
                 >
                   {link.label}
-                </motion.a>
+                </a>
               ))}
+              
               <div className="pt-3 flex flex-col gap-2 border-t border-border mt-3">
-                <MagneticButton href="#cta" className="w-full justify-center">
-                  Start Internship
-                </MagneticButton>
+                {role === 'guest' ? (
+                  <>
+                    <button
+                      onClick={() => {
+                        setMobileOpen(false)
+                        navigate('login')
+                      }}
+                      className="w-full text-center py-2.5 rounded-xl border border-border text-xs text-muted font-semibold"
+                    >
+                      Sign In
+                    </button>
+                    <MagneticButton
+                      onClick={() => {
+                        setMobileOpen(false)
+                        navigate('career_selection')
+                      }}
+                      className="w-full justify-center"
+                    >
+                      Start Internship
+                    </MagneticButton>
+                  </>
+                ) : (
+                  <div className="flex items-center justify-between px-3 py-1">
+                    <span className="text-xs font-bold text-text">{user?.name}</span>
+                    <button
+                      onClick={() => {
+                        setMobileOpen(false)
+                        handleLogout()
+                      }}
+                      className="text-xs text-rose-300 font-semibold"
+                    >
+                      Sign Out
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </motion.div>

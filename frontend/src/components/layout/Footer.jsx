@@ -1,97 +1,113 @@
 import { Mail } from 'lucide-react'
 import { FaGithub, FaLinkedin, FaXTwitter } from 'react-icons/fa6'
-
-const footerLinks = {
-  Product: [
-    { label: 'Internship Generator', href: '#generator' },
-    { label: 'AI Evaluation', href: '#evaluation' },
-    { label: 'Interview Simulator', href: '#interview' },
-    { label: 'Certificates', href: '#certificate' },
-  ],
-  Platform: [
-    { label: 'For Students', href: '#hero' },
-    { label: 'For Recruiters', href: '#recruiters' },
-    { label: 'For Colleges', href: '#features' },
-    { label: 'Features', href: '#features' },
-  ],
-  Company: [
-    { label: 'About', href: '#' },
-    { label: 'Careers', href: '#' },
-    { label: 'Blog', href: '#' },
-    { label: 'Press', href: '#' },
-  ],
-}
-
-const socialLinks = [
-  { icon: FaLinkedin, href: '#', label: 'LinkedIn' },
-  { icon: FaXTwitter, href: '#', label: 'Twitter' },
-  { icon: FaGithub, href: '#', label: 'GitHub' },
-  { icon: Mail, href: 'mailto:hello@internx.ai', label: 'Email' },
-]
+import { useNavigation } from '../../context/NavigationContext'
 
 export default function Footer() {
+  const { navigate } = useNavigation()
+
+  const handleLinkClick = (e, pageId, hashId) => {
+    e.preventDefault()
+    if (hashId) {
+      navigate('landing')
+      setTimeout(() => {
+        const el = document.getElementById(hashId)
+        if (el) el.scrollIntoView({ behavior: 'smooth' })
+      }, 100)
+    } else {
+      navigate(pageId)
+    }
+  }
+
   return (
-    <footer className="border-t border-border bg-void">
+    <footer className="border-t border-border bg-void relative z-10">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 lg:gap-12">
+          
+          {/* Brand */}
           <div className="col-span-2 md:col-span-4 lg:col-span-2">
-            <a href="#" className="flex items-center gap-2.5 group">
+            <a href="#/" onClick={(e) => handleLinkClick(e, 'landing')} className="flex items-center gap-2.5 group">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-violet">
                 <span className="text-sm font-bold text-white font-display">IX</span>
               </div>
-              <span className="text-lg font-display font-semibold">InternX AI</span>
+              <span className="text-lg font-display font-semibold text-text">InternX AI</span>
             </a>
             <p className="mt-4 text-sm text-muted leading-relaxed max-w-xs">
-              Gain real experience before your first job. AI-powered internships that
-              prepare you for the real world.
+              Gain real experience before your first job. Join simulated AI companies, write code deliverables, and get audited by automated evaluations.
             </p>
             <div className="flex items-center gap-3 mt-6">
-              {socialLinks.map((social) => {
-                const Icon = social.icon
-                return (
-                  <a
-                    key={social.label}
-                    href={social.href}
-                    aria-label={social.label}
-                    className="flex h-9 w-9 items-center justify-center rounded-lg glass text-muted hover:text-text hover:border-border-bright transition-colors"
-                  >
-                    <Icon size={16} />
-                  </a>
-                )
-              })}
+              <a href="#" className="flex h-9 w-9 items-center justify-center rounded-lg glass text-muted hover:text-text transition-colors">
+                <FaLinkedin size={16} />
+              </a>
+              <a href="#" className="flex h-9 w-9 items-center justify-center rounded-lg glass text-muted hover:text-text transition-colors">
+                <FaXTwitter size={15} />
+              </a>
+              <a href="#" className="flex h-9 w-9 items-center justify-center rounded-lg glass text-muted hover:text-text transition-colors">
+                <FaGithub size={16} />
+              </a>
             </div>
           </div>
 
-          {Object.entries(footerLinks).map(([category, links]) => (
-            <div key={category}>
-              <p className="text-sm font-semibold mb-4">{category}</p>
-              <ul className="space-y-3">
-                {links.map((link) => (
-                  <li key={link.label}>
-                    <a
-                      href={link.href}
-                      className="text-sm text-muted hover:text-text transition-colors"
-                    >
-                      {link.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
+          {/* Links Categories */}
+          <div>
+            <p className="text-sm font-semibold mb-4 text-text">Product</p>
+            <ul className="space-y-3 text-sm text-muted">
+              <li>
+                <a href="#/" onClick={(e) => handleLinkClick(e, 'landing', 'generator')} className="hover:text-text transition-colors">
+                  AI generator
+                </a>
+              </li>
+              <li>
+                <a href="#/" onClick={(e) => handleLinkClick(e, 'landing', 'evaluation')} className="hover:text-text transition-colors">
+                  Evaluation engine
+                </a>
+              </li>
+              <li>
+                <a href="#/" onClick={(e) => handleLinkClick(e, 'landing', 'interview')} className="hover:text-text transition-colors">
+                  Interview simulator
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <p className="text-sm font-semibold mb-4 text-text">Enterprise Portals</p>
+            <ul className="space-y-3 text-sm text-muted">
+              <li>
+                <a href="#/" onClick={(e) => handleLinkClick(e, 'career_selection')} className="hover:text-text transition-colors">
+                  For Students
+                </a>
+              </li>
+              <li>
+                <a href="#/" onClick={(e) => handleLinkClick(e, 'recruiter_login')} className="hover:text-text transition-colors text-amber-500 font-semibold">
+                  For Recruiters
+                </a>
+              </li>
+              <li>
+                <a href="#/" onClick={(e) => handleLinkClick(e, 'college_login')} className="hover:text-text transition-colors text-emerald font-semibold">
+                  For Colleges
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <div>
+            <p className="text-sm font-semibold mb-4 text-text">Corporate</p>
+            <ul className="space-y-3 text-sm text-muted font-medium">
+              <li><a href="#" className="hover:text-text">About Us</a></li>
+              <li><a href="#" className="hover:text-text">Press Kit</a></li>
+              <li><a href="#" className="hover:text-text">Contact Support</a></li>
+            </ul>
+          </div>
+
         </div>
 
-        <div className="mt-12 pt-8 border-t border-border flex flex-wrap items-center justify-between gap-4">
-          <p className="text-sm text-dim">
-            &copy; {new Date().getFullYear()} InternX AI. All rights reserved.
+        <div className="mt-12 pt-8 border-t border-border flex flex-wrap items-center justify-between gap-4 text-xs text-dim">
+          <p>
+            &copy; {new Date().getFullYear()} InternX AI. Built with dark grid. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
-            <a href="#" className="text-sm text-dim hover:text-muted transition-colors">
-              Privacy
-            </a>
-            <a href="#" className="text-sm text-dim hover:text-muted transition-colors">
-              Terms
-            </a>
+            <a href="#" className="hover:text-muted transition-colors">Privacy Policy</a>
+            <a href="#" className="hover:text-muted transition-colors">Terms of Service</a>
           </div>
         </div>
       </div>
