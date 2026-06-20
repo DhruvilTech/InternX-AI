@@ -3,9 +3,13 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
+import session from 'express-session';
+import passport from 'passport';
+import './config/passportGithub.js';
 import authRoutes from './routes/auth.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import careerRoutes from './routes/career.routes.js';
+import githubRoutes from './routes/github.routes.js';
 import { setupSwagger } from './config/swagger.js';
 import { errorHandler } from './middlewares/error.middleware.js';
 
@@ -43,6 +47,25 @@ app.use(express.urlencoded({ limit: '10mb', extended: true }));
 // Cookie Parser to parse tokens inside request cookies
 app.use(cookieParser());
 
+// Secure session configuration required for OAuth callbacks
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || 'internx_github_session_secret_2026_key',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    },
+  })
+);
+
+// Initialize Passport & session restores
+app.use(passport.initialize());
+app.use(passport.session());
+
 // Setup Swagger UI Documentation
 setupSwagger(app);
 
@@ -50,6 +73,7 @@ setupSwagger(app);
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/careers', careerRoutes);
+app.use('/api/github', githubRoutes);
 
 // Base application health check
 app.get('/health', (req, res) => {

@@ -46,6 +46,7 @@ export default function Navbar() {
       return [
         { label: 'Dashboard', id: 'student/dashboard' },
         { label: 'Internships', id: user?.selectedCareer ? 'my-career' : 'careers' },
+        { label: 'GitHub', id: 'dashboard/github' },
         { label: 'Tasks', id: 'kanban' },
         { label: 'Certificates', id: 'certificates' },
         { label: 'Profile', id: 'profile' },

@@ -55,6 +55,13 @@ import NotificationsPage from './pages/NotificationsPage';
 import SettingsPage from './pages/SettingsPage';
 import { Page404 } from './pages/ErrorPages';
 
+// GitHub Integration Pages
+import GitHubConnectPage from './pages/GitHubConnectPage';
+import GitHubProfilePage from './pages/GitHubProfilePage';
+import GitHubRepositoriesPage from './pages/GitHubRepositoriesPage';
+import RepositoryDetailsPage from './pages/RepositoryDetailsPage';
+import RepositorySelectionPage from './pages/RepositorySelectionPage';
+
 export default function App() {
   useLenis();
   const location = useLocation();
@@ -131,6 +138,13 @@ export default function App() {
                   <Route path="/interview_simulator" element={<InterviewSimulatorPage />} />
                   <Route path="/certificates" element={<CertificateCenterPage />} />
                   <Route path="/profile" element={<ProfilePage />} />
+                  
+                  {/* GitHub Module Views */}
+                  <Route path="/dashboard/github" element={<GitHubConnectPage />} />
+                  <Route path="/dashboard/github/profile" element={<GitHubProfilePage />} />
+                  <Route path="/dashboard/github/repositories" element={<GitHubRepositoriesPage />} />
+                  <Route path="/dashboard/github/repositories/:id" element={<RepositoryDetailsPage />} />
+                  <Route path="/dashboard/github/select" element={<RepositorySelectionPage />} />
                 </Route>
 
                 {/* College specific views */}

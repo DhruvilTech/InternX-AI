@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import axiosInstance from '../api/axios.js'
 import useAuth from '../hooks/useAuth.js'
 
@@ -172,24 +172,24 @@ export function NavigationProvider({ children }) {
     return () => window.removeEventListener('hashchange', handleHashChange)
   }, [])
 
-  const navigate = (toPage) => {
+  const navigate = useCallback((toPage) => {
     window.location.hash = `#/${toPage}`
     setPage(toPage)
     // Scroll window to top
     window.scrollTo({ top: 0, behavior: 'instant' })
-  }
+  }, [])
 
-  const addToast = (title, type = 'success') => {
+  const addToast = useCallback((title, type = 'success') => {
     const id = Date.now()
     setToasts((prev) => [...prev, { id, title, type }])
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id))
     }, 4000)
-  }
+  }, [])
 
-  const removeToast = (id) => {
+  const removeToast = useCallback((id) => {
     setToasts((prev) => prev.filter((t) => t.id !== id))
-  }
+  }, [])
 
   // Pre-load a student profile to test components instantly
   const loadDemoStudent = (track = 'ai') => {
