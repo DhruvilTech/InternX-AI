@@ -1,5 +1,6 @@
 import CareerPath from '../models/CareerPath.js';
 import StudentCareer from '../models/StudentCareer.js';
+import Task from '../models/Task.js';
 import { sendResponse } from '../utils/sendResponse.js';
 
 /**
@@ -230,6 +231,26 @@ export const getMyCareer = async (req, res, next) => {
     
     if (!studentCareer) {
       return sendResponse(res, 404, false, 'No selected career path found for this student');
+    }
+
+    // Calculate dynamic progress based on task completion
+    const totalTasks = await Task.countDocuments({ studentId: req.user._id });
+    const completedTasks = await Task.countDocuments({ studentId: req.user._id, status: 'completed' });
+    const completionPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+
+    if (studentCareer.completionPercentage !== completionPercentage) {
+      studentCareer.completionPercentage = completionPercentage;
+      
+      // Update career level based on progress
+      if (completionPercentage >= 100) {
+        studentCareer.currentLevel = 'Expert';
+      } else if (completionPercentage >= 50) {
+        studentCareer.currentLevel = 'Intermediate';
+      } else {
+        studentCareer.currentLevel = 'Beginner';
+      }
+      
+      await studentCareer.save();
     }
 
     return sendResponse(res, 200, true, 'My career details retrieved successfully', {

@@ -207,3 +207,31 @@ body {
 .animate-pulse-ring {
   animation: pulse-ring 2s ease-in-out infinite;
 }
+
+@keyframes laser-scan {
+  0%, 100% {
+    top: 0%;
+  }
+  50% {
+    top: 100%;
+  }
+}
+
+.scanner-line {
+  animation: laser-scan 3s ease-in-out infinite;
+}
+
+@keyframes indicator-glow {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(0.95);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+.indicator-pulse {
+  animation: indicator-glow 1.5s ease-in-out infinite;
+}

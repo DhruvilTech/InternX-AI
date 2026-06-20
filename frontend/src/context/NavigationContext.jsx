@@ -43,8 +43,34 @@ export function NavigationProvider({ children }) {
   const [page, setPage] = useState(getHashPage)
   const [role, setRole] = useState('guest') // guest, student, recruiter, college_admin
   const [user, setUser] = useState(null) // { name, email, avatar, track }
+  const [internship, setInternship] = useState(null)
+  const [tasks, setTasks] = useState([])
 
   const { user: authUser, role: authRole } = useAuth()
+
+  const fetchStudentInternshipAndTasks = async () => {
+    try {
+      const internRes = await axiosInstance.get('/api/internships/my-internship');
+      if (internRes.data?.success && internRes.data?.data?.internship) {
+        setInternship(internRes.data.data.internship);
+      } else {
+        setInternship(null);
+      }
+    } catch (err) {
+      setInternship(null);
+    }
+
+    try {
+      const tasksRes = await axiosInstance.get('/api/tasks');
+      if (tasksRes.data?.success && tasksRes.data?.data?.tasks) {
+        setTasks(tasksRes.data.data.tasks);
+      } else {
+        setTasks([]);
+      }
+    } catch (err) {
+      setTasks([]);
+    }
+  };
 
   useEffect(() => {
     if (authUser) {
@@ -55,9 +81,14 @@ export function NavigationProvider({ children }) {
         track: authUser.skills && authUser.skills.length > 0 ? 'ai' : 'ai'
       })
       setRole(authRole === 'college' ? 'college_admin' : authRole)
+      if (authRole === 'student') {
+        fetchStudentInternshipAndTasks()
+      }
     } else {
       setUser(null)
       setRole('guest')
+      setInternship(null)
+      setTasks([])
     }
   }, [authUser, authRole])
 
@@ -134,11 +165,7 @@ export function NavigationProvider({ children }) {
   // Selected career path
   const [selectedTrack, setSelectedTrack] = useState('ai')
 
-  // Generated Internship details
-  const [internship, setInternship] = useState(null)
-
-  // Kanban Task system
-  const [tasks, setTasks] = useState([])
+  // Kanban Task system and active task selection
   const [selectedTaskId, setSelectedTaskId] = useState(null)
 
   // Submissions

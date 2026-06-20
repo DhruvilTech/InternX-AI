@@ -29,6 +29,7 @@ import { useTheme } from '../context/ThemeContext'
 import ScoreRing from '../components/ui/ScoreRing'
 import PulseDot from '../components/ui/PulseDot'
 import { getMyCareer } from '../api/careerService.js'
+import axiosInstance from '../api/axios.js'
 
 const chartData = [
   { day: 'Mon', views: 4 },
@@ -43,23 +44,57 @@ const chartData = [
 export default function StudentDashboardPage() {
   const { navigate, internship, tasks, setSelectedTaskId, addToast } = useNavigation()
   const { isDark } = useTheme()
-  const [score, setScore] = useState(89)
-  const [progress, setProgress] = useState(67)
+  const [score, setScore] = useState(0)
+  const [progress, setProgress] = useState(0)
+  const [interviewReadyScore, setInterviewReadyScore] = useState(0)
   const [careerData, setCareerData] = useState(null)
 
   useEffect(() => {
-    const fetchMyCareer = async () => {
+    if (tasks && tasks.length > 0) {
+      const completed = tasks.filter(t => t.status === 'completed')
+      const calculatedProgress = Math.round((completed.length / tasks.length) * 100)
+      setProgress(calculatedProgress)
+
+      const completedWithScores = completed.filter(t => typeof t.score === 'number' && t.score > 0)
+      const calculatedScore = completedWithScores.length > 0
+        ? Math.round(completedWithScores.reduce((acc, t) => acc + t.score, 0) / completedWithScores.length)
+        : 0
+      setScore(calculatedScore)
+
+      const calculatedInterview = Math.round((completed.length / tasks.length) * 80 + 20)
+      setInterviewReadyScore(calculatedInterview)
+    } else {
+      setProgress(0)
+      setScore(0)
+      setInterviewReadyScore(0)
+    }
+  }, [tasks])
+
+  useEffect(() => {
+    const checkStateAndFetchCareer = async () => {
       try {
         const res = await getMyCareer();
         if (res.success && res.data) {
           setCareerData(res.data.career);
           setProgress(res.data.progress);
+          
+          try {
+            const internRes = await axiosInstance.get('/api/internships/my-internship');
+            if (!internRes.data?.success || !internRes.data?.data?.internship) {
+              navigate('generator');
+            }
+          } catch (err) {
+            navigate('generator');
+          }
+        } else {
+          navigate('careers');
         }
       } catch (err) {
         console.error('Failed to load career path metadata for dashboard:', err);
+        navigate('careers');
       }
     };
-    fetchMyCareer();
+    checkStateAndFetchCareer();
   }, []);
 
   // Demo fallback
@@ -203,7 +238,7 @@ export default function StudentDashboardPage() {
                         </div>
                       </div>
                       <span className="text-[9px] font-semibold text-amber bg-amber/10 border border-amber/20 px-2.5 py-0.5 rounded-full uppercase">
-                        {t.status.replace('_', ' ')}
+                        {t.status.replace(/[_-]/g, ' ')}
                       </span>
                     </div>
                   ))
@@ -251,7 +286,7 @@ export default function StudentDashboardPage() {
               
               <div className="glass rounded-2xl p-4 border border-border bg-void/30 text-center flex flex-col items-center">
                 <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block mb-3">Interview Ready</span>
-                <ScoreRing score={74} size={85} strokeWidth={5} />
+                <ScoreRing score={interviewReadyScore} size={85} strokeWidth={5} />
                 <span className="text-[9px] text-accent font-semibold mt-2 block">Practice Needed</span>
               </div>
             </div>
@@ -273,12 +308,6 @@ export default function StudentDashboardPage() {
               <div className="h-32 w-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={chartData} margin={{ left: -30, right: 5, top: 5, bottom: 5 }}>
-                    <defs>
-                      <linearGradient id="viewsGrad" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stopColor="#38bdf8" stopOpacity={0.3} />
-                        <stop offset="100%" stopColor="#38bdf8" stopOpacity={0} />
-                      </linearGradient>
-                    </defs>
                     <XAxis dataKey="day" tick={{ fill: '#64748b', fontSize: 9 }} stroke="rgba(255,255,255,0.05)" />
                     <YAxis tick={{ fill: '#64748b', fontSize: 9 }} stroke="rgba(255,255,255,0.05)" />
                     <Tooltip
@@ -295,7 +324,7 @@ export default function StudentDashboardPage() {
                       dataKey="views"
                       stroke="#38bdf8"
                       strokeWidth={2}
-                      fill="url(#viewsGrad)"
+                      fill="rgba(56, 189, 248, 0.15)"
                     />
                   </AreaChart>
                 </ResponsiveContainer>

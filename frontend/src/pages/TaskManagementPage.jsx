@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Plus, Clock, ArrowRight, CornerDownRight, CheckSquare, Search, Filter, ShieldCheck, X } from 'lucide-react'
 import { useNavigation } from '../context/NavigationContext'
+import axiosInstance from '../api/axios.js'
 
 const columns = [
   { id: 'todo', label: 'To Do', border: 'border-slate-800' },
-  { id: 'in_progress', label: 'In Progress', border: 'border-accent/40' },
-  { id: 'review', label: 'Under Review', border: 'border-violet/40' },
+  { id: 'in-progress', label: 'In Progress', border: 'border-accent/40' },
+  { id: 'under-review', label: 'Under Review', border: 'border-violet/40' },
   { id: 'completed', label: 'Completed', border: 'border-emerald/40' },
 ]
 
@@ -27,14 +28,49 @@ export default function TaskManagementPage() {
     return () => clearInterval(timer)
   }, [])
 
-  const moveTask = (taskId, newStatus) => {
-    setTasks(prev => prev.map(t => {
-      if (t.id === taskId) {
-        addToast(`Moved "${t.title}" to ${newStatus.replace('_', ' ').toUpperCase()}`, 'success')
-        return { ...t, status: newStatus }
+  useEffect(() => {
+    const verifyInternship = async () => {
+      try {
+        const internRes = await axiosInstance.get('/api/internships/my-internship')
+        if (!internRes.data?.success || !internRes.data?.data?.internship) {
+          navigate('generator')
+        }
+      } catch (err) {
+        navigate('generator')
       }
-      return t
-    }))
+    }
+    verifyInternship()
+  }, [])
+
+  const moveTask = async (taskId, newStatus) => {
+    try {
+      // Optimistic update
+      setTasks(prev => prev.map(t => {
+        if (t.id === taskId) {
+          return { ...t, status: newStatus }
+        }
+        return t
+      }))
+
+      const response = await axiosInstance.patch(`/api/tasks/${taskId}/status`, { status: newStatus })
+      if (response.data?.success) {
+        addToast(`Moved task to ${newStatus.replace(/[_-]/g, ' ').toUpperCase()}`, 'success')
+      } else {
+        throw new Error('Failed to update status')
+      }
+    } catch (err) {
+      console.error(err)
+      addToast('Failed to update task status in database.', 'error')
+      // Rollback or reload tasks from backend
+      try {
+        const tasksRes = await axiosInstance.get('/api/tasks')
+        if (tasksRes.data?.success && tasksRes.data?.data?.tasks) {
+          setTasks(tasksRes.data.data.tasks)
+        }
+      } catch (fetchErr) {
+        console.error('Failed to sync tasks on rollback:', fetchErr)
+      }
+    }
   }
 
   const handleOpenTask = (task) => {
@@ -152,7 +188,7 @@ export default function TaskManagementPage() {
                                 title="Move back"
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  const prevStatuses = { in_progress: 'todo', review: 'in_progress', completed: 'review' }
+                                  const prevStatuses = { 'in-progress': 'todo', 'under-review': 'in-progress', 'completed': 'under-review' }
                                   moveTask(task.id, prevStatuses[col.id])
                                 }}
                                 className="h-4 w-4 rounded bg-surface-muted hover:bg-border flex items-center justify-center text-muted"
@@ -165,7 +201,7 @@ export default function TaskManagementPage() {
                                 title="Move forward"
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  const nextStatuses = { todo: 'in_progress', in_progress: 'review', review: 'completed' }
+                                  const nextStatuses = { 'todo': 'in-progress', 'in-progress': 'under-review', 'under-review': 'completed' }
                                   moveTask(task.id, nextStatuses[col.id])
                                 }}
                                 className="h-4 w-4 rounded bg-surface-muted hover:bg-border flex items-center justify-center text-muted"
@@ -221,7 +257,7 @@ export default function TaskManagementPage() {
               <div className="flex items-center gap-2 p-3 bg-surface-muted/20 border border-border rounded-xl text-xs">
                 <Clock size={14} className="text-accent" />
                 <span className="text-muted">Sprint State:</span>
-                <span className="font-semibold text-text uppercase">{selectedTask.status.replace('_', ' ')}</span>
+                <span className="font-semibold text-text uppercase">{selectedTask.status.replace(/[_-]/g, ' ')}</span>
                 <span className="text-muted ml-auto">Due:</span>
                 <span className="font-semibold text-text">{selectedTask.deadline}</span>
               </div>

@@ -7,6 +7,8 @@ import Recruiter from '../models/Recruiter.js';
 import { jwtConfig } from '../config/jwt.js';
 import { generateAccessToken } from '../utils/generateToken.js';
 import { cloudinary } from '../config/cloudinary.js';
+import { sendMail } from '../utils/mailer.js';
+import { getOtpTemplate } from '../utils/emailTemplates.js';
 
 /**
  * Register a new user based on their specific role.
@@ -61,6 +63,13 @@ export const registerUser = async (userData) => {
   };
 
   const user = new User(userPayload);
+
+  // Generate registration OTP
+  const otp = Math.floor(1000 + Math.random() * 9000).toString();
+  user.otp = otp;
+  user.otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+  user.isEmailVerified = false;
+
   await user.save();
 
   // Create profile documents for roles
@@ -91,31 +100,30 @@ export const registerUser = async (userData) => {
     });
   }
 
-  const populatedUser = await User.findById(user._id).populate([
-    { path: 'studentProfile' },
-    { path: 'collegeProfile' },
-    { path: 'recruiterProfile' },
-    {
-      path: 'selectedCareer',
-      populate: {
-        path: 'careerId',
-        model: 'CareerPath',
-      },
-    },
-  ]);
-  return populatedUser;
+  // Send registration verification email
+  await sendMail({
+    to: user.email,
+    subject: 'Welcome to InternX AI - Verify your email',
+    text: `Your email verification OTP is: ${otp}. This code is valid for 10 minutes.`,
+    html: getOtpTemplate(otp)
+  });
+
+  return user;
 };
 
 /**
  * Authenticate credentials and update last login timestamp.
  */
 export const loginUser = async (email, password) => {
+  console.log(`[LOGIN SERVICE] Searching for email: "${email}"`);
   const user = await User.findOne({ email }).select('+password');
   if (!user) {
+    console.log(`[LOGIN SERVICE] User not found for email: "${email}"`);
     const error = new Error('Invalid credentials');
     error.statusCode = 401;
     throw error;
   }
+  console.log(`[LOGIN SERVICE] User found. Hash in DB: "${user.password}"`);
 
   if (!user.isActive) {
     const error = new Error('Your account is deactivated. Please contact support.');
@@ -124,9 +132,30 @@ export const loginUser = async (email, password) => {
   }
 
   const isMatch = await user.comparePassword(password);
+  console.log(`[LOGIN SERVICE] Password comparison result for "${email}": ${isMatch}`);
   if (!isMatch) {
     const error = new Error('Invalid credentials');
     error.statusCode = 401;
+    throw error;
+  }
+
+  // Block login if email is not verified, and send a new OTP
+  if (!user.isEmailVerified) {
+    const otp = Math.floor(1000 + Math.random() * 9000).toString();
+    user.otp = otp;
+    user.otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    await user.save({ validateBeforeSave: false });
+
+    await sendMail({
+      to: user.email,
+      subject: 'Verify your email address - InternX AI',
+      text: `Your email verification OTP is: ${otp}. This code is valid for 10 minutes.`,
+      html: getOtpTemplate(otp)
+    });
+
+    const error = new Error('Your email address is not verified. A new OTP has been sent to your email.');
+    error.statusCode = 401;
+    error.code = 'EMAIL_NOT_VERIFIED'; // Client checks this code
     throw error;
   }
 
@@ -150,19 +179,7 @@ export const loginUser = async (email, password) => {
   user.lastLogin = new Date();
   await user.save({ validateBeforeSave: false });
 
-  const populatedUser = await User.findById(user._id).populate([
-    { path: 'studentProfile' },
-    { path: 'collegeProfile' },
-    { path: 'recruiterProfile' },
-    {
-      path: 'selectedCareer',
-      populate: {
-        path: 'careerId',
-        model: 'CareerPath',
-      },
-    },
-  ]);
-  return populatedUser;
+  return user;
 };
 
 /**
@@ -185,20 +202,7 @@ export const refreshAccessToken = async (token) => {
 
   try {
     const decoded = jwt.verify(token, jwtConfig.refreshSecret);
-    const user = await User.findById(decoded.id)
-      .select('+refreshToken')
-      .populate([
-        { path: 'studentProfile' },
-        { path: 'collegeProfile' },
-        { path: 'recruiterProfile' },
-        {
-          path: 'selectedCareer',
-          populate: {
-            path: 'careerId',
-            model: 'CareerPath',
-          },
-        },
-      ]);
+    const user = await User.findById(decoded.id).select('+refreshToken');
 
     if (!user || user.refreshToken !== token) {
       const error = new Error('Invalid or expired refresh token');
@@ -283,3 +287,33 @@ export const resetUserPassword = async (resetToken, newPassword) => {
 
   await user.save();
 };
+
+/**
+ * Resend OTP code to unverified user.
+ */
+export const resendUserOtp = async (email) => {
+  const user = await User.findOne({ email });
+  if (!user) {
+    const error = new Error('No user found with this email address');
+    error.statusCode = 404;
+    throw error;
+  }
+  if (user.isEmailVerified) {
+    const error = new Error('Email is already verified');
+    error.statusCode = 400;
+    throw error;
+  }
+  const otp = Math.floor(1000 + Math.random() * 9000).toString();
+  user.otp = otp;
+  user.otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+  await user.save({ validateBeforeSave: false });
+
+  await sendMail({
+    to: user.email,
+    subject: 'Verify your email address - InternX AI',
+    text: `Your email verification OTP is: ${otp}. This code is valid for 10 minutes.`,
+    html: getOtpTemplate(otp)
+  });
+  return user;
+};
+

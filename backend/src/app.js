@@ -6,6 +6,8 @@ import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import careerRoutes from './routes/career.routes.js';
+import internshipRoutes from './routes/internship.routes.js';
+import taskRoutes from './routes/task.routes.js';
 import { setupSwagger } from './config/swagger.js';
 import { errorHandler } from './middlewares/error.middleware.js';
 
@@ -23,10 +25,10 @@ const corsOptions = {
 };
 app.use(cors(corsOptions));
 
-// Implement Rate Limiting (100 requests per 15 minutes)
+// Implement Rate Limiting (100 requests per 15 minutes, relaxed to 10000 in development)
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  max: process.env.NODE_ENV === 'development' ? 10000 : 100, // Limit each IP to 100 requests per windowMs
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again after 15 minutes',
@@ -50,6 +52,8 @@ setupSwagger(app);
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/careers', careerRoutes);
+app.use('/api/internships', internshipRoutes);
+app.use('/api/tasks', taskRoutes);
 
 // Base application health check
 app.get('/health', (req, res) => {

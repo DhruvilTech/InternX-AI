@@ -146,3 +146,11 @@ export const resetPasswordValidationRules = [
   body('newPassword')
     .isLength({ min: 8 }).withMessage('New password must be at least 8 characters long'),
 ];
+
+export const verifyEmailValidationRules = [
+  body('email')
+    .isEmail().withMessage('Please enter a valid email address')
+    .normalizeEmail(),
+  body('otp')
+    .isLength({ min: 4, max: 6 }).withMessage('OTP code must be 4 to 6 characters'),
+];

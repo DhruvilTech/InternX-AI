@@ -8,6 +8,14 @@ export default function ScoreRing({ score, size = 120, strokeWidth = 6, label })
   const offset = circumference - (score / 100) * circumference
   const trackStroke = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(15,23,42,0.1)'
 
+  // Dynamic color based on score value
+  let strokeColor = '#818cf8'; // Indigo default
+  if (score >= 90) strokeColor = '#10b981'; // Emerald/Green for high scores
+  else if (score >= 70) strokeColor = '#22d3ee'; // Cyan/Blue for medium-high
+  else if (score >= 40) strokeColor = '#f59e0b'; // Amber for medium
+  else if (score > 0) strokeColor = '#ef4444'; // Red for low
+  else strokeColor = 'rgba(255,255,255,0.15)'; // Dim for 0
+
   return (
     <div className="relative inline-flex flex-col items-center">
       <svg width={size} height={size} className="-rotate-90">
@@ -24,7 +32,7 @@ export default function ScoreRing({ score, size = 120, strokeWidth = 6, label })
           cy={size / 2}
           r={radius}
           fill="none"
-          stroke="url(#scoreGradient)"
+          stroke={strokeColor}
           strokeWidth={strokeWidth}
           strokeLinecap="round"
           strokeDasharray={circumference}
@@ -33,12 +41,6 @@ export default function ScoreRing({ score, size = 120, strokeWidth = 6, label })
           viewport={{ once: true }}
           transition={{ duration: 1.5, ease: [0.22, 1, 0.36, 1] }}
         />
-        <defs>
-          <linearGradient id="scoreGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-            <stop offset="0%" stopColor="#818cf8" />
-            <stop offset="100%" stopColor="#22d3ee" />
-          </linearGradient>
-        </defs>
       </svg>
       <div
         className="absolute inset-0 flex flex-col items-center justify-center"

@@ -14,13 +14,33 @@ import {
 import { useNavigation } from '../context/NavigationContext.jsx';
 import { getMyCareer } from '../api/careerService.js';
 import ScoreRing from '../components/ui/ScoreRing.jsx';
+import axiosInstance from '../api/axios.js';
+import useAuth from '../hooks/useAuth.js';
 
 export default function MyCareerPage() {
   const navigate = useNavigate();
   const { addToast } = useNavigation();
+  const { updateProfile } = useAuth();
 
   const [careerData, setCareerData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [checkingInternship, setCheckingInternship] = useState(false);
+
+  const handleEnterWorkspace = async () => {
+    setCheckingInternship(true);
+    try {
+      const response = await axiosInstance.get('/api/internships/my-internship');
+      if (response.data?.success && response.data?.data?.internship) {
+        navigate('/student/dashboard');
+      } else {
+        navigate('/generator');
+      }
+    } catch (error) {
+      navigate('/generator');
+    } finally {
+      setCheckingInternship(false);
+    }
+  };
 
   useEffect(() => {
     const fetchMyCareer = async () => {
@@ -31,6 +51,7 @@ export default function MyCareerPage() {
         }
       } catch (err) {
         console.error(err);
+        updateProfile({ selectedCareer: null });
         addToast('No active selected career path found. Redirecting...', 'info');
         navigate('/careers');
       } finally {
@@ -134,10 +155,11 @@ export default function MyCareerPage() {
             </div>
             
             <button
-              onClick={() => navigate('/student/dashboard')}
-              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-accent to-violet text-white text-xs font-bold uppercase tracking-wider hover:shadow-lg hover:shadow-accent/20 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer flex items-center justify-center gap-1.5"
+              onClick={handleEnterWorkspace}
+              disabled={checkingInternship}
+              className="w-full py-2.5 rounded-xl bg-gradient-to-r from-accent to-violet text-white text-xs font-bold uppercase tracking-wider hover:shadow-lg hover:shadow-accent/20 hover:scale-[1.01] active:scale-[0.99] transition-all cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-50"
             >
-              <span>Enter Workspace</span>
+              <span>{checkingInternship ? 'Checking Workspace...' : 'Enter Workspace'}</span>
               <ChevronRight size={13} />
             </button>
           </div>

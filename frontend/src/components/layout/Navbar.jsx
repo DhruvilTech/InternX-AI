@@ -17,6 +17,16 @@ export default function Navbar() {
 
   const { role, user, logout } = useAuth()
 
+  const isPendingApproval = user && user.role !== 'admin' && (
+    (user.role === 'student' && !user.isVerified) ||
+    (user.role === 'college' && !user.isCollegeVerified) ||
+    (user.role === 'recruiter' && !user.isRecruiterVerified)
+  )
+
+  const isEmailPending = user && !user.isEmailVerified
+
+  const isLocked = isPendingApproval || isEmailPending
+
   const handleLogout = async () => {
     await logout()
     navigate('login')
@@ -42,6 +52,9 @@ export default function Navbar() {
 
   // Determine navigation links based on user status
   const getNavLinks = () => {
+    if (isLocked) {
+      return []
+    }
     if (role === 'student') {
       return [
         { label: 'Dashboard', id: 'student/dashboard' },
@@ -143,13 +156,15 @@ export default function Navbar() {
             <ThemeToggle />
 
             {/* Search command shortcut trigger button */}
-            <button
-              onClick={() => setCommandPaletteOpen(true)}
-              className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface-muted/50 text-muted hover:text-text hover:border-border-strong transition-colors"
-              title="Search dashboard Ctrl+K"
-            >
-              <Search size={15} />
-            </button>
+            {!isLocked && (
+              <button
+                onClick={() => setCommandPaletteOpen(true)}
+                className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface-muted/50 text-muted hover:text-text hover:border-border-strong transition-colors"
+                title="Search dashboard Ctrl+K"
+              >
+                <Search size={15} />
+              </button>
+            )}
 
             {role === 'guest' ? (
               <>
@@ -169,13 +184,15 @@ export default function Navbar() {
             ) : (
               <div className="flex items-center gap-3">
                 {/* Notification bell */}
-                <button
-                  onClick={() => setNotificationsOpen(true)}
-                  className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface-muted/50 text-muted hover:text-text hover:border-border-strong transition-colors"
-                >
-                  <Bell size={15} />
-                  <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 bg-accent rounded-full animate-pulse" />
-                </button>
+                {!isLocked && (
+                  <button
+                    onClick={() => setNotificationsOpen(true)}
+                    className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface-muted/50 text-muted hover:text-text hover:border-border-strong transition-colors"
+                  >
+                    <Bell size={15} />
+                    <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 bg-accent rounded-full animate-pulse" />
+                  </button>
+                )}
 
                 {/* Avatar menu */}
                 <div className="relative">

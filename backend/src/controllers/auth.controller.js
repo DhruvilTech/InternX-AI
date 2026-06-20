@@ -1,6 +1,9 @@
 import * as authService from '../services/auth.service.js';
 import { sendTokenResponse } from '../utils/generateToken.js';
 import { sendResponse } from '../utils/sendResponse.js';
+import { sendMail } from '../utils/mailer.js';
+import { getResetTemplate } from '../utils/emailTemplates.js';
+import User from '../models/User.js';
 
 /**
  * Register a new user and return JWT tokens.
@@ -8,7 +11,41 @@ import { sendResponse } from '../utils/sendResponse.js';
 export const register = async (req, res, next) => {
   try {
     const user = await authService.registerUser(req.body);
-    return await sendTokenResponse(user, 201, 'Registration successful', res);
+    return sendResponse(res, 201, true, 'Registration successful. Verification OTP sent to your email.', {
+      email: user.email,
+      role: user.role
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Verify email address using the received OTP.
+ */
+export const verifyEmail = async (req, res, next) => {
+  try {
+    const { email, otp } = req.body;
+    
+    const user = await User.findOne({ email }).select('+otp +otpExpires');
+    if (!user) {
+      return sendResponse(res, 404, false, 'User not found');
+    }
+
+    if (user.isEmailVerified) {
+      return sendResponse(res, 400, false, 'Email is already verified');
+    }
+
+    if (!user.otp || user.otp !== otp || new Date() > user.otpExpires) {
+      return sendResponse(res, 400, false, 'Invalid or expired OTP verification code');
+    }
+
+    user.isEmailVerified = true;
+    user.otp = null;
+    user.otpExpires = null;
+    await user.save({ validateBeforeSave: false });
+
+    return await sendTokenResponse(user, 200, 'Email verified and logged in successfully', res);
   } catch (error) {
     next(error);
   }
@@ -99,16 +136,22 @@ export const changePassword = async (req, res, next) => {
   }
 };
 
-/**
- * Generate password reset token.
- */
 export const forgotPassword = async (req, res, next) => {
   try {
     const { email } = req.body;
     const resetToken = await authService.forgotUserPassword(email);
     
-    // In production, an email would be sent. Returning token for development/testing convenience.
-    return sendResponse(res, 200, true, 'Password reset token generated successfully', { resetToken });
+    const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    const resetUrl = `${clientUrl}/#/reset-password?token=${resetToken}`;
+    
+    await sendMail({
+      to: email,
+      subject: 'Reset Password Request - InternX AI',
+      text: `You requested a password reset. Please click on the link to reset your password: ${resetUrl}. This link is valid for 1 hour.`,
+      html: getResetTemplate(resetUrl)
+    });
+
+    return sendResponse(res, 200, true, 'Password reset email sent successfully', { resetToken });
   } catch (error) {
     next(error);
   }
@@ -126,3 +169,17 @@ export const resetPassword = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * Resend email verification OTP.
+ */
+export const resendOtp = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+    await authService.resendUserOtp(email);
+    return sendResponse(res, 200, true, 'Verification OTP sent to your email.');
+  } catch (error) {
+    next(error);
+  }
+};
+

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, Terminal, Building2, User, Users, FolderKanban, ShieldCheck, ArrowRight } from 'lucide-react'
 import { useNavigation } from '../context/NavigationContext'
+import axiosInstance from '../api/axios.js'
 
 const logs = [
   'Establishing secure connection to InternX AI models...',
@@ -15,10 +16,38 @@ const logs = [
 ]
 
 export default function InternshipGeneratorPage() {
-  const { navigate, internship, addToast } = useNavigation()
+  const { navigate, internship, setInternship, setTasks, addToast } = useNavigation()
   const [logIndex, setLogIndex] = useState(0)
   const [progress, setProgress] = useState(0)
   const [complete, setComplete] = useState(false)
+  const [apiFinished, setApiFinished] = useState(false)
+
+  useEffect(() => {
+    const generateWorkspace = async () => {
+      try {
+        const response = await axiosInstance.post('/api/internships/generate')
+        if (response.data?.success && response.data?.data) {
+          const { internship: generatedInternship, tasks: generatedTasks } = response.data.data
+          setInternship(generatedInternship)
+          setTasks(generatedTasks)
+          setApiFinished(true)
+        } else {
+          throw new Error('Failed to generate')
+        }
+      } catch (err) {
+        console.error(err)
+        addToast(err.response?.data?.message || 'Failed to generate internship workspace.', 'error')
+        navigate('my-career')
+      }
+    }
+    generateWorkspace()
+  }, [])
+
+  useEffect(() => {
+    if (progress >= 100 && apiFinished) {
+      setComplete(true)
+    }
+  }, [progress, apiFinished])
 
   useEffect(() => {
     // Increment logs
@@ -32,9 +61,11 @@ export default function InternshipGeneratorPage() {
     // Increment progress
     const progressInterval = setInterval(() => {
       setProgress((prev) => {
+        if (prev >= 99 && !apiFinished) {
+          return 99
+        }
         if (prev >= 100) {
           clearInterval(progressInterval)
-          setComplete(true)
           return 100
         }
         const step = Math.random() * 8 + 4
@@ -46,7 +77,7 @@ export default function InternshipGeneratorPage() {
       clearInterval(logInterval)
       clearInterval(progressInterval)
     }
-  }, [])
+  }, [apiFinished])
 
   const handleEnterWorkspace = () => {
     addToast('Entering student workspace...', 'success')
