@@ -4,7 +4,7 @@ import bcrypt from 'bcryptjs';
 const userSchema = new mongoose.Schema(
   {
     fullName: {
-      type: String,
+      type: String, // Keeping directly on User for admin/convenience
       trim: true,
     },
     email: {
@@ -49,50 +49,17 @@ const userSchema = new mongoose.Schema(
       type: Date,
       default: null,
     },
-
-    // Student specific fields
-    collegeName: {
+    verificationDocName: {
       type: String,
-      trim: true,
+      default: '',
     },
-    course: {
+    verificationDocFile: {
       type: String,
-      trim: true,
+      default: '',
     },
-    year: {
-      type: Number,
-    },
-    skills: {
-      type: [String],
-      default: [],
-    },
-
-    // College specific fields
-    collegeCode: {
+    cloudinaryUrl: {
       type: String,
-      trim: true,
-    },
-    website: {
-      type: String,
-      trim: true,
-    },
-    contactPerson: {
-      type: String,
-      trim: true,
-    },
-
-    // Recruiter specific fields
-    companyName: {
-      type: String,
-      trim: true,
-    },
-    industry: {
-      type: String,
-      trim: true,
-    },
-    companySize: {
-      type: String,
-      trim: true,
+      default: '',
     },
 
     // Future Ready Fields
@@ -159,23 +126,35 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    verificationDocName: {
-      type: String,
-      default: '',
-    },
-    verificationDocFile: {
-      type: String,
-      default: '',
-    },
-    cloudinaryUrl: {
-      type: String,
-      default: '',
-    },
   },
   {
     timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
+
+// Virtual populates linking to role specific collections
+userSchema.virtual('studentProfile', {
+  ref: 'Student',
+  localField: '_id',
+  foreignField: 'userId',
+  justOne: true,
+});
+
+userSchema.virtual('collegeProfile', {
+  ref: 'College',
+  localField: '_id',
+  foreignField: 'userId',
+  justOne: true,
+});
+
+userSchema.virtual('recruiterProfile', {
+  ref: 'Recruiter',
+  localField: '_id',
+  foreignField: 'userId',
+  justOne: true,
+});
 
 // Encrypt password before saving
 userSchema.pre('save', async function () {

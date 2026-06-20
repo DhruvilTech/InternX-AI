@@ -1,6 +1,9 @@
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
+import Student from '../models/Student.js';
+import College from '../models/College.js';
+import Recruiter from '../models/Recruiter.js';
 import { jwtConfig } from '../config/jwt.js';
 import { generateAccessToken } from '../utils/generateToken.js';
 import { cloudinary } from '../config/cloudinary.js';
@@ -51,35 +54,45 @@ export const registerUser = async (userData) => {
     email,
     password,
     role,
+    fullName: userData.fullName || userData.collegeName || userData.companyName || '',
     verificationDocName: userData.verificationDocName || '',
     verificationDocFile: userData.verificationDocFile || '',
     cloudinaryUrl,
   };
 
-  // Map role-specific parameters
-  if (role === 'student') {
-    userPayload.fullName = userData.fullName;
-    userPayload.collegeName = userData.collegeName;
-    userPayload.course = userData.course;
-    userPayload.year = userData.year;
-    userPayload.skills = userData.skills || [];
-  } else if (role === 'college') {
-    userPayload.collegeName = userData.collegeName;
-    userPayload.collegeCode = userData.collegeCode;
-    userPayload.website = userData.website;
-    userPayload.contactPerson = userData.contactPerson;
-  } else if (role === 'recruiter') {
-    userPayload.companyName = userData.companyName;
-    userPayload.industry = userData.industry;
-    userPayload.website = userData.website;
-    userPayload.companySize = userData.companySize;
-  } else if (role === 'admin') {
-    userPayload.fullName = userData.fullName;
-  }
-
   const user = new User(userPayload);
   await user.save();
-  return user;
+
+  // Create profile documents for roles
+  if (role === 'student') {
+    await Student.create({
+      userId: user._id,
+      fullName: userData.fullName,
+      collegeName: userData.collegeName,
+      course: userData.course,
+      year: userData.year,
+      skills: userData.skills || [],
+    });
+  } else if (role === 'college') {
+    await College.create({
+      userId: user._id,
+      collegeName: userData.collegeName,
+      collegeCode: userData.collegeCode,
+      website: userData.website || '',
+      contactPerson: userData.contactPerson,
+    });
+  } else if (role === 'recruiter') {
+    await Recruiter.create({
+      userId: user._id,
+      companyName: userData.companyName,
+      industry: userData.industry,
+      companySize: userData.companySize,
+      website: userData.website || '',
+    });
+  }
+
+  const populatedUser = await User.findById(user._id).populate('studentProfile collegeProfile recruiterProfile');
+  return populatedUser;
 };
 
 /**
@@ -126,7 +139,8 @@ export const loginUser = async (email, password) => {
   user.lastLogin = new Date();
   await user.save({ validateBeforeSave: false });
 
-  return user;
+  const populatedUser = await User.findById(user._id).populate('studentProfile collegeProfile recruiterProfile');
+  return populatedUser;
 };
 
 /**
@@ -149,7 +163,7 @@ export const refreshAccessToken = async (token) => {
 
   try {
     const decoded = jwt.verify(token, jwtConfig.refreshSecret);
-    const user = await User.findById(decoded.id).select('+refreshToken');
+    const user = await User.findById(decoded.id).select('+refreshToken').populate('studentProfile collegeProfile recruiterProfile');
 
     if (!user || user.refreshToken !== token) {
       const error = new Error('Invalid or expired refresh token');

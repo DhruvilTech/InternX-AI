@@ -24,7 +24,7 @@ export const protect = async (req, res, next) => {
   try {
     const decoded = jwt.verify(token, jwtConfig.accessSecret);
 
-    const user = await User.findById(decoded.id);
+    const user = await User.findById(decoded.id).populate('studentProfile collegeProfile recruiterProfile');
 
     if (!user) {
       return res.status(401).json({

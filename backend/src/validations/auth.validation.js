@@ -34,8 +34,8 @@ export const registerValidationRules = [
   }),
 
   body('collegeName').custom((value, { req }) => {
-    if (req.body.role === 'student' && (!value || !value.trim())) {
-      throw new Error('College name is required for students');
+    if (['student', 'college'].includes(req.body.role) && (!value || !value.trim())) {
+      throw new Error('College name is required');
     }
     return true;
   }),
