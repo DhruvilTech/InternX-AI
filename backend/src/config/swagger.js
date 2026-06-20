@@ -465,6 +465,232 @@ const openApiSpec = {
         },
       },
     },
+    '/api/github/connect': {
+      get: {
+        summary: 'Initiate GitHub connection',
+        description: 'Initiates GitHub OAuth flow. User access token must be passed as a query parameter.',
+        parameters: [
+          { name: 'token', in: 'query', required: true, schema: { type: 'string' }, description: 'User JWT Access Token' },
+        ],
+        responses: {
+          302: { description: 'Redirect to GitHub authorize page' },
+          401: { description: 'Missing or invalid token' },
+        },
+      },
+    },
+    '/api/github/disconnect': {
+      delete: {
+        summary: 'Disconnect GitHub connection',
+        description: 'Removes cached profile, repositories, contributions, and unlinks User account.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'GitHub connection disconnected successfully',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/SuccessResponse' } } },
+          },
+        },
+      },
+    },
+    '/api/github/profile': {
+      get: {
+        summary: 'Get connected GitHub profile',
+        description: 'Returns connected GitHub profile metadata for the authenticated student.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'Profile details',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/SuccessResponse' } } },
+          },
+          400: { description: 'GitHub account not connected' },
+        },
+      },
+    },
+    '/api/github/repos': {
+      get: {
+        summary: 'Sync and list GitHub repositories',
+        description: 'Fetches repositories from GitHub, updates local MongoDB cache, and returns them.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: {
+            description: 'List of synchronized repositories',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/SuccessResponse' } } },
+          },
+        },
+      },
+    },
+    '/api/github/repos/{repoId}': {
+      get: {
+        summary: 'Get repo details',
+        description: 'Returns cached repository details.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'repoId', in: 'path', required: true, schema: { type: 'string' }, description: 'GitHub Repo ID' },
+        ],
+        responses: {
+          200: { description: 'Repository metadata' },
+          404: { description: 'Repository not cached' },
+        },
+      },
+    },
+    '/api/github/repos/{repoId}/languages': {
+      get: {
+        summary: 'Get repo language breakdown',
+        description: 'Fetches language usage details from GitHub and returns percentage distributions.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'repoId', in: 'path', required: true, schema: { type: 'string' }, description: 'GitHub Repo ID' },
+        ],
+        responses: {
+          200: { description: 'Language distribution' },
+        },
+      },
+    },
+    '/api/github/repos/{repoId}/commits': {
+      get: {
+        summary: 'Get repo commit analytics',
+        description: 'Fetches commit history statistics and constructs a timeline chart data.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'repoId', in: 'path', required: true, schema: { type: 'string' }, description: 'GitHub Repo ID' },
+        ],
+        responses: {
+          200: { description: 'Commit analytics details' },
+        },
+      },
+    },
+    '/api/github/repos/{repoId}/pulls': {
+      get: {
+        summary: 'Get repo pull request analytics',
+        description: 'Calculates open/closed/merged PR counts and user contribution metrics.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'repoId', in: 'path', required: true, schema: { type: 'string' }, description: 'GitHub Repo ID' },
+        ],
+        responses: {
+          200: { description: 'PR analytics data' },
+        },
+      },
+    },
+    '/api/github/select-repository': {
+      post: {
+        summary: 'Select active internship repository',
+        description: 'Sets the student\'s active repository for task submissions.',
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['repoId', 'repositoryName', 'branch'],
+                properties: {
+                  repoId: { type: 'string', example: '12345678' },
+                  repositoryName: { type: 'string', example: 'internship-task-tracker' },
+                  branch: { type: 'string', example: 'main' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          200: { description: 'Selected repository registered' },
+        },
+      },
+    },
+    '/api/github/selected-repository': {
+      get: {
+        summary: 'Get active selected repository',
+        description: 'Returns the student\'s currently active selected repository.',
+        security: [{ bearerAuth: [] }],
+        responses: {
+          200: { description: 'Selected repository data' },
+        },
+      },
+    },
+    '/api/github/repos/{repoId}/files': {
+      get: {
+        summary: 'Explore repository directory tree',
+        description: 'Lists folder and files under path query. Used for repository file explorer.',
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: 'repoId', in: 'path', required: true, schema: { type: 'string' }, description: 'GitHub Repo ID' },
+          { name: 'path', in: 'query', required: false, schema: { type: 'string' }, description: 'Directory sub-path' },
+        ],
+        responses: {
+          200: { description: 'Folder directory structure' },
+        },
+      },
+    },
+    '/api/college/profile': {
+      get: {
+        summary: 'Get College profile details',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Profile details' } }
+      },
+      patch: {
+        summary: 'Update College profile details',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Profile updated' } }
+      }
+    },
+    '/api/college/dashboard': {
+      get: {
+        summary: 'Get College Portal dashboard metrics',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Dashboard stats' } }
+      }
+    },
+    '/api/college/students': {
+      get: {
+        summary: 'List and search college students',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'List of students' } }
+      }
+    },
+    '/api/college/students/{id}': {
+      get: {
+        summary: 'Get student details with GitHub & certificates',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Detailed student analytics' } }
+      }
+    },
+    '/api/college/internships': {
+      get: {
+        summary: 'Get college internship completion metrics',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Internship stats' } }
+      }
+    },
+    '/api/college/skills': {
+      get: {
+        summary: 'Get college student skills growth and gaps',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Skills stats' } }
+      }
+    },
+    '/api/college/placement-readiness': {
+      get: {
+        summary: 'Get college student placement readiness indexes',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Readiness stats' } }
+      }
+    },
+    '/api/college/certificates': {
+      get: {
+        summary: 'Get certificates issued list',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Certificates stats' } }
+      }
+    },
+    '/api/college/reports': {
+      get: {
+        summary: 'Compile institutional reports data',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'type', in: 'query', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Report data' } }
+      }
+    }
   },
 };
 

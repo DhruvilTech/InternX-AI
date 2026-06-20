@@ -558,6 +558,351 @@
           "response": []
         }
       ]
+    },
+    {
+      "name": "GitHub",
+      "item": [
+        {
+          "name": "Connect GitHub (Initiate OAuth)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/github/connect?token={{accessToken}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "github",
+                "connect"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/github/profile",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "github",
+                "profile"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Sync & List Repositories",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/github/repos",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "github",
+                "repos"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Repository Details",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/github/repos/:repoId",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "github",
+                "repos",
+                ":repoId"
+              ],
+              "variable": [
+                {
+                  "key": "repoId",
+                  "value": "<github_repo_id_here>"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Repository Languages",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/github/repos/:repoId/languages",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "github",
+                "repos",
+                ":repoId",
+                "languages"
+              ],
+              "variable": [
+                {
+                  "key": "repoId",
+                  "value": "<github_repo_id_here>"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Repository Commits",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/github/repos/:repoId/commits",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "github",
+                "repos",
+                ":repoId",
+                "commits"
+              ],
+              "variable": [
+                {
+                  "key": "repoId",
+                  "value": "<github_repo_id_here>"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Repository PRs",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/github/repos/:repoId/pulls",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "github",
+                "repos",
+                ":repoId",
+                "pulls"
+              ],
+              "variable": [
+                {
+                  "key": "repoId",
+                  "value": "<github_repo_id_here>"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Select Submission Repository",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"repoId\": \"12345678\",\n  \"repositoryName\": \"internship-task-tracker\",\n  \"branch\": \"main\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/github/select-repository",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "github",
+                "select-repository"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Selected Repository",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/github/selected-repository",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "github",
+                "selected-repository"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Explore Directory Files",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{accessToken}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/github/repos/:repoId/files?path=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "github",
+                "repos",
+                ":repoId",
+                "files"
+              ],
+              "query": [
+                {
+                  "key": "path",
+                  "value": ""
+                }
+              ],
+              "variable": [
+                {
+                  "key": "repoId",
+                  "value": "<github_repo_id_here>"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
     }
   ],
   "event": [],
