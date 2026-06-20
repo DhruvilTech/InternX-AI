@@ -33,18 +33,22 @@ export default function AdminInspectUserPage() {
 
   const handleStatusChange = async (status) => {
     setUpdating(true);
-    let updateField = {};
-    if (targetUser.role === 'student') {
-      updateField = { isVerified: status === 'approved' };
-    } else if (targetUser.role === 'college') {
-      updateField = { isCollegeVerified: status === 'approved' };
-    } else if (targetUser.role === 'recruiter') {
-      updateField = { isRecruiterVerified: status === 'approved' };
-    }
-
     try {
-      await axiosInstance.put(`/api/admin/user/${id}`, updateField);
-      addToast(`Account request ${status.toUpperCase()} successfully.`, status === 'approved' ? 'success' : 'error');
+      if (status === 'rejected') {
+        await axiosInstance.delete(`/api/admin/user/${id}`);
+        addToast('Account request rejected and permanently deleted.', 'error');
+      } else {
+        let updateField = {};
+        if (targetUser.role === 'student') {
+          updateField = { isVerified: true };
+        } else if (targetUser.role === 'college') {
+          updateField = { isCollegeVerified: true };
+        } else if (targetUser.role === 'recruiter') {
+          updateField = { isRecruiterVerified: true };
+        }
+        await axiosInstance.put(`/api/admin/user/${id}`, updateField);
+        addToast(`Account request approved successfully.`, 'success');
+      }
       navigate('/admin/dashboard');
     } catch (err) {
       console.error(err);
@@ -96,7 +100,7 @@ export default function AdminInspectUserPage() {
     );
   }
 
-  const fileUrl = targetUser.cloudinaryUrl || targetUser.verificationDocFile;
+  const fileUrl = targetUser.verificationDocFile || targetUser.cloudinaryUrl;
 
   return (
     <div className="min-h-screen pt-24 pb-16 bg-void relative overflow-hidden text-text">
@@ -208,15 +212,26 @@ export default function AdminInspectUserPage() {
               <div className="flex justify-between items-center text-xs text-muted border-b border-border/40 pb-3">
                 <span className="font-bold">Accreditation Document Preview</span>
                 {fileUrl && (
-                  <a
-                    href={fileUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-accent hover:underline inline-flex items-center gap-1 font-semibold"
-                  >
-                    <span>Open External View</span>
-                    <ArrowUpRight size={12} />
-                  </a>
+                  fileUrl.startsWith('data:') ? (
+                    <a
+                      href={fileUrl}
+                      download={targetUser.verificationDocName || 'verification-document'}
+                      className="text-accent hover:underline inline-flex items-center gap-1 font-semibold cursor-pointer"
+                    >
+                      <span>Download Document</span>
+                      <ArrowUpRight size={12} />
+                    </a>
+                  ) : (
+                    <a
+                      href={fileUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-accent hover:underline inline-flex items-center gap-1 font-semibold cursor-pointer"
+                    >
+                      <span>Open External View</span>
+                      <ArrowUpRight size={12} />
+                    </a>
+                  )
                 )}
               </div>
 

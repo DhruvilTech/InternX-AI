@@ -58,7 +58,7 @@ export const updateUser = async (req, res, next) => {
         user[field] = req.body[field];
       }
     });
-    await user.save();
+    await user.save({ validateBeforeSave: false });
 
     // Update role specific profiles
     if (user.role === 'student') {

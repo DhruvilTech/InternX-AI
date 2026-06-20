@@ -91,7 +91,18 @@ export const registerUser = async (userData) => {
     });
   }
 
-  const populatedUser = await User.findById(user._id).populate('studentProfile collegeProfile recruiterProfile');
+  const populatedUser = await User.findById(user._id).populate([
+    { path: 'studentProfile' },
+    { path: 'collegeProfile' },
+    { path: 'recruiterProfile' },
+    {
+      path: 'selectedCareer',
+      populate: {
+        path: 'careerId',
+        model: 'CareerPath',
+      },
+    },
+  ]);
   return populatedUser;
 };
 
@@ -139,7 +150,18 @@ export const loginUser = async (email, password) => {
   user.lastLogin = new Date();
   await user.save({ validateBeforeSave: false });
 
-  const populatedUser = await User.findById(user._id).populate('studentProfile collegeProfile recruiterProfile');
+  const populatedUser = await User.findById(user._id).populate([
+    { path: 'studentProfile' },
+    { path: 'collegeProfile' },
+    { path: 'recruiterProfile' },
+    {
+      path: 'selectedCareer',
+      populate: {
+        path: 'careerId',
+        model: 'CareerPath',
+      },
+    },
+  ]);
   return populatedUser;
 };
 
@@ -163,7 +185,20 @@ export const refreshAccessToken = async (token) => {
 
   try {
     const decoded = jwt.verify(token, jwtConfig.refreshSecret);
-    const user = await User.findById(decoded.id).select('+refreshToken').populate('studentProfile collegeProfile recruiterProfile');
+    const user = await User.findById(decoded.id)
+      .select('+refreshToken')
+      .populate([
+        { path: 'studentProfile' },
+        { path: 'collegeProfile' },
+        { path: 'recruiterProfile' },
+        {
+          path: 'selectedCareer',
+          populate: {
+            path: 'careerId',
+            model: 'CareerPath',
+          },
+        },
+      ]);
 
     if (!user || user.refreshToken !== token) {
       const error = new Error('Invalid or expired refresh token');

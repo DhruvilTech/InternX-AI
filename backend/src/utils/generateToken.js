@@ -26,7 +26,18 @@ export const sendTokenResponse = async (user, statusCode, message, res) => {
   await user.save({ validateBeforeSave: false });
 
   // Ensure role profiles are populated
-  await user.populate('studentProfile collegeProfile recruiterProfile');
+  await user.populate([
+    { path: 'studentProfile' },
+    { path: 'collegeProfile' },
+    { path: 'recruiterProfile' },
+    {
+      path: 'selectedCareer',
+      populate: {
+        path: 'careerId',
+        model: 'CareerPath',
+      },
+    },
+  ]);
 
   // Cookie configuration
   const cookieOptions = {

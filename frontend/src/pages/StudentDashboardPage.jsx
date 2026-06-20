@@ -28,6 +28,7 @@ import { useNavigation } from '../context/NavigationContext'
 import { useTheme } from '../context/ThemeContext'
 import ScoreRing from '../components/ui/ScoreRing'
 import PulseDot from '../components/ui/PulseDot'
+import { getMyCareer } from '../api/careerService.js'
 
 const chartData = [
   { day: 'Mon', views: 4 },
@@ -44,6 +45,22 @@ export default function StudentDashboardPage() {
   const { isDark } = useTheme()
   const [score, setScore] = useState(89)
   const [progress, setProgress] = useState(67)
+  const [careerData, setCareerData] = useState(null)
+
+  useEffect(() => {
+    const fetchMyCareer = async () => {
+      try {
+        const res = await getMyCareer();
+        if (res.success && res.data) {
+          setCareerData(res.data.career);
+          setProgress(res.data.progress);
+        }
+      } catch (err) {
+        console.error('Failed to load career path metadata for dashboard:', err);
+      }
+    };
+    fetchMyCareer();
+  }, []);
 
   // Demo fallback
   const companyInfo = internship || {
@@ -80,7 +97,7 @@ export default function StudentDashboardPage() {
                 </span>
               </div>
               <p className="text-xs text-muted mt-0.5">
-                {companyInfo.roleTitle} · {companyInfo.department}
+                {careerData ? careerData.title : companyInfo.roleTitle} · {careerData ? careerData.category : companyInfo.department}
               </p>
             </div>
           </div>

@@ -268,25 +268,34 @@ export function NavigationProvider({ children }) {
 
   // Approval handlers
   const setApprovalStatus = async (category, id, status) => {
-    let updateField = {}
-    if (category === 'students') {
-      updateField = { isVerified: status === 'approved' }
-    } else if (category === 'colleges') {
-      updateField = { isCollegeVerified: status === 'approved' }
-    } else if (category === 'companies') {
-      updateField = { isRecruiterVerified: status === 'approved' }
-    }
-
     try {
-      await axiosInstance.put(`/api/admin/user/${id}`, updateField)
+      if (status === 'rejected') {
+        await axiosInstance.delete(`/api/admin/user/${id}`)
+        setApprovals(prev => ({
+          ...prev,
+          [category]: prev[category].filter(item => item.id !== id)
+        }))
+        addToast(`${category.slice(0, -1).toUpperCase()} request rejected and account deleted.`, 'error')
+      } else {
+        let updateField = {}
+        if (category === 'students') {
+          updateField = { isVerified: true }
+        } else if (category === 'colleges') {
+          updateField = { isCollegeVerified: true }
+        } else if (category === 'companies') {
+          updateField = { isRecruiterVerified: true }
+        }
 
-      setApprovals(prev => ({
-        ...prev,
-        [category]: prev[category].map(item =>
-          item.id === id ? { ...item, status } : item
-        )
-      }))
-      addToast(`${category.slice(0, -1).toUpperCase()} request ${status.toUpperCase()}`, status === 'approved' ? 'success' : 'error')
+        await axiosInstance.put(`/api/admin/user/${id}`, updateField)
+
+        setApprovals(prev => ({
+          ...prev,
+          [category]: prev[category].map(item =>
+            item.id === id ? { ...item, status: 'approved' } : item
+          )
+        }))
+        addToast(`${category.slice(0, -1).toUpperCase()} request approved successfully.`, 'success')
+      }
     } catch (err) {
       console.error(err)
       addToast('Failed to update verification status on server.', 'error')

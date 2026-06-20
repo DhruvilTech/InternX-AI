@@ -156,6 +156,13 @@ userSchema.virtual('recruiterProfile', {
   justOne: true,
 });
 
+userSchema.virtual('selectedCareer', {
+  ref: 'StudentCareer',
+  localField: '_id',
+  foreignField: 'studentId',
+  justOne: true,
+});
+
 // Encrypt password before saving
 userSchema.pre('save', async function () {
   if (!this.isModified('password')) {

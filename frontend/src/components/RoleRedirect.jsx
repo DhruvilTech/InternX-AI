@@ -6,7 +6,7 @@ import LoadingScreen from './LoadingScreen.jsx';
  * Route level redirection handler to steer authenticated users to their dashboard home.
  */
 export default function RoleRedirect() {
-  const { isAuthenticated, role, loading } = useAuth();
+  const { isAuthenticated, role, user, loading } = useAuth();
 
   if (loading) {
     return <LoadingScreen />;
@@ -18,7 +18,11 @@ export default function RoleRedirect() {
 
   let redirectPath = '/login';
   if (role === 'student') {
-    redirectPath = '/student/dashboard';
+    if (!user?.selectedCareer) {
+      redirectPath = '/careers';
+    } else {
+      redirectPath = '/student/dashboard';
+    }
   } else if (role === 'college' || role === 'college_admin') {
     redirectPath = '/college/dashboard';
   } else if (role === 'recruiter') {

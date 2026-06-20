@@ -45,7 +45,7 @@ export default function Navbar() {
     if (role === 'student') {
       return [
         { label: 'Dashboard', id: 'student/dashboard' },
-        { label: 'Internships', id: 'career_selection' },
+        { label: 'Internships', id: user?.selectedCareer ? 'my-career' : 'careers' },
         { label: 'Tasks', id: 'kanban' },
         { label: 'Certificates', id: 'certificates' },
         { label: 'Profile', id: 'profile' },

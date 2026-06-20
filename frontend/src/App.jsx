@@ -35,6 +35,8 @@ import AdminInspectUserPage from './pages/AdminInspectUserPage';
 import LandingPage from './pages/LandingPage';
 import OnboardingPage from './pages/OnboardingPage';
 import CareerSelectionPage from './pages/CareerSelectionPage';
+import CareerDetailsPage from './pages/CareerDetailsPage';
+import MyCareerPage from './pages/MyCareerPage';
 import InternshipGeneratorPage from './pages/InternshipGeneratorPage';
 import AICompanyPage from './pages/AICompanyPage';
 import TaskManagementPage from './pages/TaskManagementPage';
@@ -113,6 +115,9 @@ export default function App() {
                   <Route path="/student/dashboard" element={<StudentDashboard />} />
                   <Route path="/onboarding" element={<OnboardingPage />} />
                   <Route path="/career_selection" element={<CareerSelectionPage />} />
+                  <Route path="/careers" element={<CareerSelectionPage />} />
+                  <Route path="/careers/:id" element={<CareerDetailsPage />} />
+                  <Route path="/my-career" element={<MyCareerPage />} />
                   <Route path="/generator" element={<InternshipGeneratorPage />} />
                   <Route path="/company" element={<AICompanyPage />} />
                   <Route path="/kanban" element={<TaskManagementPage />} />
