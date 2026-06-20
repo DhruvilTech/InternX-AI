@@ -87,10 +87,19 @@ export default function CollegeAdminLoginPage() {
           </button>
         </form>
 
-        <div className="text-center mt-6">
+        <div className="text-center mt-6 space-y-3">
           <p className="text-[10px] text-muted">
             Request portal access for your institution? <a href="#" className="text-accent underline font-semibold">Integrate College</a>
           </p>
+          <div>
+            <button
+              type="button"
+              onClick={() => navigate('login')}
+              className="text-[10px] text-muted hover:text-text underline font-medium transition-colors cursor-pointer"
+            >
+              Back to Main Login
+            </button>
+          </div>
         </div>
       </motion.div>
     </div>
