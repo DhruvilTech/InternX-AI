@@ -30,6 +30,7 @@ import ScoreRing from '../components/ui/ScoreRing'
 import PulseDot from '../components/ui/PulseDot'
 import { getMyCareer } from '../api/careerService.js'
 import axiosInstance from '../api/axios.js'
+import useAuth from '../hooks/useAuth'
 
 const chartData = [
   { day: 'Mon', views: 4 },
@@ -44,6 +45,8 @@ const chartData = [
 export default function StudentDashboardPage() {
   const { navigate, internship, tasks, setSelectedTaskId, addToast } = useNavigation()
   const { isDark } = useTheme()
+  const { user } = useAuth()
+  const firstName = user?.fullName ? user.fullName.split(' ')[0] : 'Arjun'
   const [score, setScore] = useState(0)
   const [progress, setProgress] = useState(0)
   const [interviewReadyScore, setInterviewReadyScore] = useState(0)
@@ -265,7 +268,7 @@ export default function StudentDashboardPage() {
                     <span className="text-[9px] text-dim font-mono">2 days ago</span>
                   </div>
                   <p className="text-xs text-muted leading-relaxed">
-                    "Arjun's vector schema optimization details are superb. The search route streaming tokens will be the next major milestone. Let's make sure the prompt template fallback code is well audited."
+                    "{firstName}'s vector schema optimization details are superb. The search route streaming tokens will be the next major milestone. Let's make sure the prompt template fallback code is well audited."
                   </p>
                 </div>
               </div>

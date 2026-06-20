@@ -3,25 +3,32 @@ import { motion } from 'framer-motion'
 import { Send, User, MessageSquare, Briefcase, Award, ShieldAlert, Sparkles, Building2 } from 'lucide-react'
 import { useNavigation } from '../context/NavigationContext'
 import PulseDot from '../components/ui/PulseDot'
-
-const defaultChats = {
-  technical: [
-    { sender: 'manager', text: 'Hi Arjun! I reviewed your vector DB schema design deliverable. The indexes are setup nicely, but I noticed you are using standard filters on queries. Have you considered dynamic partitioning?', time: '10:30 AM' },
-    { sender: 'user', text: 'Yes! I was wondering if dynamic indexes would affect our search query latency parameters?', time: '10:32 AM' },
-    { sender: 'manager', text: 'If configured correctly with index pre-warming, it actually cuts down latency by 15%. I suggest referencing the yml templates in your resources drawer.', time: '10:33 AM' }
-  ],
-  manager: [
-    { sender: 'manager', text: 'Welcome to the team! During your AI Internship at NeuralMind, we focus on autonomous executions. I will assign sprint tasks weekly. Let me know if you need guidelines.', time: 'Yesterday' }
-  ],
-  career: [
-    { sender: 'manager', text: 'Hey Arjun, I noticed your code evaluation indexes are in the top 8% of all candidates! That is a strong rating for recruiter discovery. We should build out your profile portfolio next.', time: '3 days ago' }
-  ]
-}
+import useAuth from '../hooks/useAuth'
 
 export default function FeedbackCenterPage() {
   const { internship, addToast } = useNavigation()
+  const { user } = useAuth()
   const [activeChannel, setActiveChannel] = useState('technical') // technical, manager, career
-  const [chats, setChats] = useState(defaultChats)
+  
+  const firstName = user?.fullName ? user.fullName.split(' ')[0] : 'Arjun'
+  const initials = user?.fullName ? user.fullName.split(' ').map(n => n[0]).join('').toUpperCase() : 'AK'
+
+  const [chats, setChats] = useState(() => {
+    const fName = user?.fullName ? user.fullName.split(' ')[0] : 'Arjun'
+    return {
+      technical: [
+        { sender: 'manager', text: `Hi ${fName}! I reviewed your vector DB schema design deliverable. The indexes are setup nicely, but I noticed you are using standard filters on queries. Have you considered dynamic partitioning?`, time: '10:30 AM' },
+        { sender: 'user', text: 'Yes! I was wondering if dynamic indexes would affect our search query latency parameters?', time: '10:32 AM' },
+        { sender: 'manager', text: 'If configured correctly with index pre-warming, it actually cuts down latency by 15%. I suggest referencing the yml templates in your resources drawer.', time: '10:33 AM' }
+      ],
+      manager: [
+        { sender: 'manager', text: 'Welcome to the team! During your AI Internship at NeuralMind, we focus on autonomous executions. I will assign sprint tasks weekly. Let me know if you need guidelines.', time: 'Yesterday' }
+      ],
+      career: [
+        { sender: 'manager', text: `Hey ${fName}, I noticed your code evaluation indexes are in the top 8% of all candidates! That is a strong rating for recruiter discovery. We should build out your profile portfolio next.`, time: '3 days ago' }
+      ]
+    }
+  })
   const [inputText, setInputText] = useState('')
   const chatEndRef = useRef(null)
 
@@ -153,7 +160,7 @@ export default function FeedbackCenterPage() {
                     <div className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold ${
                       isUser ? 'bg-accent/20 text-accent border border-accent/30' : 'bg-violet/20 text-violet border border-violet/30'
                     }`}>
-                      {isUser ? 'AK' : 'SJ'}
+                      {isUser ? initials : 'SJ'}
                     </div>
                     {/* Message Bubble */}
                     <div className={`p-3 rounded-2xl text-xs space-y-1 ${

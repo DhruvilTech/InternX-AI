@@ -3,9 +3,11 @@ import { motion } from 'framer-motion'
 import { Award, Download, CheckCircle2, ShieldCheck, Copy, ExternalLink, Calendar } from 'lucide-react'
 import { FaLinkedin } from 'react-icons/fa6'
 import { useNavigation } from '../context/NavigationContext'
+import useAuth from '../hooks/useAuth'
 
 export default function CertificateCenterPage() {
   const { internship, addToast } = useNavigation()
+  const { user } = useAuth()
   const [verificationCode, setVerificationCode] = useState('IX-92-2026')
   const [verifiedData, setVerifiedData] = useState(null)
 
@@ -20,7 +22,7 @@ export default function CertificateCenterPage() {
     e.preventDefault()
     if (verificationCode.trim() === 'IX-92-2026') {
       setVerifiedData({
-        recipient: 'Arjun Kapoor',
+        recipient: user?.fullName || 'Arjun Kapoor',
         company: companyInfo.name,
         track: companyInfo.roleTitle,
         grade: '92/100',
@@ -92,7 +94,7 @@ export default function CertificateCenterPage() {
               {/* Certificate Content text */}
               <div className="space-y-4 relative z-10">
                 <span className="text-[9px] uppercase tracking-[0.25em] text-amber-500/80 font-bold block">Certificate of Accomplishment</span>
-                <h3 className="font-display text-2xl font-bold text-text">Arjun Kapoor</h3>
+                <h3 className="font-display text-2xl font-bold text-text">{user?.fullName || 'Arjun Kapoor'}</h3>
                 <p className="text-xs text-muted max-w-md mx-auto leading-relaxed">
                   has successfully completed all milestones and sprints of the simulated professional internship as a
                   <span className="text-text font-bold block mt-1 text-sm">{companyInfo.roleTitle}</span>

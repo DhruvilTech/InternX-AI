@@ -63,3 +63,11 @@ export const refreshToken = async () => {
   const response = await axiosInstance.post('/api/auth/refresh-token');
   return response.data;
 };
+
+/**
+ * Update authenticated user profile metadata.
+ */
+export const updateProfile = async (profileData) => {
+  const response = await axiosInstance.put('/api/auth/profile', profileData);
+  return response.data;
+};

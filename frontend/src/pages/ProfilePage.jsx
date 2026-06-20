@@ -1,6 +1,7 @@
 import { useNavigation } from '../context/NavigationContext'
 import { Award, Briefcase, Mail, GraduationCap, Link, Calendar, CheckSquare, Plus } from 'lucide-react'
 import { FaGithub } from 'react-icons/fa6'
+import useAuth from '../hooks/useAuth'
 
 const projects = [
   { name: 'Semantic Search Engine RAG', desc: 'Custom vector DB index configuration running SentenceTransformers cosine similarity checks.', tech: ['Python', 'Vector DB', 'LangChain', 'FastAPI'], link: 'github.com/arjun/semantic-rag' },
@@ -12,18 +13,35 @@ const achievements = [
   { title: 'Completed RAG Pipeline Integration sprint', issuer: 'NeuralMind Technologies' }
 ]
 
-const timeline = [
-  { period: 'June 2026 - Present', role: 'AI Research Intern', organization: 'NeuralMind Technologies (Simulated)' },
-  { period: 'Sept 2023 - Present', role: 'B.S. Computer Science student', organization: 'Massachusetts Institute of Technology' }
-]
-
 export default function ProfilePage() {
   const { internship } = useNavigation()
+  const { user } = useAuth()
 
   const companyInfo = internship || {
     name: 'NeuralMind Technologies',
     roleTitle: 'AI Research Intern'
   }
+
+  const initials = user?.fullName
+    ? user.fullName.split(' ').map(n => n[0]).join('').toUpperCase()
+    : 'U'
+
+  const userSkills = user?.studentProfile?.skills?.length > 0
+    ? user.studentProfile.skills
+    : ['Vector Databases', 'LangChain', 'PyTorch', 'React JS', 'Node JS', 'FastAPI', 'Redis', 'Docker']
+
+  const timeline = [
+    { 
+      period: 'June 2026 - Present', 
+      role: companyInfo.roleTitle || 'AI Research Intern', 
+      organization: `${companyInfo.name} (Simulated)` 
+    },
+    { 
+      period: `Graduation Year: ${user?.studentProfile?.year || '2027'}`, 
+      role: user?.studentProfile?.course || 'B.S. Computer Science student', 
+      organization: user?.studentProfile?.collegeName || 'Massachusetts Institute of Technology' 
+    }
+  ]
 
   return (
     <div className="min-h-screen pt-24 pb-16 bg-void relative overflow-hidden text-text">
@@ -39,20 +57,20 @@ export default function ProfilePage() {
           
           <div className="flex flex-col sm:flex-row items-center sm:items-end gap-5 text-center sm:text-left">
             <div className="h-20 w-20 bg-gradient-to-br from-accent to-violet rounded-full flex items-center justify-center text-white text-2xl font-bold font-display shadow-lg shadow-violet/20">
-              AK
+              {initials}
             </div>
             <div className="space-y-1">
-              <h2 className="font-display font-bold text-2xl">Arjun Kapoor</h2>
+              <h2 className="font-display font-bold text-2xl">{user?.fullName || 'Anonymous User'}</h2>
               <p className="text-xs text-muted flex flex-wrap items-center justify-center sm:justify-start gap-2">
                 <GraduationCap size={14} className="text-accent" />
-                <span>Computer Science student at MIT</span>
+                <span>{user?.studentProfile?.course || 'Computer Science student'} at {user?.studentProfile?.collegeName || 'Massachusetts Institute of Technology'}</span>
               </p>
             </div>
           </div>
 
           <div className="flex gap-2">
             <a
-              href="mailto:arjun@university.edu"
+              href={`mailto:${user?.email || 'arjun@university.edu'}`}
               className="p-2 border border-border bg-surface-muted/20 hover:border-border-strong text-muted hover:text-text rounded-xl transition-all"
             >
               <Mail size={14} />
@@ -78,7 +96,7 @@ export default function ProfilePage() {
             <div className="glass border border-border rounded-2xl p-5 bg-void/25 space-y-3">
               <h4 className="text-xs font-bold text-text uppercase tracking-wider">Skills & Tech Stack</h4>
               <div className="flex flex-wrap gap-1.5">
-                {['Vector Databases', 'LangChain', 'PyTorch', 'React JS', 'Node JS', 'FastAPI', 'Redis', 'Docker'].map((s) => (
+                {userSkills.map((s) => (
                   <span key={s} className="text-[10px] bg-surface-muted/30 border border-border px-2.5 py-1 rounded-lg text-muted font-mono">
                     {s}
                   </span>

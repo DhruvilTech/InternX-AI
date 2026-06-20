@@ -317,3 +317,71 @@ export const resendUserOtp = async (email) => {
   return user;
 };
 
+/**
+ * Update user profile details and synchronize with role-specific collection.
+ */
+export const updateUserProfile = async (user, profileData) => {
+  const { fullName, email } = profileData;
+
+  const dbUser = await User.findById(user._id);
+  if (!dbUser) {
+    const error = new Error('User not found');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  // If email is changing, make sure it is not already taken
+  if (email && email !== dbUser.email) {
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      const error = new Error('Email is already registered by another account');
+      error.statusCode = 400;
+      throw error;
+    }
+    dbUser.email = email;
+  }
+
+  if (fullName !== undefined) {
+    dbUser.fullName = fullName.trim();
+  }
+
+  await dbUser.save();
+
+  // Keep in sync with role-specific collection
+  if (user.role === 'student') {
+    await Student.findOneAndUpdate(
+      { userId: user._id },
+      { fullName: fullName.trim() },
+      { runValidators: true }
+    );
+  } else if (user.role === 'college') {
+    await College.findOneAndUpdate(
+      { userId: user._id },
+      { collegeName: fullName.trim() },
+      { runValidators: true }
+    );
+  } else if (user.role === 'recruiter') {
+    await Recruiter.findOneAndUpdate(
+      { userId: user._id },
+      { companyName: fullName.trim() },
+      { runValidators: true }
+    );
+  }
+
+  // Fetch fully populated updated user to return
+  const updatedUser = await User.findById(user._id).populate([
+    { path: 'studentProfile' },
+    { path: 'collegeProfile' },
+    { path: 'recruiterProfile' },
+    {
+      path: 'selectedCareer',
+      populate: {
+        path: 'careerId',
+        model: 'CareerPath',
+      },
+    },
+  ]);
+
+  return updatedUser;
+};
+

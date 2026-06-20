@@ -1,18 +1,30 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Settings, User, Lock, Bell, Shield, Eye, Save } from 'lucide-react'
 import { useNavigation } from '../context/NavigationContext'
 import { useTheme } from '../context/ThemeContext'
 import ThemeToggle from '../components/ui/ThemeToggle'
+import useAuth from '../hooks/useAuth'
+import * as authApi from '../api/authApi'
 
 export default function SettingsPage() {
-  const { addToast } = useNavigation()
+  const { addToast, internship } = useNavigation()
   const { isDark, toggleTheme } = useTheme()
+  const { user, updateProfile } = useAuth()
   const [activeTab, setActiveTab] = useState('account') // account, password, notifications, privacy
   
   // Account Form
-  const [name, setName] = useState('Arjun Kapoor')
-  const [email, setEmail] = useState('arjun.kapoor@university.edu')
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
+
+  // Sync inputs with user context
+  useEffect(() => {
+    if (user) {
+      setName(user.fullName || '')
+      setEmail(user.email || '')
+    }
+  }, [user])
   
   // Checkbox states
   const [notifSprints, setNotifSprints] = useState(true)
@@ -20,9 +32,32 @@ export default function SettingsPage() {
   const [notifCoach, setNotifCoach] = useState(false)
   const [privacyPublic, setPrivacyPublic] = useState(true)
 
-  const handleSave = (e) => {
+  const handleSave = async (e) => {
     e.preventDefault()
-    addToast('Configuration profile saved successfully!', 'success')
+    if (!name.trim()) {
+      addToast('Name is required.', 'error')
+      return
+    }
+    if (!email.trim()) {
+      addToast('Email is required.', 'error')
+      return
+    }
+
+    setIsSaving(true)
+    try {
+      const res = await authApi.updateProfile({ fullName: name, email })
+      if (res?.success && res?.data?.user) {
+        updateProfile(res.data.user)
+        addToast('Configuration profile saved successfully!', 'success')
+      } else {
+        addToast(res?.message || 'Failed to update profile.', 'error')
+      }
+    } catch (err) {
+      console.error('[Settings] Error saving profile:', err)
+      addToast(err.response?.data?.message || 'Error saving profile configurations.', 'error')
+    } finally {
+      setIsSaving(false)
+    }
   }
 
   return (
@@ -114,7 +149,18 @@ export default function SettingsPage() {
                     <input
                       type="text"
                       disabled
-                      value="AI Engineer Intern (NeuralMind Technologies)"
+                      value={(() => {
+                        if (!user) return 'Loading...';
+                        if (user.role === 'student') {
+                          const track = user.selectedCareer?.careerId?.title || 'Not Selected';
+                          const comp = internship?.name || 'No Internship Active';
+                          return `Student Intern — Track: ${track} (${comp})`;
+                        }
+                        if (user.role === 'college') return `College Administrator — ${user.collegeProfile?.collegeName || 'Institution'}`;
+                        if (user.role === 'recruiter') return `Recruiter — ${user.recruiterProfile?.companyName || 'Hiring Partner'}`;
+                        if (user.role === 'admin') return 'Super Administrator';
+                        return 'User';
+                      })()}
                       className="w-full bg-surface-muted/20 border border-border text-xs rounded-xl py-2.5 px-3 outline-none text-muted font-medium"
                     />
                   </div>
@@ -213,10 +259,11 @@ export default function SettingsPage() {
               <div className="flex justify-end pt-6 border-t border-border mt-8">
                 <button
                   type="submit"
-                  className="px-5 py-2.5 bg-gradient-to-r from-accent to-violet text-white text-xs font-semibold rounded-xl hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer"
+                  disabled={isSaving}
+                  className="px-5 py-2.5 bg-gradient-to-r from-accent to-violet text-white text-xs font-semibold rounded-xl hover:shadow-lg transition-all flex items-center gap-2 cursor-pointer disabled:opacity-50"
                 >
                   <Save size={13} />
-                  <span>Save Configuration</span>
+                  <span>{isSaving ? 'Saving...' : 'Save Configuration'}</span>
                 </button>
               </div>
             </form>

@@ -2,10 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Send, Sparkles, Map, Compass, BookOpen, Award, CheckSquare, MessageSquare } from 'lucide-react'
 import { useNavigation } from '../context/NavigationContext'
-
-const initialMessages = [
-  { sender: 'coach', text: 'Hello Arjun! I am your AI Career Coach. I analyzed your evaluation scorecard (92/100) and Vector DB skills. Based on current industry benchmarks, I generated a custom learning roadmap and project list. What career milestones should we discuss today?', time: '11:00 AM' }
-]
+import useAuth from '../hooks/useAuth'
 
 const roadmapSteps = [
   { step: '1', title: 'Vector DB Index pre-warming configurations', status: 'Completed' },
@@ -21,7 +18,13 @@ const recommendedProjects = [
 
 export default function AICareerCoachPage() {
   const { addToast } = useNavigation()
-  const [messages, setMessages] = useState(initialMessages)
+  const { user } = useAuth()
+  const firstName = user?.fullName ? user.fullName.split(' ')[0] : 'Arjun'
+  const initials = user?.fullName ? user.fullName.split(' ').map(n => n[0]).join('').toUpperCase() : 'AK'
+
+  const [messages, setMessages] = useState(() => [
+    { sender: 'coach', text: `Hello ${firstName}! I am your AI Career Coach. I analyzed your evaluation scorecard (92/100) and Vector DB skills. Based on current industry benchmarks, I generated a custom learning roadmap and project list. What career milestones should we discuss today?`, time: '11:00 AM' }
+  ])
   const [inputText, setInputText] = useState('')
   const chatEndRef = useRef(null)
 
@@ -95,7 +98,7 @@ export default function AICareerCoachPage() {
                     <div className={`h-7 w-7 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold ${
                       isUser ? 'bg-accent/20 text-accent border border-accent/30' : 'bg-violet/20 text-violet border border-violet/30'
                     }`}>
-                      {isUser ? 'AK' : 'AC'}
+                      {isUser ? initials : 'AC'}
                     </div>
                     <div className={`p-3 rounded-2xl text-xs space-y-1 ${
                       isUser ? 'bg-accent text-white rounded-tr-none' : 'bg-surface-muted border border-border text-text rounded-tl-none'

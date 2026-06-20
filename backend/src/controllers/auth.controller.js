@@ -183,3 +183,29 @@ export const resendOtp = async (req, res, next) => {
   }
 };
 
+/**
+ * Update authenticated user profile details.
+ */
+export const updateProfile = async (req, res, next) => {
+  try {
+    const updatedUser = await authService.updateUserProfile(req.user, req.body);
+    
+    // Convert to object and sanitize password/tokens
+    const userObj = updatedUser.toObject();
+    delete userObj.password;
+    delete userObj.refreshToken;
+
+    // Set dashboard url based on user role
+    let dashboardUrl = '/dashboard';
+    if (userObj.role === 'student') dashboardUrl = '/dashboard/student';
+    else if (userObj.role === 'college') dashboardUrl = '/dashboard/college';
+    else if (userObj.role === 'recruiter') dashboardUrl = '/dashboard/recruiter';
+    else if (userObj.role === 'admin') dashboardUrl = '/dashboard/admin';
+    userObj.dashboardUrl = dashboardUrl;
+
+    return sendResponse(res, 200, true, 'User profile updated successfully', { user: userObj });
+  } catch (error) {
+    next(error);
+  }
+};
+

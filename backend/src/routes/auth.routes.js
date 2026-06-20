@@ -10,6 +10,7 @@ import {
   resetPassword,
   verifyEmail,
   resendOtp,
+  updateProfile,
 } from '../controllers/auth.controller.js';
 import { protect } from '../middlewares/auth.middleware.js';
 import {
@@ -38,5 +39,6 @@ router.post('/resend-otp', forgotPasswordValidationRules, validate, resendOtp);
 router.post('/logout', protect, logout);
 router.get('/me', protect, getMe);
 router.put('/change-password', protect, changePasswordValidationRules, validate, changePassword);
+router.put('/profile', protect, updateProfile);
 
 export default router;
