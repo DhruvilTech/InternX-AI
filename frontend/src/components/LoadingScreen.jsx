@@ -22,9 +22,7 @@ export default function LoadingScreen() {
         />
 
         {/* Logo text center */}
-        <div className="absolute font-display text-xs font-black tracking-widest text-text">
-          IX
-        </div>
+        <img src="/logo.png" alt="InternX Logo" className="absolute h-6 w-6 object-contain" />
       </div>
       
       <motion.p

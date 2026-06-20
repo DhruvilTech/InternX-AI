@@ -18,9 +18,7 @@ export default function AuthLayout({ children, title, subtitle }) {
       >
         <div className="text-center mb-8">
           {/* Brand Logo */}
-          <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br from-accent to-violet shadow-lg shadow-accent/25">
-            <span className="text-base font-black text-white font-display">IX</span>
-          </div>
+          <img src="/logo.png" alt="InternX Logo" className="mx-auto h-11 w-11 object-contain" />
           
           <h2 className="mt-5 text-xl font-display font-bold tracking-tight text-text">
             {title}

@@ -6,7 +6,7 @@ import { useNavigation } from '../context/NavigationContext'
 import useAuth from '../hooks/useAuth'
 
 export default function CertificateCenterPage() {
-  const { internship, addToast } = useNavigation()
+  const { internship, tasks, addToast } = useNavigation()
   const { user } = useAuth()
   const [verificationCode, setVerificationCode] = useState('IX-92-2026')
   const [verifiedData, setVerifiedData] = useState(null)
@@ -17,6 +17,12 @@ export default function CertificateCenterPage() {
     department: 'Artificial Intelligence',
     roleTitle: 'AI Research Intern',
   }
+
+  // Calculate task completion percentage
+  const completedTasks = tasks ? tasks.filter(t => t.status === 'completed') : []
+  const totalTasksCount = tasks ? tasks.length : 0
+  const completionPercentage = totalTasksCount > 0 ? Math.round((completedTasks.length / totalTasksCount) * 100) : 0
+  const requiredPercentage = 80 // At least 80% tasks must be completed to unlock certificate download
 
   const handleVerify = (e) => {
     e.preventDefault()
@@ -37,6 +43,10 @@ export default function CertificateCenterPage() {
   }
 
   const handleDownload = () => {
+    if (completionPercentage < requiredPercentage) {
+      addToast(`You must complete at least ${requiredPercentage}% of your tasks to download your certificate. Current progress is ${completionPercentage}%.`, 'error')
+      return
+    }
     addToast('Generating PDF file stream...', 'info')
     setTimeout(() => {
       addToast('Certificate PDF downloaded successfully!', 'success')
@@ -44,6 +54,10 @@ export default function CertificateCenterPage() {
   }
 
   const handleShare = () => {
+    if (completionPercentage < requiredPercentage) {
+      addToast(`You must complete at least ${requiredPercentage}% of your tasks to share your certificate. Current progress is ${completionPercentage}%.`, 'error')
+      return
+    }
     addToast('Post shared to your LinkedIn feed!', 'success')
   }
 
@@ -66,6 +80,19 @@ export default function CertificateCenterPage() {
           <p className="text-xs text-muted mt-1">Verify, download, or share your completed internship certificates.</p>
         </div>
 
+        {/* Lock notice alert if progress is below required threshold */}
+        {completionPercentage < requiredPercentage && (
+          <div className="p-4 rounded-xl border border-amber-500/20 bg-amber-500/5 text-amber-500 text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div>
+              <span className="font-bold uppercase tracking-wider block mb-0.5">Certificate Locked</span>
+              <span>You must complete at least {requiredPercentage}% of your assigned task sprint milestones to unlock certificate downloads and sharing. Current completion progress is {completionPercentage}%.</span>
+            </div>
+            <div className="shrink-0 font-mono font-bold text-sm bg-amber-500/10 border border-amber-500/20 px-3 py-1 rounded">
+              {completionPercentage}% / {requiredPercentage}% Completed
+            </div>
+          </div>
+        )}
+
         {/* Content split */}
         <div className="grid lg:grid-cols-12 gap-8 items-stretch">
           
@@ -80,9 +107,7 @@ export default function CertificateCenterPage() {
               {/* Top border seal */}
               <div className="flex justify-between items-start relative z-10">
                 <div className="flex items-center gap-2">
-                  <div className="h-6 w-6 rounded bg-gradient-to-br from-amber-500 to-violet flex items-center justify-center">
-                    <span className="text-[10px] font-bold text-white">IX</span>
-                  </div>
+                  <img src="/logo.png" alt="InternX Logo" className="h-6 w-6 object-contain" />
                   <span className="text-[9px] font-mono tracking-widest text-muted">INTERNX CREDENTIAL</span>
                 </div>
                 <div className="text-right">
@@ -134,7 +159,8 @@ export default function CertificateCenterPage() {
             <div className="flex flex-wrap gap-3 justify-center max-w-xl mx-auto pt-2">
               <button
                 onClick={handleDownload}
-                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-border bg-surface-muted/10 text-xs font-semibold rounded-xl text-text hover:border-border-strong hover:bg-surface-muted/20 transition-all cursor-pointer"
+                disabled={completionPercentage < requiredPercentage}
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 border border-border bg-surface-muted/10 text-xs font-semibold rounded-xl text-text hover:border-border-strong hover:bg-surface-muted/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Download size={14} className="text-accent" />
                 <span>Download PDF</span>
@@ -142,7 +168,8 @@ export default function CertificateCenterPage() {
               
               <button
                 onClick={handleShare}
-                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-accent to-violet text-white text-xs font-semibold rounded-xl hover:shadow-lg transition-all cursor-pointer"
+                disabled={completionPercentage < requiredPercentage}
+                className="flex-1 inline-flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-accent to-violet text-white text-xs font-semibold rounded-xl hover:shadow-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <FaLinkedin size={14} />
                 <span>Share to LinkedIn</span>

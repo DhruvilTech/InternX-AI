@@ -133,9 +133,7 @@ export default function Navbar() {
 
           {/* Logo */}
           <a href="#/" onClick={handleLogoClick} className="flex items-center gap-2.5 shrink-0 group">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-violet shadow-lg shadow-accent/20 group-hover:scale-105 transition-transform">
-              <span className="text-sm font-bold text-white font-display">IX</span>
-            </div>
+            <img src="/logo.png" alt="InternX Logo" className="h-8 w-8 object-contain group-hover:scale-[1.05] transition-transform" />
             <span className="text-lg font-display font-semibold tracking-tight text-text">
               InternX AI
             </span>
