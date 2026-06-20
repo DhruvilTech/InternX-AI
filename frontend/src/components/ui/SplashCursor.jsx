@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef } from 'react';
+import { useTheme } from '../../context/ThemeContext';
 
 function SplashCursor({
   SIM_RESOLUTION = 128,
@@ -17,10 +18,17 @@ function SplashCursor({
   BACK_COLOR = { r: 0.5, g: 0, b: 0 },
   TRANSPARENT = true,
   RAINBOW_MODE = true,
-  COLOR = '#ff0000'
+  COLOR = '#ff0000',
+  USE_THEME_PALETTE = true
 }) {
+  const { isDark } = useTheme();
+  const isDarkRef = useRef(isDark);
   const canvasRef = useRef(null);
   const animationFrameId = useRef(null);
+
+  useEffect(() => {
+    isDarkRef.current = isDark;
+  }, [isDark]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -59,7 +67,8 @@ function SplashCursor({
       BACK_COLOR,
       TRANSPARENT,
       RAINBOW_MODE,
-      COLOR
+      COLOR,
+      USE_THEME_PALETTE
     };
 
     let pointers = [new pointerPrototype()];
@@ -894,7 +903,42 @@ function SplashCursor({
       return { r: r * 0.15, g: g * 0.15, b: b * 0.15 };
     }
 
+    function getThemePaletteColor(t) {
+      const isDark = isDarkRef.current;
+      const palette = isDark
+        ? [
+            { r: 129 / 255, g: 140 / 255, b: 248 / 255 }, // #818cf8 (Indigo)
+            { r: 139 / 255, g: 92 / 255, b: 246 / 255 },  // #8b5cf6 (Violet)
+            { r: 34 / 255, g: 211 / 255, b: 238 / 255 }   // #22d3ee (Cyan)
+          ]
+        : [
+            { r: 67 / 255, g: 56 / 255, b: 202 / 255 },   // #4338ca (Indigo Accent-bright)
+            { r: 109 / 255, g: 40 / 255, b: 217 / 255 },  // #6d28d9 (Violet)
+            { r: 8 / 255, g: 145 / 255, b: 178 / 255 }    // #0891b2 (Cyan)
+          ];
+
+      const n = palette.length;
+      const scaledT = t * n;
+      const index1 = Math.floor(scaledT) % n;
+      const index2 = (index1 + 1) % n;
+      const factor = scaledT - Math.floor(scaledT);
+
+      const c1 = palette[index1];
+      const c2 = palette[index2];
+
+      return {
+        r: (c1.r + (c2.r - c1.r) * factor) * 0.15,
+        g: (c1.g + (c2.g - c1.g) * factor) * 0.15,
+        b: (c1.b + (c2.b - c1.b) * factor) * 0.15
+      };
+    }
+
     function generateColor() {
+      if (config.USE_THEME_PALETTE) {
+        // Slow cycle over 5 seconds (5000ms)
+        const t = (Date.now() / 5000) % 1;
+        return getThemePaletteColor(t);
+      }
       if (!config.RAINBOW_MODE) {
         return hexToRGB(config.COLOR);
       }

@@ -103,11 +103,10 @@ export default function InternshipGenerator() {
                 onClick={() => handleSelect(c.id)}
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.98 }}
-                className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-medium transition-all duration-300 ${
-                  active
+                className={`flex items-center gap-2 px-5 py-3 rounded-xl text-sm font-medium transition-all duration-300 ${active
                     ? 'bg-gradient-to-r from-accent to-violet text-white shadow-lg shadow-accent/25'
                     : 'glass text-muted hover:text-text hover:border-border-bright'
-                }`}
+                  }`}
               >
                 <Icon size={16} />
                 {c.label}

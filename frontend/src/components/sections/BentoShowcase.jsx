@@ -140,20 +140,23 @@ export default function BentoShowcase() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.04 }}
-                  whileHover={{ scale: 1.02 }}
-                  className={`${feature.size} group relative glass-bright rounded-2xl p-5 cursor-pointer h-full min-h-[140px] flex flex-col justify-between hover:border-border-bright transition-all duration-300 hover:glow-accent`}
+                  whileHover={{ scale: 1.025, y: -4 }}
+                  className={`${feature.size} group relative glass-bright rounded-2xl p-5 cursor-pointer h-full min-h-[140px] flex flex-col justify-between hover:border-accent/30 hover:shadow-[0_0_30px_rgba(129,140,248,0.2)] transition-all duration-300 overflow-hidden`}
                 >
                   <div
                     className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-500`}
                   />
+                  {/* Glossy futuristic shine sweep */}
+                  <div className="absolute inset-0 w-[150%] h-full bg-gradient-to-r from-transparent via-white/5 to-transparent -skew-x-12 -translate-x-[150%] group-hover:translate-x-[150%] transition-transform duration-[1200ms] ease-in-out pointer-events-none" />
+
                   <div className="relative z-10">
-                    <div className="w-10 h-10 rounded-xl bg-surface-muted flex items-center justify-center mb-3 group-hover:scale-110 transition-transform">
-                      <Icon size={18} className="text-accent" />
+                    <div className="w-10 h-10 rounded-xl bg-surface-muted flex items-center justify-center mb-3 group-hover:scale-110 group-hover:bg-accent/10 transition-all duration-300">
+                      <Icon size={18} className="text-accent group-hover:rotate-12 group-hover:text-accent-bright transition-all duration-300" />
                     </div>
-                    <h3 className="font-display font-semibold text-sm sm:text-base">{feature.title}</h3>
+                    <h3 className="font-display font-semibold text-sm sm:text-base text-text">{feature.title}</h3>
                     <p className="text-[11px] sm:text-xs text-muted mt-1">{feature.desc}</p>
                   </div>
-                  <motion.div
+                  <div
                     className="absolute bottom-3 right-3 w-20 h-20 rounded-full bg-accent/5 blur-2xl opacity-0 group-hover:opacity-100 transition-opacity"
                   />
                 </motion.div>
