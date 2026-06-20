@@ -225,7 +225,7 @@ export default function AdminPanelPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-md glass-bright rounded-2xl border border-border p-6 space-y-6 glow-accent bg-void/50 text-center"
+              className={`relative w-full ${inspectingDoc.fileUrl ? 'max-w-2xl' : 'max-w-md'} glass-bright rounded-2xl border border-border p-6 space-y-6 glow-accent bg-void/50 text-center`}
             >
               <div className="flex justify-between items-center border-b border-border pb-3">
                 <span className="text-xs font-bold text-text uppercase">{getDocLabel()} Preview</span>
@@ -234,24 +234,67 @@ export default function AdminPanelPage() {
                 </button>
               </div>
 
-              {/* Document Mockup Drawing */}
-              <div className="border border-dashed border-amber-500/30 rounded-xl p-6 bg-gradient-to-br from-amber-500/5 to-void text-center space-y-4 shadow-inner min-h-[160px] flex flex-col justify-between">
-                <div className="flex justify-between items-center text-[8px] font-mono text-muted">
-                  <span>OFFICIAL CREDENTIAL</span>
-                  <span className="text-amber-500">PENDING AUDIT</span>
-                </div>
-                
-                <div className="space-y-1">
-                  <span className="text-[10px] text-amber-500 uppercase tracking-widest block font-bold">{getDocLabel()}</span>
-                  <h4 className="font-display font-bold text-base text-text">{inspectingDoc.name}</h4>
-                  <span className="text-[9px] text-muted block">{inspectingDoc.email || inspectingDoc.adminEmail || inspectingDoc.recruiterEmail}</span>
-                </div>
+              {/* Document Rendering */}
+              {inspectingDoc.fileUrl ? (
+                inspectingDoc.fileType?.startsWith('image/') ? (
+                  <div className="my-3 border border-border bg-void/80 rounded-xl overflow-hidden min-h-[300px] flex flex-col p-3 justify-between items-center relative">
+                    <div className="w-full flex-grow flex items-center justify-center overflow-hidden bg-void/50 rounded-lg p-2 max-h-[320px]">
+                      <img src={inspectingDoc.fileUrl} alt="Uploaded Credential" className="max-w-full max-h-[300px] object-contain rounded" />
+                    </div>
+                    <div className="w-full flex justify-between items-center text-[10px] text-dim border-t border-border/50 pt-2 mt-2">
+                      <span className="truncate max-w-[320px] text-left">FILE: {inspectingDoc.idDoc || inspectingDoc.identityDoc || inspectingDoc.licenseDoc}</span>
+                      <a
+                        href={inspectingDoc.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-accent hover:underline flex items-center gap-1 font-semibold shrink-0"
+                      >
+                        <span>Open in new tab</span>
+                        <ArrowUpRight size={12} />
+                      </a>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="my-3 border border-border bg-void/80 rounded-xl overflow-hidden min-h-[300px] flex flex-col p-3 relative">
+                    <iframe
+                      src={inspectingDoc.fileUrl}
+                      title="PDF Credential Preview"
+                      className="w-full h-80 border-none rounded-lg bg-white"
+                    />
+                    <div className="flex justify-between items-center text-[10px] text-dim border-t border-border/50 pt-2 mt-2">
+                      <span className="truncate max-w-[320px] text-left">FILE: {inspectingDoc.idDoc || inspectingDoc.identityDoc || inspectingDoc.licenseDoc}</span>
+                      <a
+                        href={inspectingDoc.fileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-accent hover:underline flex items-center gap-1 font-semibold shrink-0"
+                      >
+                        <span>Open in new tab</span>
+                        <ArrowUpRight size={12} />
+                      </a>
+                    </div>
+                  </div>
+                )
+              ) : (
+                /* Fallback to Mockup Drawing if no fileUrl */
+                <div className="border border-dashed border-amber-500/30 rounded-xl p-6 bg-gradient-to-br from-amber-500/5 to-void text-center space-y-4 shadow-inner min-h-[160px] flex flex-col justify-between">
+                  <div className="flex justify-between items-center text-[8px] font-mono text-muted">
+                    <span>OFFICIAL CREDENTIAL</span>
+                    <span className="text-amber-500">PENDING AUDIT</span>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-amber-500 uppercase tracking-widest block font-bold">{getDocLabel()}</span>
+                    <h4 className="font-display font-bold text-base text-text">{inspectingDoc.name}</h4>
+                    <span className="text-[9px] text-muted block">{inspectingDoc.email || inspectingDoc.adminEmail || inspectingDoc.recruiterEmail}</span>
+                  </div>
 
-                <div className="border-t border-border pt-3 flex justify-between items-center text-[8px] text-dim">
-                  <span>FILE: {inspectingDoc.idDoc || inspectingDoc.identityDoc || inspectingDoc.licenseDoc}</span>
-                  <span>SYS ID: {inspectingDoc.id}</span>
+                  <div className="border-t border-border pt-3 flex justify-between items-center text-[8px] text-dim">
+                    <span>FILE: {inspectingDoc.idDoc || inspectingDoc.identityDoc || inspectingDoc.licenseDoc}</span>
+                    <span>SYS ID: {inspectingDoc.id}</span>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div className="flex gap-2 justify-end border-t border-border pt-4">
                 <button

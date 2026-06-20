@@ -87,10 +87,19 @@ export default function RecruiterLoginPage() {
           </button>
         </form>
 
-        <div className="text-center mt-6">
+        <div className="text-center mt-6 space-y-3">
           <p className="text-[10px] text-muted">
             Interested in hiring partnerships? <a href="#" className="text-accent underline font-semibold">Contact Partner Sales</a>
           </p>
+          <div>
+            <button
+              type="button"
+              onClick={() => navigate('login')}
+              className="text-[10px] text-muted hover:text-text underline font-medium transition-colors cursor-pointer"
+            >
+              Back to Main Login
+            </button>
+          </div>
         </div>
       </motion.div>
     </div>

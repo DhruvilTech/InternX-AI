@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, Mail, Lock, User, KeyRound, ArrowRight, ShieldCheck, UploadCloud, Building2, GraduationCap, CheckCircle } from 'lucide-react'
 import { useNavigation } from '../context/NavigationContext'
@@ -21,6 +21,27 @@ export default function AuthPages() {
   const [otp, setOtp] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // Real File Upload States
+  const fileInputRef = useRef(null)
+  const [selectedFile, setSelectedFile] = useState(null)
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      setSelectedFile(file)
+      setUploadedDocName(file.name)
+      addToast(`Attached document: ${file.name}`, 'success')
+    }
+  }
+
+  const handleClearFile = () => {
+    setSelectedFile(null)
+    setUploadedDocName('')
+    if (fileInputRef.current) {
+      fileInputRef.current.value = ''
+    }
+  }
+
   const handleSubmit = (e) => {
     e.preventDefault()
     setLoading(true)
@@ -32,6 +53,9 @@ export default function AuthPages() {
         navigate('dashboard')
         addToast('Welcome back, Arjun!', 'success')
       } else if (authMode === 'signup') {
+        const fileUrl = selectedFile ? URL.createObjectURL(selectedFile) : null
+        const fileType = selectedFile ? selectedFile.type : null
+
         // Build pending approval payloads based on signupRole
         if (signupRole === 'student') {
           addPendingApproval('students', {
@@ -41,7 +65,9 @@ export default function AuthPages() {
             track: 'AI Engineer',
             idDoc: uploadedDocName || 'student_id_card.pdf',
             uploadedAt: 'Just now',
-            status: 'pending'
+            status: 'pending',
+            fileUrl,
+            fileType
           })
         } else if (signupRole === 'college') {
           addPendingApproval('colleges', {
@@ -51,7 +77,9 @@ export default function AuthPages() {
             adminEmail: email,
             identityDoc: uploadedDocName || 'accreditation_proof.pdf',
             uploadedAt: 'Just now',
-            status: 'pending'
+            status: 'pending',
+            fileUrl,
+            fileType
           })
         } else if (signupRole === 'recruiter') {
           addPendingApproval('companies', {
@@ -61,7 +89,9 @@ export default function AuthPages() {
             recruiterEmail: email,
             licenseDoc: uploadedDocName || 'business_license.pdf',
             uploadedAt: 'Just now',
-            status: 'pending'
+            status: 'pending',
+            fileUrl,
+            fileType
           })
         }
 
@@ -231,6 +261,29 @@ export default function AuthPages() {
                   </p>
                 </div>
 
+                {/* College or Recruiter Login Portal Redirections */}
+                <div className="mt-6 pt-6 border-t border-border/60">
+                  <p className="text-[10px] text-muted text-center uppercase tracking-wider mb-3">Institutional Gateways</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => navigate('college_login')}
+                      className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-emerald/20 bg-emerald/5 hover:bg-emerald/10 text-emerald-300 text-xs font-semibold transition-all hover:scale-[1.02] cursor-pointer"
+                    >
+                      <GraduationCap size={14} />
+                      <span>College Login</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigate('recruiter_login')}
+                      className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 text-amber-300 text-xs font-semibold transition-all hover:scale-[1.02] cursor-pointer"
+                    >
+                      <Building2 size={14} />
+                      <span>Recruiter Login</span>
+                    </button>
+                  </div>
+                </div>
+
                 {/* Direct Persona Quick logins */}
                 <div className="border-t border-border pt-4 mt-6 text-center">
                   <p className="text-[10px] text-muted uppercase tracking-wider mb-2.5">Demo Portals (Quick Access)</p>
@@ -385,31 +438,36 @@ export default function AuthPages() {
                       {signupRole === 'student' ? 'Student ID Card (.pdf/.png)' : signupRole === 'college' ? 'Accreditation identity file (.pdf)' : 'Corporate business license (.pdf)'}
                     </label>
 
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      onChange={handleFileChange}
+                      accept="application/pdf,image/*"
+                      className="hidden"
+                    />
+
                     {uploadedDocName ? (
                       <div className="p-3 border border-emerald/30 bg-emerald/5 text-emerald rounded-xl flex items-center justify-between text-xs font-semibold">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle size={14} />
-                          <span>{uploadedDocName}</span>
+                        <div className="flex items-center gap-2 overflow-hidden mr-2">
+                          <CheckCircle size={14} className="shrink-0" />
+                          <span className="truncate">{uploadedDocName}</span>
                         </div>
                         <button
                           type="button"
-                          onClick={() => setUploadedDocName('')}
-                          className="text-[10px] text-muted hover:text-text hover:bg-white/5 px-2 py-1 rounded"
+                          onClick={handleClearFile}
+                          className="text-[10px] text-muted hover:text-text hover:bg-white/5 px-2 py-1 rounded shrink-0"
                         >
                           Change
                         </button>
                       </div>
                     ) : (
                       <div
-                        onClick={() => {
-                          const mockName = signupRole === 'student' ? 'student_id_mit.pdf' : signupRole === 'college' ? 'mit_accreditation_seal.pdf' : 'neuralmind_corp_license.pdf'
-                          simulateFileUpload(mockName)
-                        }}
+                        onClick={() => fileInputRef.current?.click()}
                         className="border border-dashed border-border hover:border-accent/40 bg-void/30 p-4 rounded-xl text-center space-y-1 cursor-pointer group transition-colors flex flex-col justify-center"
                       >
                         <UploadCloud size={18} className="text-muted group-hover:text-accent mx-auto transition-colors" />
                         <span className="text-[10px] text-text font-bold block">Attach Verification Credential File</span>
-                        <span className="text-[8px] text-muted block">Simulate upload click</span>
+                        <span className="text-[8px] text-muted block">Select PDF or Image from your local storage</span>
                       </div>
                     )}
                   </div>
