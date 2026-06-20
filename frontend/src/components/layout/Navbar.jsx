@@ -5,17 +5,22 @@ import MagneticButton from '../ui/MagneticButton'
 import ThemeToggle from '../ui/ThemeToggle'
 import { useNavigation } from '../../context/NavigationContext'
 import PulseDot from '../ui/PulseDot'
+import useAuth from '../../hooks/useAuth.js'
 
 export default function Navbar() {
   const {
     page,
     navigate,
-    role,
-    user,
-    handleLogout,
     setNotificationsOpen,
     setCommandPaletteOpen,
   } = useNavigation()
+
+  const { role, user, logout } = useAuth()
+
+  const handleLogout = async () => {
+    await logout()
+    navigate('login')
+  }
 
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
@@ -39,24 +44,32 @@ export default function Navbar() {
   const getNavLinks = () => {
     if (role === 'student') {
       return [
-        { label: 'Dashboard', id: 'dashboard' },
-        { label: 'AI Company', id: 'company' },
-        { label: 'Sprints', id: 'kanban' },
-        { label: 'Interview Prep', id: 'interview_simulator' },
-        { label: 'Certs', id: 'certificates' },
+        { label: 'Dashboard', id: 'student/dashboard' },
+        { label: 'Internships', id: 'career_selection' },
+        { label: 'Tasks', id: 'kanban' },
+        { label: 'Certificates', id: 'certificates' },
+        { label: 'Profile', id: 'profile' },
+      ]
+    } else if (role === 'college' || role === 'college_admin') {
+      return [
+        { label: 'Dashboard', id: 'college/dashboard' },
+        { label: 'Students', id: 'college/dashboard' },
+        { label: 'Analytics', id: 'college/dashboard' },
+        { label: 'Reports', id: 'college/dashboard' },
       ]
     } else if (role === 'recruiter') {
       return [
-        { label: 'Talent Discovery', id: 'recruiter_dashboard' },
-        { label: 'Audit Profiles', id: 'candidate_profile' },
-      ]
-    } else if (role === 'college_admin') {
-      return [
-        { label: 'Oversight Dashboard', id: 'college_dashboard' },
+        { label: 'Dashboard', id: 'recruiter/dashboard' },
+        { label: 'Talent Pool', id: 'recruiter/dashboard' },
+        { label: 'Certificates', id: 'recruiter/dashboard' },
+        { label: 'Hiring', id: 'recruiter/dashboard' },
       ]
     } else if (role === 'admin') {
       return [
-        { label: 'Approvals Queue', id: 'admin_panel' },
+        { label: 'Dashboard', id: 'admin/dashboard' },
+        { label: 'Users', id: 'admin/dashboard' },
+        { label: 'Analytics', id: 'admin/dashboard' },
+        { label: 'Settings', id: 'settings' },
       ]
     } else {
       return [
@@ -171,7 +184,7 @@ export default function Navbar() {
                     onClick={() => setProfileMenuOpen(!profileMenuOpen)}
                     className="h-9 w-9 rounded-full bg-gradient-to-br from-accent to-violet flex items-center justify-center text-white text-xs font-bold font-display shadow-md shadow-accent/10 border border-white/10"
                   >
-                    {user?.avatar || 'AK'}
+                    {user?.avatar || (user?.fullName ? user.fullName.split(' ').map(n=>n[0]).join('') : user?.companyName ? user.companyName.slice(0, 2).toUpperCase() : user?.collegeName ? user.collegeName.slice(0,2).toUpperCase() : 'U')}
                   </button>
 
                   <AnimatePresence>
@@ -185,8 +198,8 @@ export default function Navbar() {
                           className="absolute right-0 mt-2.5 w-48 rounded-xl border border-border glass bg-void/90 p-1.5 shadow-2xl z-50 text-left"
                         >
                           <div className="px-3 py-2 border-b border-border/60 mb-1.5">
-                            <p className="text-xs font-bold text-text truncate">{user?.name || 'Arjun Kapoor'}</p>
-                            <p className="text-[9px] text-muted truncate mt-0.5">{user?.email || 'arjun@university.edu'}</p>
+                            <p className="text-xs font-bold text-text truncate">{user?.fullName || user?.companyName || user?.collegeName || 'User'}</p>
+                            <p className="text-[9px] text-muted truncate mt-0.5">{user?.email || 'user@example.com'}</p>
                           </div>
 
                           {role === 'admin' ? (
@@ -302,7 +315,7 @@ export default function Navbar() {
                   </>
                 ) : (
                   <div className="flex items-center justify-between px-3 py-1">
-                    <span className="text-xs font-bold text-text">{user?.name}</span>
+                    <span className="text-xs font-bold text-text">{user?.fullName || user?.companyName || user?.collegeName || 'User'}</span>
                     <button
                       onClick={() => {
                         setMobileOpen(false)

@@ -5,13 +5,20 @@ import App from './App.jsx'
 import { ThemeProvider } from './context/ThemeContext'
 import { NavigationProvider } from './context/NavigationContext'
 
+import { HashRouter } from 'react-router-dom'
+import { AuthProvider } from './context/AuthContext'
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <ThemeProvider>
-      <NavigationProvider>
-        <App />
-      </NavigationProvider>
-    </ThemeProvider>
+    <HashRouter>
+      <AuthProvider>
+        <ThemeProvider>
+          <NavigationProvider>
+            <App />
+          </NavigationProvider>
+        </ThemeProvider>
+      </AuthProvider>
+    </HashRouter>
   </StrictMode>,
 )
 

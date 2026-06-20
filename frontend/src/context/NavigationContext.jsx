@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import useAuth from '../hooks/useAuth.js'
 
 const NavigationContext = createContext(null)
 
@@ -41,6 +42,23 @@ export function NavigationProvider({ children }) {
   const [page, setPage] = useState(getHashPage)
   const [role, setRole] = useState('guest') // guest, student, recruiter, college_admin
   const [user, setUser] = useState(null) // { name, email, avatar, track }
+
+  const { user: authUser, role: authRole } = useAuth()
+
+  useEffect(() => {
+    if (authUser) {
+      setUser({
+        name: authUser.fullName || authUser.companyName || authUser.collegeName || 'User',
+        email: authUser.email,
+        avatar: authUser.avatar || (authUser.fullName ? authUser.fullName.split(' ').map(n => n[0]).join('') : 'U'),
+        track: authUser.skills && authUser.skills.length > 0 ? 'ai' : 'ai'
+      })
+      setRole(authRole === 'college' ? 'college_admin' : authRole)
+    } else {
+      setUser(null)
+      setRole('guest')
+    }
+  }, [authUser, authRole])
   
   // Onboarding
   const [onboardingStep, setOnboardingStep] = useState(1)
