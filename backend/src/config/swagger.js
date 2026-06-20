@@ -621,6 +621,76 @@ const openApiSpec = {
         },
       },
     },
+    '/api/college/profile': {
+      get: {
+        summary: 'Get College profile details',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Profile details' } }
+      },
+      patch: {
+        summary: 'Update College profile details',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Profile updated' } }
+      }
+    },
+    '/api/college/dashboard': {
+      get: {
+        summary: 'Get College Portal dashboard metrics',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Dashboard stats' } }
+      }
+    },
+    '/api/college/students': {
+      get: {
+        summary: 'List and search college students',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'List of students' } }
+      }
+    },
+    '/api/college/students/{id}': {
+      get: {
+        summary: 'Get student details with GitHub & certificates',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'id', in: 'path', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Detailed student analytics' } }
+      }
+    },
+    '/api/college/internships': {
+      get: {
+        summary: 'Get college internship completion metrics',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Internship stats' } }
+      }
+    },
+    '/api/college/skills': {
+      get: {
+        summary: 'Get college student skills growth and gaps',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Skills stats' } }
+      }
+    },
+    '/api/college/placement-readiness': {
+      get: {
+        summary: 'Get college student placement readiness indexes',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Readiness stats' } }
+      }
+    },
+    '/api/college/certificates': {
+      get: {
+        summary: 'Get certificates issued list',
+        security: [{ bearerAuth: [] }],
+        responses: { 200: { description: 'Certificates stats' } }
+      }
+    },
+    '/api/college/reports': {
+      get: {
+        summary: 'Compile institutional reports data',
+        security: [{ bearerAuth: [] }],
+        parameters: [{ name: 'type', in: 'query', required: true, schema: { type: 'string' } }],
+        responses: { 200: { description: 'Report data' } }
+      }
+    }
   },
 };
 

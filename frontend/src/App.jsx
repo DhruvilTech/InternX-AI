@@ -62,6 +62,15 @@ import GitHubRepositoriesPage from './pages/GitHubRepositoriesPage';
 import RepositoryDetailsPage from './pages/RepositoryDetailsPage';
 import RepositorySelectionPage from './pages/RepositorySelectionPage';
 
+// College Portal Pages
+import StudentsManagementPage from './pages/StudentsManagementPage';
+import StudentDetailsPage from './pages/StudentDetailsPage';
+import InternshipAnalyticsPage from './pages/InternshipAnalyticsPage';
+import SkillsAnalyticsPage from './pages/SkillsAnalyticsPage';
+import PlacementReadinessPage from './pages/PlacementReadinessPage';
+import CertificateManagementPage from './pages/CertificateManagementPage';
+import ReportsPage from './pages/ReportsPage';
+
 export default function App() {
   useLenis();
   const location = useLocation();
@@ -150,6 +159,13 @@ export default function App() {
                 {/* College specific views */}
                 <Route element={<RoleRoute allowedRoles={['college', 'college_admin']} />}>
                   <Route path="/college/dashboard" element={<CollegeDashboard />} />
+                  <Route path="/college/students" element={<StudentsManagementPage />} />
+                  <Route path="/college/students/:id" element={<StudentDetailsPage />} />
+                  <Route path="/college/internships" element={<InternshipAnalyticsPage />} />
+                  <Route path="/college/skills" element={<SkillsAnalyticsPage />} />
+                  <Route path="/college/placement" element={<PlacementReadinessPage />} />
+                  <Route path="/college/certificates" element={<CertificateManagementPage />} />
+                  <Route path="/college/reports" element={<ReportsPage />} />
                 </Route>
 
                 {/* Recruiter specific views */}

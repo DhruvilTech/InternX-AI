@@ -10,6 +10,7 @@ import authRoutes from './routes/auth.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import careerRoutes from './routes/career.routes.js';
 import githubRoutes from './routes/github.routes.js';
+import collegeRoutes from './modules/college/routes/college.routes.js';
 import { setupSwagger } from './config/swagger.js';
 import { errorHandler } from './middlewares/error.middleware.js';
 
@@ -74,6 +75,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/careers', careerRoutes);
 app.use('/api/github', githubRoutes);
+app.use('/api/college', collegeRoutes);
 
 // Base application health check
 app.get('/health', (req, res) => {

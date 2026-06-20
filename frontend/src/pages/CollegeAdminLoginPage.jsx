@@ -2,23 +2,33 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { GraduationCap, Mail, Lock, ArrowRight, ShieldCheck } from 'lucide-react'
 import { useNavigation } from '../context/NavigationContext'
+import useAuth from '../hooks/useAuth.js'
 
 export default function CollegeAdminLoginPage() {
-  const { navigate, loadDemoCollege, addToast } = useNavigation()
+  const { navigate, addToast } = useNavigation()
+  const { login } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
-
-    setTimeout(() => {
+    try {
+      const res = await login({ email, password })
+      const userObj = res?.user || res?.data?.user
+      if (userObj.role !== 'college' && userObj.role !== 'college_admin') {
+        localStorage.removeItem('accessToken')
+        addToast('Access denied: This gateway is restricted to academic administrators.', 'error')
+      } else {
+        navigate('college/dashboard')
+        addToast('Welcome back, placement director!', 'success')
+      }
+    } catch (err) {
+      addToast(err.response?.data?.message || err.message || 'Login failed. Please verify credentials.', 'error')
+    } finally {
       setLoading(false)
-      loadDemoCollege()
-      navigate('college_dashboard')
-      addToast('Welcome back, placement director!', 'success')
-    }, 1200)
+    }
   }
 
   return (

@@ -54,9 +54,12 @@ export default function Navbar() {
     } else if (role === 'college' || role === 'college_admin') {
       return [
         { label: 'Dashboard', id: 'college/dashboard' },
-        { label: 'Students', id: 'college/dashboard' },
-        { label: 'Analytics', id: 'college/dashboard' },
-        { label: 'Reports', id: 'college/dashboard' },
+        { label: 'Students', id: 'college/students' },
+        { label: 'Internships', id: 'college/internships' },
+        { label: 'Skills', id: 'college/skills' },
+        { label: 'Placement', id: 'college/placement' },
+        { label: 'Certificates', id: 'college/certificates' },
+        { label: 'Reports', id: 'college/reports' },
       ]
     } else if (role === 'recruiter') {
       return [
