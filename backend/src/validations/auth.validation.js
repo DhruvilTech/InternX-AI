@@ -23,18 +23,18 @@ export const registerValidationRules = [
   body('password')
     .isLength({ min: 8 }).withMessage('Password must be at least 8 characters long'),
   body('role')
-    .isIn(['student', 'college', 'recruiter', 'admin']).withMessage('Invalid role selected'),
+    .isIn(['student', 'recruiter', 'admin', 'college_representative']).withMessage('Invalid role selected'),
 
   // Role-specific custom validations
   body('fullName').custom((value, { req }) => {
-    if (['student', 'admin'].includes(req.body.role) && (!value || !value.trim())) {
+    if (['student', 'admin', 'college_representative'].includes(req.body.role) && (!value || !value.trim())) {
       throw new Error('Full name is required');
     }
     return true;
   }),
 
   body('collegeName').custom((value, { req }) => {
-    if (['student', 'college'].includes(req.body.role) && (!value || !value.trim())) {
+    if (req.body.role === 'student' && (!value || !value.trim())) {
       throw new Error('College name is required');
     }
     return true;
@@ -60,19 +60,7 @@ export const registerValidationRules = [
     return true;
   }),
 
-  body('collegeCode').custom((value, { req }) => {
-    if (req.body.role === 'college' && (!value || !value.trim())) {
-      throw new Error('College code is required for colleges');
-    }
-    return true;
-  }),
 
-  body('contactPerson').custom((value, { req }) => {
-    if (req.body.role === 'college' && (!value || !value.trim())) {
-      throw new Error('Contact person name is required for colleges');
-    }
-    return true;
-  }),
 
   body('companyName').custom((value, { req }) => {
     if (req.body.role === 'recruiter' && (!value || !value.trim())) {

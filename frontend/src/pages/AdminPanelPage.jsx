@@ -26,10 +26,98 @@ import axiosInstance from '../api/axios.js';
 export default function AdminPanelPage() {
   const { approvals, setApprovalStatus, addToast } = useNavigation();
   const navigate = useNavigate();
-  const [activeCategory, setActiveCategory] = useState('students'); // students, colleges, companies, careers
+  const [activeCategory, setActiveCategory] = useState('students'); // students, pending_colleges, pending_representatives, colleges, companies, careers
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('pending'); // pending, approved, rejected
   const [viewedDocs, setViewedDocs] = useState({});
+
+  // Pending approval states
+  const [pendingColleges, setPendingColleges] = useState([]);
+  const [pendingRepresentatives, setPendingRepresentatives] = useState([]);
+  const [loadingColleges, setLoadingColleges] = useState(false);
+  const [loadingReps, setLoadingReps] = useState(false);
+
+  const fetchPendingColleges = async () => {
+    setLoadingColleges(true);
+    try {
+      const res = await axiosInstance.get('/api/admin/pending-colleges');
+      if (res.data?.success) {
+        setPendingColleges(res.data.data);
+      }
+    } catch (err) {
+      console.error(err);
+      if (typeof addToast === 'function') addToast('Failed to fetch pending custom colleges.', 'error');
+    } finally {
+      setLoadingColleges(false);
+    }
+  };
+
+  const fetchPendingRepresentatives = async () => {
+    setLoadingReps(true);
+    try {
+      const res = await axiosInstance.get('/api/admin/pending-representatives');
+      if (res.data?.success) {
+        setPendingRepresentatives(res.data.data);
+      }
+    } catch (err) {
+      console.error(err);
+      if (typeof addToast === 'function') addToast('Failed to fetch pending representatives.', 'error');
+    } finally {
+      setLoadingReps(false);
+    }
+  };
+
+  const handleApproveCollege = async (id) => {
+    try {
+      const res = await axiosInstance.put('/api/admin/approve-college', { pendingCollegeId: id });
+      if (res.data?.success) {
+        if (typeof addToast === 'function') addToast('College request approved and added successfully.', 'success');
+        fetchPendingColleges();
+      }
+    } catch (err) {
+      console.error(err);
+      if (typeof addToast === 'function') addToast('Failed to approve college.', 'error');
+    }
+  };
+
+  const handleRejectCollege = async (id) => {
+    try {
+      const res = await axiosInstance.put('/api/admin/reject-college', { pendingCollegeId: id });
+      if (res.data?.success) {
+        if (typeof addToast === 'function') addToast('College request rejected.', 'info');
+        fetchPendingColleges();
+      }
+    } catch (err) {
+      console.error(err);
+      if (typeof addToast === 'function') addToast('Failed to reject college.', 'error');
+    }
+  };
+
+  const handleApproveRepresentative = async (id) => {
+    try {
+      const res = await axiosInstance.put('/api/admin/approve-representative', { representativeId: id });
+      if (res.data?.success) {
+        if (typeof addToast === 'function') addToast('Representative verified and dashboard access granted.', 'success');
+        fetchPendingRepresentatives();
+      }
+    } catch (err) {
+      console.error(err);
+      if (typeof addToast === 'function') addToast('Failed to approve representative.', 'error');
+    }
+  };
+
+  const handleRejectRepresentative = async (id) => {
+    try {
+      const res = await axiosInstance.put('/api/admin/reject-representative', { representativeId: id });
+      if (res.data?.success) {
+        if (typeof addToast === 'function') addToast('Representative request rejected.', 'info');
+        fetchPendingRepresentatives();
+      }
+    } catch (err) {
+      console.error(err);
+      if (typeof addToast === 'function') addToast('Failed to reject representative.', 'error');
+    }
+  };
 
   // Careers state
   const [careersList, setCareersList] = useState([]);
@@ -69,6 +157,10 @@ export default function AdminPanelPage() {
   useEffect(() => {
     if (activeCategory === 'careers') {
       fetchCareers();
+    } else if (activeCategory === 'pending_colleges') {
+      fetchPendingColleges();
+    } else if (activeCategory === 'pending_representatives') {
+      fetchPendingRepresentatives();
     }
   }, [activeCategory]);
 
@@ -81,6 +173,24 @@ export default function AdminPanelPage() {
         career.title.toLowerCase().includes(search.toLowerCase()) ||
         career.category.toLowerCase().includes(search.toLowerCase()) ||
         career.description.toLowerCase().includes(search.toLowerCase())
+      );
+    }
+
+    if (activeCategory === 'pending_colleges') {
+      return pendingColleges.filter(item =>
+        item.collegeName.toLowerCase().includes(search.toLowerCase()) ||
+        item.city.toLowerCase().includes(search.toLowerCase()) ||
+        item.state.toLowerCase().includes(search.toLowerCase()) ||
+        (item.requestedBy?.fullName && item.requestedBy.fullName.toLowerCase().includes(search.toLowerCase()))
+      );
+    }
+
+    if (activeCategory === 'pending_representatives') {
+      return pendingRepresentatives.filter(item =>
+        (item.userId?.fullName && item.userId.fullName.toLowerCase().includes(search.toLowerCase())) ||
+        (item.userId?.email && item.userId.email.toLowerCase().includes(search.toLowerCase())) ||
+        (item.collegeId?.name && item.collegeId.name.toLowerCase().includes(search.toLowerCase())) ||
+        (item.designation && item.designation.toLowerCase().includes(search.toLowerCase()))
       );
     }
 
@@ -253,13 +363,18 @@ export default function AdminPanelPage() {
         <div className="flex border-b border-border gap-4 sm:gap-6 overflow-x-auto pb-1 sm:pb-0">
           {[
             { id: 'students', label: 'Student IDs', icon: User },
-            { id: 'colleges', label: 'College Identity', icon: GraduationCap },
+            { id: 'pending_colleges', label: 'Requested Colleges', icon: GraduationCap },
+            { id: 'pending_representatives', label: 'College Reps', icon: ShieldCheck },
             { id: 'companies', label: 'Company Licenses', icon: Building2 },
             { id: 'careers', label: 'Manage Careers', icon: Layers }
           ].map(tab => {
             const Icon = tab.icon;
             const active = activeCategory === tab.id;
-            const count = activeCategory !== 'careers' && tab.id !== 'careers'
+            const count = tab.id === 'pending_colleges'
+              ? pendingColleges.length
+              : tab.id === 'pending_representatives'
+              ? pendingRepresentatives.length
+              : activeCategory !== 'careers' && tab.id !== 'careers'
               ? (approvals[tab.id] || []).filter(item => item.status === statusFilter).length
               : 0;
             return (
@@ -299,7 +414,7 @@ export default function AdminPanelPage() {
             />
           </div>
 
-          {activeCategory !== 'careers' && (
+          {!['careers', 'pending_colleges', 'pending_representatives'].includes(activeCategory) && (
             <div className="flex gap-2">
               {['pending', 'approved', 'rejected'].map(status => (
                 <button
@@ -392,6 +507,104 @@ export default function AdminPanelPage() {
                       >
                         <Trash2 size={11} />
                         <span>Delete Path</span>
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )
+            ) : activeCategory === 'pending_colleges' ? (
+              filtered.length === 0 ? (
+                <div className="text-center py-16 text-xs text-muted border border-dashed border-border rounded-2xl">
+                  No pending custom colleges in queue.
+                </div>
+              ) : (
+                filtered.map((item) => (
+                  <div
+                    key={item._id}
+                    className="p-5 border border-border rounded-2xl bg-void/40 hover:border-accent/30 transition-all flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6"
+                  >
+                    <div className="space-y-2 flex-1">
+                      <h4 className="text-sm font-bold text-text">{item.collegeName}</h4>
+                      <div className="text-xs text-muted space-y-1">
+                        <div><span className="text-dim">Location:</span> {item.city}, {item.state}</div>
+                        {item.requestedBy && (
+                          <div>
+                            <span className="text-dim">Requested By Student:</span> {item.requestedBy.fullName} ({item.requestedBy.email})
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2.5 shrink-0">
+                      <button
+                        onClick={() => handleRejectCollege(item._id)}
+                        className="h-8 px-3 bg-rose-500/10 border border-rose-500/20 text-rose-300 hover:bg-rose-500/20 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer text-xs font-semibold"
+                      >
+                        <XCircle size={13} />
+                        <span>Reject</span>
+                      </button>
+                      <button
+                        onClick={() => handleApproveCollege(item._id)}
+                        className="h-8 px-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald hover:bg-emerald-500/20 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer text-xs font-semibold"
+                      >
+                        <ShieldCheck size={13} />
+                        <span>Approve</span>
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )
+            ) : activeCategory === 'pending_representatives' ? (
+              filtered.length === 0 ? (
+                <div className="text-center py-16 text-xs text-muted border border-dashed border-border rounded-2xl">
+                  No pending representative verifications in queue.
+                </div>
+              ) : (
+                filtered.map((item) => (
+                  <div
+                    key={item._id}
+                    className="p-5 border border-border rounded-2xl bg-void/40 hover:border-accent/30 transition-all flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6"
+                  >
+                    <div className="space-y-2 flex-1">
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-sm font-bold text-text">{item.userId?.fullName || 'Anonymous Representative'}</h4>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-accent/10 border border-accent/20 text-accent font-bold uppercase">
+                          {item.designation}
+                        </span>
+                      </div>
+                      <div className="text-xs text-muted space-y-1">
+                        <div><span className="text-dim">College:</span> {item.collegeId?.name || 'N/A'}</div>
+                        <div><span className="text-dim">Official Email:</span> {item.officialEmail}</div>
+                        <div><span className="text-dim">Phone:</span> {item.phone || 'N/A'}</div>
+                        {item.verificationDocument && (
+                          <div className="flex items-center gap-1.5 text-accent font-semibold pt-1">
+                            <FileCheck size={12} />
+                            <a
+                              href={item.verificationDocument}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="hover:underline text-accent-bright inline-flex items-center gap-0.5 cursor-pointer font-bold font-mono text-[10px]"
+                            >
+                              <span>Inspect Verification Document</span>
+                              <ArrowUpRight size={10} />
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2.5 shrink-0">
+                      <button
+                        onClick={() => handleRejectRepresentative(item._id)}
+                        className="h-8 px-3 bg-rose-500/10 border border-rose-500/20 text-rose-300 hover:bg-rose-500/20 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer text-xs font-semibold"
+                      >
+                        <XCircle size={13} />
+                        <span>Reject</span>
+                      </button>
+                      <button
+                        onClick={() => handleApproveRepresentative(item._id)}
+                        className="h-8 px-3 bg-emerald-500/10 border border-emerald-500/20 text-emerald hover:bg-emerald-500/20 rounded-lg flex items-center gap-1.5 transition-colors cursor-pointer text-xs font-semibold"
+                      >
+                        <ShieldCheck size={13} />
+                        <span>Approve</span>
                       </button>
                     </div>
                   </div>

@@ -9,7 +9,7 @@ import { sendResponse } from '../utils/sendResponse.js';
  */
 export const getUsers = async (req, res, next) => {
   try {
-    const users = await User.find().populate('studentProfile collegeProfile recruiterProfile');
+    const users = await User.find().populate('studentProfile recruiterProfile');
     return sendResponse(res, 200, true, 'Users retrieved successfully', { users });
   } catch (error) {
     next(error);
@@ -21,7 +21,7 @@ export const getUsers = async (req, res, next) => {
  */
 export const getUserById = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id).populate('studentProfile collegeProfile recruiterProfile');
+    const user = await User.findById(req.params.id).populate('studentProfile recruiterProfile');
     if (!user) {
       return sendResponse(res, 404, false, 'User not found');
     }
@@ -72,17 +72,6 @@ export const updateUser = async (req, res, next) => {
       if (Object.keys(updateObj).length > 0) {
         await Student.findOneAndUpdate({ userId: user._id }, { $set: updateObj });
       }
-    } else if (user.role === 'college') {
-      const collegeFields = ['collegeName', 'collegeCode', 'website', 'contactPerson'];
-      const updateObj = {};
-      collegeFields.forEach((field) => {
-        if (req.body[field] !== undefined) {
-          updateObj[field] = req.body[field];
-        }
-      });
-      if (Object.keys(updateObj).length > 0) {
-        await College.findOneAndUpdate({ userId: user._id }, { $set: updateObj });
-      }
     } else if (user.role === 'recruiter') {
       const recruiterFields = ['companyName', 'industry', 'companySize', 'website'];
       const updateObj = {};
@@ -96,7 +85,7 @@ export const updateUser = async (req, res, next) => {
       }
     }
 
-    const populatedUser = await User.findById(user._id).populate('studentProfile collegeProfile recruiterProfile');
+    const populatedUser = await User.findById(user._id).populate('studentProfile recruiterProfile');
     return sendResponse(res, 200, true, 'User updated successfully', { user: populatedUser });
   } catch (error) {
     next(error);
@@ -116,10 +105,10 @@ export const deleteUser = async (req, res, next) => {
     // Cascade delete role specific profile documents
     if (user.role === 'student') {
       await Student.findOneAndDelete({ userId: user._id });
-    } else if (user.role === 'college') {
-      await College.findOneAndDelete({ userId: user._id });
     } else if (user.role === 'recruiter') {
       await Recruiter.findOneAndDelete({ userId: user._id });
+    } else if (user.role === 'college_representative') {
+      await mongoose.model('CollegeRepresentative').findOneAndDelete({ userId: user._id });
     }
 
     await User.findByIdAndDelete(user._id);
@@ -142,7 +131,7 @@ export const blockUser = async (req, res, next) => {
     user.isActive = false;
     await user.save({ validateBeforeSave: false });
 
-    const populatedUser = await User.findById(user._id).populate('studentProfile collegeProfile recruiterProfile');
+    const populatedUser = await User.findById(user._id).populate('studentProfile recruiterProfile');
     return sendResponse(res, 200, true, 'User blocked successfully', { user: populatedUser });
   } catch (error) {
     next(error);
@@ -162,7 +151,7 @@ export const unblockUser = async (req, res, next) => {
     user.isActive = true;
     await user.save({ validateBeforeSave: false });
 
-    const populatedUser = await User.findById(user._id).populate('studentProfile collegeProfile recruiterProfile');
+    const populatedUser = await User.findById(user._id).populate('studentProfile recruiterProfile');
     return sendResponse(res, 200, true, 'User unblocked successfully', { user: populatedUser });
   } catch (error) {
     next(error);

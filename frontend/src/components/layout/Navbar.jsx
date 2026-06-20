@@ -19,8 +19,8 @@ export default function Navbar() {
 
   const isPendingApproval = user && user.role !== 'admin' && (
     (user.role === 'student' && !user.isVerified) ||
-    (user.role === 'college' && !user.isCollegeVerified) ||
-    (user.role === 'recruiter' && !user.isRecruiterVerified)
+    (user.role === 'recruiter' && !user.isRecruiterVerified) ||
+    (user.role === 'college_representative' && !user.isVerified)
   )
 
   const isEmailPending = user && !user.isEmailVerified
@@ -65,7 +65,7 @@ export default function Navbar() {
         { label: 'Certificates', id: 'certificates' },
         { label: 'Profile', id: 'profile' },
       ]
-    } else if (role === 'college' || role === 'college_admin') {
+    } else if (role === 'college_representative' || role === 'college_admin') {
       return [
         { label: 'Dashboard', id: 'college/dashboard' },
         { label: 'Students', id: 'college/students' },

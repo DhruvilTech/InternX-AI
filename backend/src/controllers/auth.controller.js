@@ -111,9 +111,9 @@ export const getMe = async (req, res, next) => {
     // InternX Role Dashboard URL
     let dashboardUrl = '/dashboard';
     if (user.role === 'student') dashboardUrl = '/dashboard/student';
-    else if (user.role === 'college') dashboardUrl = '/dashboard/college';
-    else if (user.role === 'recruiter') dashboardUrl = '/dashboard/recruiter';
-    else if (user.role === 'admin') dashboardUrl = '/dashboard/admin';
+    else if (user.role === 'college_representative') dashboardUrl = '/college/dashboard';
+    else if (user.role === 'recruiter') dashboardUrl = '/recruiter/dashboard';
+    else if (user.role === 'admin') dashboardUrl = '/admin/dashboard';
 
     user.dashboardUrl = dashboardUrl;
 
@@ -198,9 +198,9 @@ export const updateProfile = async (req, res, next) => {
     // Set dashboard url based on user role
     let dashboardUrl = '/dashboard';
     if (userObj.role === 'student') dashboardUrl = '/dashboard/student';
-    else if (userObj.role === 'college') dashboardUrl = '/dashboard/college';
-    else if (userObj.role === 'recruiter') dashboardUrl = '/dashboard/recruiter';
-    else if (userObj.role === 'admin') dashboardUrl = '/dashboard/admin';
+    else if (userObj.role === 'college_representative') dashboardUrl = '/college/dashboard';
+    else if (userObj.role === 'recruiter') dashboardUrl = '/recruiter/dashboard';
+    else if (userObj.role === 'admin') dashboardUrl = '/admin/dashboard';
     userObj.dashboardUrl = dashboardUrl;
 
     return sendResponse(res, 200, true, 'User profile updated successfully', { user: userObj });

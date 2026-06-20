@@ -26,7 +26,6 @@ export const protect = async (req, res, next) => {
 
     const user = await User.findById(decoded.id).populate([
       { path: 'studentProfile' },
-      { path: 'collegeProfile' },
       { path: 'recruiterProfile' },
       {
         path: 'selectedCareer',

@@ -20,10 +20,10 @@ export default function ProtectedRoute() {
   // Intercept and block users pending admin approval (except for admin accounts)
   if (user && user.role !== 'admin') {
     const isStudentPending = user.role === 'student' && !user.isVerified;
-    const isCollegePending = user.role === 'college' && !user.isCollegeVerified;
     const isRecruiterPending = user.role === 'recruiter' && !user.isRecruiterVerified;
+    const isRepresentativePending = user.role === 'college_representative' && !user.isVerified;
 
-    if (isStudentPending || isCollegePending || isRecruiterPending) {
+    if (isStudentPending || isRecruiterPending || isRepresentativePending) {
       return <PendingApprovalPage />;
     }
   }

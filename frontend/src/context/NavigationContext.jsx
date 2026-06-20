@@ -80,7 +80,7 @@ export function NavigationProvider({ children }) {
         avatar: authUser.avatar || (authUser.fullName ? authUser.fullName.split(' ').map(n => n[0]).join('') : 'U'),
         track: authUser.skills && authUser.skills.length > 0 ? 'ai' : 'ai'
       })
-      setRole(authRole === 'college' ? 'college_admin' : authRole)
+      setRole(authRole === 'college_representative' || authRole === 'college' ? 'college_admin' : authRole)
       if (authRole === 'student') {
         fetchStudentInternshipAndTasks()
       }

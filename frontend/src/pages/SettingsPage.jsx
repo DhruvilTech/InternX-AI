@@ -156,7 +156,7 @@ export default function SettingsPage() {
                           const comp = internship?.name || 'No Internship Active';
                           return `Student Intern — Track: ${track} (${comp})`;
                         }
-                        if (user.role === 'college') return `College Administrator — ${user.collegeProfile?.collegeName || 'Institution'}`;
+                        if (user.role === 'college_representative') return `College Representative — ${user.fullName || 'Institution'}`;
                         if (user.role === 'recruiter') return `Recruiter — ${user.recruiterProfile?.companyName || 'Hiring Partner'}`;
                         if (user.role === 'admin') return 'Super Administrator';
                         return 'User';

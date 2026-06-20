@@ -21,7 +21,6 @@ import RoleRedirect from './components/RoleRedirect';
 
 // Auth Pages
 import AuthPages from './pages/AuthPages';
-import CollegeAdminLoginPage from './pages/CollegeAdminLoginPage';
 import RecruiterLoginPage from './pages/RecruiterLoginPage';
 
 // Dashboard page wrappers
@@ -81,7 +80,7 @@ export default function App() {
   // Hide footer on dashboard views or active student program modules or auth views
   const isDashboardView =
     location.pathname.includes('/dashboard') ||
-    ['/company', '/kanban', '/task_details', '/submit_task', '/evaluation', '/feedback_center', '/skill_gap', '/analytics', '/career_coach', '/interview_simulator', '/interview', '/candidate_profile', '/settings', '/notifications', '/login', '/register', '/forgot-password', '/reset-password', '/college-login', '/recruiter-login', '/admin/user'].some((path) =>
+    ['/company', '/kanban', '/task_details', '/submit_task', '/evaluation', '/feedback_center', '/skill_gap', '/analytics', '/career_coach', '/interview_simulator', '/interview', '/candidate_profile', '/settings', '/notifications', '/login', '/register', '/forgot-password', '/reset-password', '/recruiter-login', '/admin/user'].some((path) =>
       location.pathname.startsWith(path)
     );
 
@@ -120,7 +119,6 @@ export default function App() {
                 <Route path="/register" element={<AuthPages />} />
                 <Route path="/forgot-password" element={<AuthPages />} />
                 <Route path="/reset-password" element={<AuthPages />} />
-                <Route path="/college-login" element={<CollegeAdminLoginPage />} />
                 <Route path="/recruiter-login" element={<RecruiterLoginPage />} />
               </Route>
 
@@ -163,7 +161,7 @@ export default function App() {
                 </Route>
 
                 {/* College specific views */}
-                <Route element={<RoleRoute allowedRoles={['college', 'college_admin']} />}>
+                <Route element={<RoleRoute allowedRoles={['college_representative', 'college_admin']} />}>
                   <Route path="/college/dashboard" element={<CollegeDashboard />} />
                   <Route path="/college/students" element={<StudentsManagementPage />} />
                   <Route path="/college/students/:id" element={<StudentDetailsPage />} />

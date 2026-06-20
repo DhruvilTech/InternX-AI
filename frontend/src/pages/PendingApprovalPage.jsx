@@ -13,8 +13,8 @@ export default function PendingApprovalPage() {
       const updatedUser = await fetchCurrentUser();
       const isApproved =
         (updatedUser.role === 'student' && updatedUser.isVerified) ||
-        (updatedUser.role === 'college' && updatedUser.isCollegeVerified) ||
-        (updatedUser.role === 'recruiter' && updatedUser.isRecruiterVerified);
+        (updatedUser.role === 'recruiter' && updatedUser.isRecruiterVerified) ||
+        (updatedUser.role === 'college_representative' && updatedUser.isVerified);
 
       if (isApproved) {
         window.location.reload(); // Refresh the page to load the dashboard

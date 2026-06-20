@@ -23,4 +23,21 @@ router.delete('/user/:id', deleteUser);
 router.patch('/block/:id', blockUser);
 router.patch('/unblock/:id', unblockUser);
 
+// Super Admin approval endpoints for College Ecosystem
+import {
+  getPendingColleges,
+  getPendingRepresentatives,
+  approveCollege,
+  rejectCollege,
+  approveRepresentative,
+  rejectRepresentative,
+} from '../controllers/collegeAdmin.controller.js';
+
+router.get('/pending-colleges', getPendingColleges);
+router.get('/pending-representatives', getPendingRepresentatives);
+router.put('/approve-college', approveCollege);
+router.put('/reject-college', rejectCollege);
+router.put('/approve-representative', approveRepresentative);
+router.put('/reject-representative', rejectRepresentative);
+
 export default router;

@@ -21,7 +21,7 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['student', 'college', 'recruiter', 'admin'],
+      enum: ['student', 'recruiter', 'admin', 'college_representative'],
       required: [true, 'Role is required'],
     },
     isVerified: {
@@ -126,6 +126,27 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    collegeId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'College',
+      default: null,
+    },
+    customCollegeName: {
+      type: String,
+      default: '',
+    },
+    department: {
+      type: String,
+      default: '',
+    },
+    year: {
+      type: Number,
+      default: null,
+    },
+    careerPath: {
+      type: String,
+      default: '',
+    },
   },
   {
     timestamps: true,
@@ -137,13 +158,6 @@ const userSchema = new mongoose.Schema(
 // Virtual populates linking to role specific collections
 userSchema.virtual('studentProfile', {
   ref: 'Student',
-  localField: '_id',
-  foreignField: 'userId',
-  justOne: true,
-});
-
-userSchema.virtual('collegeProfile', {
-  ref: 'College',
   localField: '_id',
   foreignField: 'userId',
   justOne: true,

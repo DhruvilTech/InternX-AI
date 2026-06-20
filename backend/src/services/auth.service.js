@@ -4,6 +4,7 @@ import User from '../models/User.js';
 import Student from '../models/Student.js';
 import College from '../models/College.js';
 import Recruiter from '../models/Recruiter.js';
+import CollegeRepresentative from '../models/CollegeRepresentative.js';
 import { jwtConfig } from '../config/jwt.js';
 import { generateAccessToken } from '../utils/generateToken.js';
 import { cloudinary } from '../config/cloudinary.js';
@@ -60,6 +61,11 @@ export const registerUser = async (userData) => {
     verificationDocName: userData.verificationDocName || '',
     verificationDocFile: userData.verificationDocFile || '',
     cloudinaryUrl,
+    collegeId: userData.collegeId || null,
+    customCollegeName: userData.customCollegeName || '',
+    department: userData.department || '',
+    year: userData.year ? Number(userData.year) : null,
+    careerPath: userData.careerPath || '',
   };
 
   const user = new User(userPayload);
@@ -77,18 +83,10 @@ export const registerUser = async (userData) => {
     await Student.create({
       userId: user._id,
       fullName: userData.fullName,
-      collegeName: userData.collegeName,
-      course: userData.course,
-      year: userData.year,
+      collegeName: userData.collegeName || userData.customCollegeName || '',
+      course: userData.course || '',
+      year: userData.year ? Number(userData.year) : 1,
       skills: userData.skills || [],
-    });
-  } else if (role === 'college') {
-    await College.create({
-      userId: user._id,
-      collegeName: userData.collegeName,
-      collegeCode: userData.collegeCode,
-      website: userData.website || '',
-      contactPerson: userData.contactPerson,
     });
   } else if (role === 'recruiter') {
     await Recruiter.create({
@@ -97,6 +95,16 @@ export const registerUser = async (userData) => {
       industry: userData.industry,
       companySize: userData.companySize,
       website: userData.website || '',
+    });
+  } else if (role === 'college_representative') {
+    await CollegeRepresentative.create({
+      userId: user._id,
+      collegeId: userData.collegeId,
+      designation: userData.designation,
+      officialEmail: userData.officialEmail,
+      phone: userData.phone,
+      verificationStatus: 'pending',
+      verificationDocument: cloudinaryUrl || userData.verificationDocFile || 'mock-doc-url',
     });
   }
 
@@ -162,11 +170,6 @@ export const loginUser = async (email, password) => {
   // Block login if the account has not been approved by the admin
   if (user.role === 'student' && !user.isVerified) {
     const error = new Error('Your account is pending admin approval.');
-    error.statusCode = 403;
-    throw error;
-  }
-  if (user.role === 'college' && !user.isCollegeVerified) {
-    const error = new Error('Your institution account is pending admin approval.');
     error.statusCode = 403;
     throw error;
   }
@@ -354,12 +357,7 @@ export const updateUserProfile = async (user, profileData) => {
       { fullName: fullName.trim() },
       { runValidators: true }
     );
-  } else if (user.role === 'college') {
-    await College.findOneAndUpdate(
-      { userId: user._id },
-      { collegeName: fullName.trim() },
-      { runValidators: true }
-    );
+
   } else if (user.role === 'recruiter') {
     await Recruiter.findOneAndUpdate(
       { userId: user._id },
@@ -371,7 +369,6 @@ export const updateUserProfile = async (user, profileData) => {
   // Fetch fully populated updated user to return
   const updatedUser = await User.findById(user._id).populate([
     { path: 'studentProfile' },
-    { path: 'collegeProfile' },
     { path: 'recruiterProfile' },
     {
       path: 'selectedCareer',

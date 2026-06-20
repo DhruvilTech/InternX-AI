@@ -5,7 +5,7 @@ const openApiSpec = {
   info: {
     title: 'InternX AI - Auth & Auth Module API',
     version: '1.0.0',
-    description: 'API Documentation for the enterprise Authentication and Authorization module of InternX AI. Supports Student, College, Recruiter, and Admin roles.',
+    description: 'API Documentation for the enterprise Authentication and Authorization module of InternX AI. Supports Student, College Representative, Recruiter, and Admin roles.',
   },
   servers: [
     {
@@ -81,19 +81,6 @@ const openApiSpec = {
           skills: { type: 'array', items: { type: 'string' }, example: ['React', 'Node.js', 'MongoDB'] },
         },
       },
-      RegisterCollegeRequest: {
-        type: 'object',
-        required: ['email', 'password', 'role', 'collegeName', 'collegeCode', 'contactPerson'],
-        properties: {
-          email: { type: 'string', format: 'email', example: 'admin@college.edu' },
-          password: { type: 'string', minLength: 8, example: 'collegePass123' },
-          role: { type: 'string', enum: ['college'], example: 'college' },
-          collegeName: { type: 'string', example: 'Stanford University' },
-          collegeCode: { type: 'string', example: 'STAN-1002' },
-          contactPerson: { type: 'string', example: 'Prof. John Doe' },
-          website: { type: 'string', example: 'https://stanford.edu' },
-        },
-      },
       RegisterRecruiterRequest: {
         type: 'object',
         required: ['email', 'password', 'role', 'companyName', 'industry', 'companySize'],
@@ -136,7 +123,7 @@ const openApiSpec = {
     '/api/auth/register': {
       post: {
         summary: 'Register a new user',
-        description: 'Registers a new user (Student, College, Recruiter, Admin) based on their role details.',
+        description: 'Registers a new user (Student, Recruiter, Admin) based on their role details.',
         requestBody: {
           required: true,
           content: {
@@ -144,7 +131,6 @@ const openApiSpec = {
               schema: {
                 oneOf: [
                   { $ref: '#/components/schemas/RegisterStudentRequest' },
-                  { $ref: '#/components/schemas/RegisterCollegeRequest' },
                   { $ref: '#/components/schemas/RegisterRecruiterRequest' },
                 ],
               },

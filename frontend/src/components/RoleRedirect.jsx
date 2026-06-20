@@ -23,7 +23,7 @@ export default function RoleRedirect() {
     } else {
       redirectPath = '/student/dashboard';
     }
-  } else if (role === 'college' || role === 'college_admin') {
+  } else if (role === 'college_representative' || role === 'college_admin') {
     redirectPath = '/college/dashboard';
   } else if (role === 'recruiter') {
     redirectPath = '/recruiter/dashboard';

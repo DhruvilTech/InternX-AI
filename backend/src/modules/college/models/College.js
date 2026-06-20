@@ -1,49 +1,33 @@
 import mongoose from 'mongoose';
 
-const collegeProfileSchema = new mongoose.Schema(
+const collegeSchema = new mongoose.Schema(
   {
-    userId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-      unique: true,
-    },
-    collegeName: {
+    name: {
       type: String,
       required: [true, 'College name is required'],
+      unique: true,
       trim: true,
     },
-    collegeCode: {
-      type: String,
-      required: [true, 'College code is required'],
-      trim: true,
-    },
-    email: {
-      type: String,
-      lowercase: true,
-      trim: true,
-    },
-    website: {
-      type: String,
-      trim: true,
-    },
-    address: {
+    shortName: {
       type: String,
       trim: true,
     },
     city: {
       type: String,
+      required: [true, 'City is required'],
       trim: true,
     },
     state: {
       type: String,
+      required: [true, 'State is required'],
       trim: true,
     },
     country: {
       type: String,
+      default: 'India',
       trim: true,
     },
-    contactNumber: {
+    website: {
       type: String,
       trim: true,
     },
@@ -51,31 +35,22 @@ const collegeProfileSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
-    establishedYear: {
-      type: Number,
-    },
-    accreditation: {
+    collegeCode: {
       type: String,
+      unique: true,
       trim: true,
     },
-    departments: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Department',
-      },
-    ],
+    type: {
+      type: String,
+      default: 'Engineering', // e.g. Engineering, Management, Arts, etc.
+    },
+    verified: {
+      type: Boolean,
+      default: true,
+    },
     totalStudents: {
       type: Number,
       default: 0,
-    },
-    status: {
-      type: String,
-      enum: ['pending', 'active', 'suspended'],
-      default: 'active',
-    },
-    contactPerson: {
-      type: String,
-      trim: true,
     },
   },
   {
@@ -83,5 +58,5 @@ const collegeProfileSchema = new mongoose.Schema(
   }
 );
 
-const College = mongoose.models.College || mongoose.model('College', collegeProfileSchema);
+const College = mongoose.models.College || mongoose.model('College', collegeSchema);
 export default College;

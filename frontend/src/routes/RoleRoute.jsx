@@ -17,8 +17,7 @@ export default function RoleRoute({ allowedRoles }) {
   }
 
   // Check if role is authorized
-  const isAuthorized = allowedRoles.includes(role) || 
-    (allowedRoles.includes('college') && role === 'college_admin'); // Support college/college_admin aliases
+  const isAuthorized = allowedRoles.includes(role);
 
   return isAuthorized ? <Outlet /> : <Navigate to="/404" replace />;
 }

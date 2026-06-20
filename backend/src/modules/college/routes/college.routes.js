@@ -23,26 +23,45 @@ import {
   departmentValidationRules,
   validate
 } from '../validators/college.validator.js';
+import {
+  getCollegeDashboard,
+  getCollegeStudents
+} from '../../../controllers/college.controller.js';
 
 const router = express.Router();
+
+// Dynamic handlers to support both modular college users and college_representatives
+const handleDashboard = (req, res, next) => {
+  if (req.user.role === 'college_representative') {
+    return getCollegeDashboard(req, res, next);
+  }
+  return requireCollegeProfile(req, res, () => getDashboard(req, res, next));
+};
+
+const handleStudents = (req, res, next) => {
+  if (req.user.role === 'college_representative') {
+    return getCollegeStudents(req, res, next);
+  }
+  return requireCollegeProfile(req, res, () => getStudents(req, res, next));
+};
 
 // Publicly verify certificate authenticity
 router.get('/certificates/verify/:id', verifyCertificate);
 
-// All other endpoints are protected and restricted to college users
+// All other endpoints are protected
 router.use(protect);
-router.use(authorizeRoles('college', 'college_admin'));
+
+// Dashboard and students endpoints accessible by representative role too
+router.get('/dashboard', authorizeRoles('college_representative', 'college_admin'), handleDashboard);
+router.get('/students', authorizeRoles('college_representative', 'college_admin'), handleStudents);
+
+// Restrict subsequent routes to college representatives/admins and enforce profile requirement
+router.use(authorizeRoles('college_representative', 'college_admin'));
 router.use(requireCollegeProfile);
 
 // Profile management
 router.get('/profile', getProfile);
 router.patch('/profile', updateProfileValidationRules, validate, patchProfile);
-
-// Dashboard Metrics
-router.get('/dashboard', getDashboard);
-
-// Cohorts / Student Management
-router.get('/students', getStudents);
 router.get('/students/:id', getStudentDetails);
 router.get('/students/:id/github', getStudentGithub);
 

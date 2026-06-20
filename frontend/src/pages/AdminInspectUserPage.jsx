@@ -41,8 +41,6 @@ export default function AdminInspectUserPage() {
         let updateField = {};
         if (targetUser.role === 'student') {
           updateField = { isVerified: true };
-        } else if (targetUser.role === 'college') {
-          updateField = { isCollegeVerified: true };
         } else if (targetUser.role === 'recruiter') {
           updateField = { isRecruiterVerified: true };
         }
@@ -69,7 +67,6 @@ export default function AdminInspectUserPage() {
 
   const getDocLabel = () => {
     if (targetUser?.role === 'student') return 'Student ID Card';
-    if (targetUser?.role === 'college') return 'College Identity Doc';
     return 'Corporate Business License';
   };
 

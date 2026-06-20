@@ -1,4 +1,5 @@
 import College from '../models/College.js';
+import CollegeRepresentative from '../../../models/CollegeRepresentative.js';
 
 export const requireCollegeProfile = async (req, res, next) => {
   try {
@@ -9,7 +10,16 @@ export const requireCollegeProfile = async (req, res, next) => {
       });
     }
 
-    const college = await College.findOne({ userId: req.user._id });
+    let college;
+    if (req.user.role === 'college_representative') {
+      const rep = await CollegeRepresentative.findOne({ userId: req.user._id });
+      if (rep) {
+        college = await College.findById(rep.collegeId);
+      }
+    } else {
+      college = await College.findOne({ userId: req.user._id });
+    }
+
     if (!college) {
       return res.status(404).json({
         success: false,

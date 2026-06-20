@@ -28,7 +28,6 @@ export const sendTokenResponse = async (user, statusCode, message, res) => {
   // Ensure role profiles are populated
   await user.populate([
     { path: 'studentProfile' },
-    { path: 'collegeProfile' },
     { path: 'recruiterProfile' },
     {
       path: 'selectedCareer',
@@ -60,9 +59,9 @@ export const sendTokenResponse = async (user, statusCode, message, res) => {
   // InternX Role Dashboard Mapping
   let dashboardUrl = '/dashboard';
   if (user.role === 'student') dashboardUrl = '/dashboard/student';
-  else if (user.role === 'college') dashboardUrl = '/dashboard/college';
-  else if (user.role === 'recruiter') dashboardUrl = '/dashboard/recruiter';
-  else if (user.role === 'admin') dashboardUrl = '/dashboard/admin';
+  else if (user.role === 'college_representative') dashboardUrl = '/college/dashboard';
+  else if (user.role === 'recruiter') dashboardUrl = '/recruiter/dashboard';
+  else if (user.role === 'admin') dashboardUrl = '/admin/dashboard';
 
   userResponse.dashboardUrl = dashboardUrl;
 

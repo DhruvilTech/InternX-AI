@@ -188,7 +188,7 @@ export const refreshAnalytics = async (collegeId) => {
 
   // Active vs Completed Careers (Simulating Internship tracks)
   const studentCareers = await StudentCareer.find({ studentId: { $in: studentUserIds } });
-  
+
   let activeInternships = 0;
   let completedInternships = 0;
   let scoreSum = 0;
@@ -320,7 +320,7 @@ export const queryStudents = async (college, queryParams) => {
   if (githubConnected) {
     const gitProfiles = await GithubProfile.find({ userId: { $in: studentUserIds } });
     const gitUserIds = gitProfiles.map(gp => gp.userId.toString());
-    
+
     if (githubConnected === 'true') {
       students = students.filter(s => s.userId && gitUserIds.includes(s.userId._id.toString()));
     } else if (githubConnected === 'false') {
@@ -468,7 +468,7 @@ export const getInternshipAnalytics = async (college) => {
   const studentUserIds = students.map(s => s.userId);
 
   const careers = await StudentCareer.find({ studentId: { $in: studentUserIds } });
-  
+
   let active = 0;
   let completed = 0;
   let scoreSum = 0;
@@ -529,7 +529,7 @@ export const getSkillAnalytics = async (college) => {
 
   const students = await Student.find({ collegeName: college.collegeName });
   const skillsCount = {};
-  
+
   students.forEach(s => {
     s.skills.forEach(skill => {
       skillsCount[skill] = (skillsCount[skill] || 0) + 1;
@@ -586,7 +586,7 @@ export const getCertificateStatistics = async (college) => {
   await seedDemoCohortIfEmpty(college);
 
   const certificates = await Certificate.find({ collegeId: college._id }).populate('studentId');
-  
+
   const formattedCerts = certificates.map(c => ({
     _id: c._id,
     studentId: c.studentId?._id,
@@ -618,7 +618,7 @@ export const getPlacementReadiness = async (college) => {
   const studentUserIds = students.map(s => s.userId?._id).filter(id => !!id);
 
   const careers = await StudentCareer.find({ studentId: { $in: studentUserIds } }).populate('careerId');
-  
+
   const topPerformers = [];
   const riskStudents = [];
 

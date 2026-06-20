@@ -211,7 +211,7 @@ export const getReports = async (req, res, next) => {
 export const createDepartment = async (req, res, next) => {
   try {
     const { departmentName, departmentCode, headOfDepartment } = req.body;
-    
+
     let dept = await Department.findOne({ collegeId: req.college._id, departmentCode });
     if (dept) {
       return res.status(400).json({ success: false, message: 'Department code already registered.' });

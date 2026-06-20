@@ -30,7 +30,7 @@ export default function AuthPages() {
   }, [location.pathname])
 
   // Registration Role selector
-  const [signupRole, setSignupRole] = useState('student') // student, recruiter, college
+  const [signupRole, setSignupRole] = useState('student') // student, recruiter, college, college_representative
 
   // Form fields
   const [email, setEmail] = useState('')
@@ -39,6 +39,24 @@ export default function AuthPages() {
   const [collegeName, setCollegeName] = useState('')
   const [companyName, setCompanyName] = useState('')
   const [uploadedDocName, setUploadedDocName] = useState('')
+
+  // Autocomplete and custom college states
+  const [collegeSearch, setCollegeSearch] = useState('')
+  const [collegesList, setCollegesList] = useState([])
+  const [selectedCollege, setSelectedCollege] = useState(null)
+  const [showDropdown, setShowDropdown] = useState(false)
+  const [customCollege, setCustomCollege] = useState(false) // My College Is Not Listed
+
+  // Custom college inputs
+  const [customName, setCustomName] = useState('')
+  const [customCity, setCustomCity] = useState('')
+  const [customState, setCustomState] = useState('')
+  const [customWebsite, setCustomWebsite] = useState('')
+
+  // College Representative fields
+  const [designation, setDesignation] = useState('')
+  const [officialEmail, setOfficialEmail] = useState('')
+  const [phone, setPhone] = useState('')
   const [otp, setOtp] = useState('')
   const [otpVerified, setOtpVerified] = useState(false)
   const [otpError, setOtpError] = useState(false)
@@ -62,6 +80,28 @@ export default function AuthPages() {
       prev.includes(skill) ? prev.filter(s => s !== skill) : [...prev, skill]
     )
   }
+
+  // College search autocomplete side effect
+  useEffect(() => {
+    if (collegeSearch.trim().length > 1 && !selectedCollege) {
+      const fetchColleges = async () => {
+        try {
+          const res = await axiosInstance.get(`/api/colleges/search?q=${encodeURIComponent(collegeSearch)}`)
+          if (res.data && res.data.success) {
+            setCollegesList(res.data.data)
+            setShowDropdown(true)
+          }
+        } catch (err) {
+          console.error(err)
+        }
+      }
+      const delay = setTimeout(fetchColleges, 300)
+      return () => clearTimeout(delay)
+    } else {
+      setCollegesList([])
+      setShowDropdown(false)
+    }
+  }, [collegeSearch, selectedCollege])
 
   // Reset OTP resend timer when transitioning to OTP mode
   useEffect(() => {
@@ -140,7 +180,7 @@ export default function AuthPages() {
 
         const role = res?.user?.role || res?.data?.user?.role;
         if (role === 'student') navigate('/student/dashboard');
-        else if (role === 'college') navigate('/college/dashboard');
+        else if (role === 'college_representative') navigate('/college/dashboard');
         else if (role === 'recruiter') navigate('/recruiter/dashboard');
         else if (role === 'admin') navigate('/admin/dashboard');
         else navigate('/dashboard');
@@ -182,21 +222,54 @@ export default function AuthPages() {
         };
 
         if (signupRole === 'student') {
+          if (customCollege) {
+            // Save custom college request to be sent after OTP/email verification is complete
+            localStorage.setItem('customCollegeRequest', JSON.stringify({
+              collegeName: customName,
+              city: customCity,
+              state: customState,
+              website: customWebsite
+            }));
+            payload = {
+              ...payload,
+              fullName: name,
+              collegeName: customName,
+              customCollegeName: customName,
+              collegeId: null,
+              course,
+              year: Number(year),
+              skills: selectedSkills
+            };
+          } else {
+            if (!selectedCollege) {
+              addToast('Please select a college from the list or check "My College Is Not Listed"', 'error');
+              setLoading(false);
+              return;
+            }
+            payload = {
+              ...payload,
+              fullName: name,
+              collegeName: selectedCollege.name,
+              collegeId: selectedCollege._id,
+              customCollegeName: '',
+              course,
+              year: Number(year),
+              skills: selectedSkills
+            };
+          }
+        } else if (signupRole === 'college_representative') {
+          if (!selectedCollege) {
+            addToast('Please select the college you represent.', 'error');
+            setLoading(false);
+            return;
+          }
           payload = {
             ...payload,
             fullName: name,
-            collegeName,
-            course,
-            year: Number(year),
-            skills: selectedSkills
-          };
-        } else if (signupRole === 'college') {
-          payload = {
-            ...payload,
-            collegeName,
-            collegeCode,
-            contactPerson: name,
-            website
+            collegeId: selectedCollege._id,
+            designation,
+            officialEmail,
+            phone
           };
         } else if (signupRole === 'recruiter') {
           payload = {
@@ -224,6 +297,19 @@ export default function AuthPages() {
           const accessToken = res.data.accessToken;
           localStorage.setItem('accessToken', accessToken);
           axiosInstance.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+
+          // Submit custom college request if it was queued during signup
+          const queuedRequest = localStorage.getItem('customCollegeRequest');
+          if (queuedRequest) {
+            try {
+              const reqData = JSON.parse(queuedRequest);
+              await axiosInstance.post('/api/colleges/request', reqData);
+              localStorage.removeItem('customCollegeRequest');
+              console.log('Submitted custom college request successfully post-auth.');
+            } catch (err) {
+              console.error('Failed to submit custom college request:', err);
+            }
+          }
           
           // Re-fetch profiles using AuthContext
           await fetchCurrentUser();
@@ -235,7 +321,7 @@ export default function AuthPages() {
           
           setTimeout(() => {
             if (targetRole === 'student') navigate('/student/dashboard');
-            else if (targetRole === 'college') navigate('/college/dashboard');
+            else if (targetRole === 'college_representative') navigate('/college/dashboard');
             else if (targetRole === 'recruiter') navigate('/recruiter/dashboard');
             else navigate('/dashboard');
           }, 1500); // 1.5s delay to show green light animation
@@ -465,7 +551,7 @@ export default function AuthPages() {
                 <div className="flex border border-border p-1 bg-void/50 rounded-xl mb-5 text-center text-xs">
                   {[
                     { id: 'student', label: 'Student', icon: User },
-                    { id: 'college', label: 'College', icon: GraduationCap },
+                    { id: 'college_representative', label: 'College Rep', icon: ShieldCheck },
                     { id: 'recruiter', label: 'Recruiter', icon: Building2 }
                   ].map((tab) => {
                     const Icon = tab.icon
@@ -477,6 +563,9 @@ export default function AuthPages() {
                         onClick={() => {
                           setSignupRole(tab.id)
                           setUploadedDocName('')
+                          setSelectedCollege(null)
+                          setCollegeSearch('')
+                          setCustomCollege(false)
                         }}
                         className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-1.5 font-semibold transition-all ${active
                             ? 'bg-gradient-to-r from-accent to-violet text-white shadow-md'
@@ -494,14 +583,14 @@ export default function AuthPages() {
                   {/* Name field */}
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block">
-                      {signupRole === 'student' ? 'Full Name' : signupRole === 'college' ? 'Director Name' : 'Recruiter Name'}
+                      {signupRole === 'student' ? 'Full Name' : signupRole === 'college_representative' ? 'Representative Name' : 'Recruiter Name'}
                     </label>
                     <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-border bg-void/50 focus-within:border-accent transition-colors">
                       <User size={14} className="text-muted" />
                       <input
                         type="text"
                         required
-                        placeholder={signupRole === 'student' ? 'Arjun Kapoor' : signupRole === 'college' ? 'Dean Arthur Pendelton' : 'Sarah Johnson'}
+                        placeholder={signupRole === 'student' ? 'Arjun Kapoor' : signupRole === 'college_representative' ? 'Prof. Vivek Sharma' : 'Sarah Johnson'}
                         value={name}
                         onChange={(e) => setName(e.target.value)}
                         className="w-full bg-transparent text-xs text-text outline-none border-none"
@@ -510,19 +599,19 @@ export default function AuthPages() {
                   </div>
 
                   {/* Dynamic Organization Name */}
-                  {signupRole !== 'student' && (
+                  {signupRole === 'recruiter' && (
                     <div className="space-y-1.5">
                       <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block">
-                        {signupRole === 'college' ? 'College Name' : 'Company Name'}
+                        Company Name
                       </label>
                       <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-border bg-void/50 focus-within:border-accent transition-colors">
                         <Building2 size={14} className="text-muted" />
                         <input
                           type="text"
                           required
-                          placeholder={signupRole === 'college' ? 'Massachusetts Institute of Technology' : 'NeuralMind Technologies'}
-                          value={signupRole === 'college' ? collegeName : companyName}
-                          onChange={(e) => signupRole === 'college' ? setCollegeName(e.target.value) : setCompanyName(e.target.value)}
+                          placeholder="NeuralMind Technologies"
+                          value={companyName}
+                          onChange={(e) => setCompanyName(e.target.value)}
                           className="w-full bg-transparent text-xs text-text outline-none border-none"
                         />
                       </div>
@@ -537,7 +626,7 @@ export default function AuthPages() {
                       <input
                         type="email"
                         required
-                        placeholder={signupRole === 'student' ? 'you@university.edu' : signupRole === 'college' ? 'dean@mit.edu' : 'recruiting@company.com'}
+                        placeholder={signupRole === 'student' ? 'you@university.edu' : signupRole === 'college_representative' ? 'vivek@college.edu' : 'recruiting@company.com'}
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         className="w-full bg-transparent text-xs text-text outline-none border-none"
@@ -561,24 +650,183 @@ export default function AuthPages() {
                     </div>
                   </div>
 
-                  {/* Student Dynamic Fields */}
-                  {signupRole === 'student' && (
+                  {/* College Search Autocomplete for Students and College Representatives */}
+                  {(signupRole === 'student' || signupRole === 'college_representative') && (
+                    <div className="space-y-1.5 relative animate-fade-in">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block">College</label>
+                        {signupRole === 'student' && (
+                          <label className="flex items-center gap-1.5 text-[10px] text-accent cursor-pointer">
+                            <input
+                              type="checkbox"
+                              checked={customCollege}
+                              onChange={(e) => {
+                                setCustomCollege(e.target.checked);
+                                if (e.target.checked) {
+                                  setSelectedCollege(null);
+                                  setCollegeSearch('');
+                                }
+                              }}
+                              className="rounded border-border bg-void/50 text-accent focus:ring-0 focus:ring-offset-0"
+                            />
+                            <span>My college is not listed</span>
+                          </label>
+                        )}
+                      </div>
+
+                      {customCollege && signupRole === 'student' ? (
+                        <div className="space-y-3 p-3.5 border border-border/85 bg-void/30 rounded-xl">
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-muted uppercase tracking-wider block">College Name</label>
+                            <input
+                              type="text"
+                              required
+                              placeholder="E.g. Nirma University"
+                              value={customName}
+                              onChange={(e) => setCustomName(e.target.value)}
+                              className="w-full bg-void/50 border border-border rounded-lg px-2.5 py-2 text-xs text-text outline-none focus:border-accent"
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-2">
+                            <div className="space-y-1">
+                              <label className="text-[9px] font-bold text-muted uppercase tracking-wider block">City</label>
+                              <input
+                                type="text"
+                                required
+                                placeholder="Ahmedabad"
+                                value={customCity}
+                                onChange={(e) => setCustomCity(e.target.value)}
+                                className="w-full bg-void/50 border border-border rounded-lg px-2.5 py-2 text-xs text-text outline-none focus:border-accent"
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[9px] font-bold text-muted uppercase tracking-wider block">State</label>
+                              <input
+                                type="text"
+                                required
+                                placeholder="Gujarat"
+                                value={customState}
+                                onChange={(e) => setCustomState(e.target.value)}
+                                className="w-full bg-void/50 border border-border rounded-lg px-2.5 py-2 text-xs text-text outline-none focus:border-accent"
+                              />
+                            </div>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[9px] font-bold text-muted uppercase tracking-wider block">Website</label>
+                            <input
+                              type="url"
+                              placeholder="https://nirmauni.ac.in"
+                              value={customWebsite}
+                              onChange={(e) => setCustomWebsite(e.target.value)}
+                              className="w-full bg-void/50 border border-border rounded-lg px-2.5 py-2 text-xs text-text outline-none focus:border-accent"
+                            />
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-border bg-void/50 focus-within:border-accent transition-colors">
+                            <GraduationCap size={14} className="text-muted" />
+                            <input
+                              type="text"
+                              required={!customCollege}
+                              placeholder="Search for your college (e.g. Nirma, IIT, NIT)..."
+                              value={collegeSearch}
+                              onChange={(e) => {
+                                setCollegeSearch(e.target.value);
+                                setSelectedCollege(null);
+                              }}
+                              className="w-full bg-transparent text-xs text-text outline-none border-none"
+                            />
+                            {selectedCollege && (
+                              <span className="text-[10px] bg-emerald/20 border border-emerald/30 text-emerald-300 font-semibold px-2 py-0.5 rounded-full shrink-0">
+                                Selected
+                              </span>
+                            )}
+                          </div>
+
+                          {showDropdown && collegesList.length > 0 && (
+                            <div className="absolute left-0 right-0 mt-1 max-h-48 overflow-y-auto glass border border-border rounded-xl shadow-xl z-50 py-1 text-xs">
+                              {collegesList.map((col) => (
+                                <div
+                                  key={col._id}
+                                  onClick={() => {
+                                    setSelectedCollege(col);
+                                    setCollegeSearch(col.name);
+                                    setShowDropdown(false);
+                                  }}
+                                  className="px-3.5 py-2 hover:bg-white/5 cursor-pointer flex justify-between items-center transition-colors text-muted hover:text-text text-left"
+                                >
+                                  <div>
+                                    <p className="font-semibold text-text">{col.name}</p>
+                                    <p className="text-[9px] opacity-70 text-muted">{col.city}, {col.state}</p>
+                                  </div>
+                                  {col.shortName && (
+                                    <span className="text-[9px] px-1.5 py-0.5 rounded bg-void/60 text-accent font-bold">
+                                      {col.shortName}
+                                    </span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* College Representative Fields */}
+                  {signupRole === 'college_representative' && (
                     <>
                       <div className="space-y-1.5">
-                        <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block">College Name</label>
+                        <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block">Official Designation</label>
                         <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-border bg-void/50 focus-within:border-accent transition-colors">
-                          <GraduationCap size={14} className="text-muted" />
+                          <ShieldCheck size={14} className="text-muted" />
                           <input
                             type="text"
                             required
-                            placeholder="E.g. Stanford University"
-                            value={collegeName}
-                            onChange={(e) => setCollegeName(e.target.value)}
+                            placeholder="E.g. Head of Placements"
+                            value={designation}
+                            onChange={(e) => setDesignation(e.target.value)}
                             className="w-full bg-transparent text-xs text-text outline-none border-none"
                           />
                         </div>
                       </div>
 
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block">Official Email</label>
+                          <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-border bg-void/50 focus-within:border-accent transition-colors">
+                            <Mail size={14} className="text-muted" />
+                            <input
+                              type="email"
+                              required
+                              placeholder="rep@college.edu"
+                              value={officialEmail}
+                              onChange={(e) => setOfficialEmail(e.target.value)}
+                              className="w-full bg-transparent text-xs text-text outline-none border-none"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block">Phone Number</label>
+                          <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-border bg-void/50 focus-within:border-accent transition-colors">
+                            <input
+                              type="tel"
+                              required
+                              placeholder="+91 98765 43210"
+                              value={phone}
+                              onChange={(e) => setPhone(e.target.value)}
+                              className="w-full bg-transparent text-xs text-text outline-none border-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Student Dynamic Fields */}
+                  {signupRole === 'student' && (
+                    <>
                       <div className="grid grid-cols-2 gap-3">
                         <div className="space-y-1.5">
                           <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block">Course</label>
@@ -634,37 +882,7 @@ export default function AuthPages() {
                     </>
                   )}
 
-                  {/* College Dynamic Fields */}
-                  {signupRole === 'college' && (
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block">College Code</label>
-                        <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-border bg-void/50 focus-within:border-accent transition-colors">
-                          <input
-                            type="text"
-                            required
-                            placeholder="STAN-002"
-                            value={collegeCode}
-                            onChange={(e) => setCollegeCode(e.target.value)}
-                            className="w-full bg-transparent text-xs text-text outline-none border-none"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block">Website URL</label>
-                        <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-border bg-void/50 focus-within:border-accent transition-colors">
-                          <input
-                            type="url"
-                            required
-                            placeholder="https://stanford.edu"
-                            value={website}
-                            onChange={(e) => setWebsite(e.target.value)}
-                            className="w-full bg-transparent text-xs text-text outline-none border-none"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
+
 
                   {/* Recruiter Dynamic Fields */}
                   {signupRole === 'recruiter' && (
@@ -716,7 +934,7 @@ export default function AuthPages() {
                   {/* File upload credentials box */}
                   <div className="space-y-1.5">
                     <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block">
-                      {signupRole === 'student' ? 'Student ID Card (.pdf/.png)' : signupRole === 'college' ? 'Accreditation identity file (.pdf)' : 'Corporate business license (.pdf)'}
+                      {signupRole === 'student' ? 'Student ID Card (.pdf/.png)' : signupRole === 'college_representative' ? 'Accreditation identity file (.pdf)' : 'Corporate business license (.pdf)'}
                     </label>
 
                     <input
