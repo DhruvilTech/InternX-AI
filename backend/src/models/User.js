@@ -159,6 +159,18 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    verificationDocName: {
+      type: String,
+      default: '',
+    },
+    verificationDocFile: {
+      type: String,
+      default: '',
+    },
+    cloudinaryUrl: {
+      type: String,
+      default: '',
+    },
   },
   {
     timestamps: true,

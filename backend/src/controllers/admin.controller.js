@@ -33,40 +33,14 @@ export const getUserById = async (req, res, next) => {
  */
 export const updateUser = async (req, res, next) => {
   try {
-    const user = await User.findById(req.params.id);
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { $set: req.body },
+      { new: true, runValidators: true }
+    );
     if (!user) {
       return sendResponse(res, 404, false, 'User not found');
     }
-
-    // Expose modifiable keys
-    const modifiableFields = [
-      'fullName',
-      'collegeName',
-      'course',
-      'year',
-      'skills',
-      'collegeCode',
-      'website',
-      'contactPerson',
-      'companyName',
-      'industry',
-      'companySize',
-      'isVerified',
-      'isActive',
-      'profileCompleted',
-      'avatar',
-      'isCollegeVerified',
-      'isRecruiterVerified',
-      'role',
-    ];
-
-    modifiableFields.forEach((field) => {
-      if (req.body[field] !== undefined) {
-        user[field] = req.body[field];
-      }
-    });
-
-    await user.save();
     return sendResponse(res, 200, true, 'User updated successfully', { user });
   } catch (error) {
     next(error);

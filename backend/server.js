@@ -1,6 +1,8 @@
+import './src/config/env.js';
 import dns from 'dns';
 import app from './src/app.js';
 import connectDB from './src/config/db.js';
+import { configureCloudinary } from './src/config/cloudinary.js';
 
 // Force DNS lookup to prefer IPv4 (resolves querySrv ECONNREFUSED issues for MongoDB Atlas)
 if (dns.setDefaultResultOrder) {
@@ -9,6 +11,7 @@ if (dns.setDefaultResultOrder) {
 
 // Connect to Database
 connectDB();
+configureCloudinary();
 
 const PORT = process.env.PORT || 5000;
 

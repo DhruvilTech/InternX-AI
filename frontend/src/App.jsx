@@ -20,16 +20,16 @@ import RoleRoute from './routes/RoleRoute';
 import RoleRedirect from './components/RoleRedirect';
 
 // Auth Pages
-import Login from './pages/auth/Login';
-import Register from './pages/auth/Register';
-import ForgotPassword from './pages/auth/ForgotPassword';
-import ResetPassword from './pages/auth/ResetPassword';
+import AuthPages from './pages/AuthPages';
+import CollegeAdminLoginPage from './pages/CollegeAdminLoginPage';
+import RecruiterLoginPage from './pages/RecruiterLoginPage';
 
 // Dashboard page wrappers
 import StudentDashboard from './pages/dashboards/StudentDashboard';
 import CollegeDashboard from './pages/dashboards/CollegeDashboard';
 import RecruiterDashboard from './pages/dashboards/RecruiterDashboard';
 import AdminDashboard from './pages/dashboards/AdminDashboard';
+import AdminInspectUserPage from './pages/AdminInspectUserPage';
 
 // Other Pages
 import LandingPage from './pages/LandingPage';
@@ -57,10 +57,10 @@ export default function App() {
   useLenis();
   const location = useLocation();
 
-  // Hide footer on dashboard views or active student program modules
+  // Hide footer on dashboard views or active student program modules or auth views
   const isDashboardView =
     location.pathname.includes('/dashboard') ||
-    ['/company', '/kanban', '/task_details', '/submit_task', '/evaluation', '/feedback_center', '/skill_gap', '/analytics', '/career_coach', '/interview_simulator', '/candidate_profile', '/settings', '/notifications'].some((path) =>
+    ['/company', '/kanban', '/task_details', '/submit_task', '/evaluation', '/feedback_center', '/skill_gap', '/analytics', '/career_coach', '/interview_simulator', '/candidate_profile', '/settings', '/notifications', '/login', '/register', '/forgot-password', '/reset-password', '/college-login', '/recruiter-login', '/admin/user'].some((path) =>
       location.pathname.startsWith(path)
     );
 
@@ -95,10 +95,12 @@ export default function App() {
               
               {/* Guest Only Auth Routes */}
               <Route element={<PublicRoute />}>
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/login" element={<AuthPages />} />
+                <Route path="/register" element={<AuthPages />} />
+                <Route path="/forgot-password" element={<AuthPages />} />
+                <Route path="/reset-password" element={<AuthPages />} />
+                <Route path="/college-login" element={<CollegeAdminLoginPage />} />
+                <Route path="/recruiter-login" element={<RecruiterLoginPage />} />
               </Route>
 
               {/* Protected Routes */}
@@ -140,6 +142,7 @@ export default function App() {
                 {/* Admin specific views */}
                 <Route element={<RoleRoute allowedRoles={['admin']} />}>
                   <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                  <Route path="/admin/user/:id" element={<AdminInspectUserPage />} />
                 </Route>
 
                 {/* Shared User views */}

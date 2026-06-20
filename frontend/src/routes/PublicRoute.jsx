@@ -10,7 +10,7 @@ export default function PublicRoute() {
   const { isAuthenticated, role, loading } = useAuth();
 
   if (loading) {
-    return <LoadingScreen />;
+    return <Outlet />;
   }
 
   if (isAuthenticated) {

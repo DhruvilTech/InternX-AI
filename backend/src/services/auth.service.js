@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import { jwtConfig } from '../config/jwt.js';
 import { generateAccessToken } from '../utils/generateToken.js';
+import { cloudinary } from '../config/cloudinary.js';
 
 /**
  * Register a new user based on their specific role.
@@ -17,10 +18,42 @@ export const registerUser = async (userData) => {
     throw error;
   }
 
+  let cloudinaryUrl = userData.cloudinaryUrl || '';
+
+  if (userData.verificationDocFile) {
+    try {
+      if (
+        process.env.CLOUDINARY_CLOUD_NAME &&
+        process.env.CLOUDINARY_API_KEY &&
+        process.env.CLOUDINARY_API_SECRET
+      ) {
+        let fileToUpload = userData.verificationDocFile;
+        if (!fileToUpload.startsWith('data:')) {
+          fileToUpload = `data:image/png;base64,${fileToUpload}`;
+        }
+
+        console.log('Uploading verification document to Cloudinary...');
+        const uploadRes = await cloudinary.uploader.upload(fileToUpload, {
+          folder: 'internx_verification',
+          resource_type: 'auto',
+        });
+        cloudinaryUrl = uploadRes.secure_url;
+        console.log('Cloudinary upload successful:', cloudinaryUrl);
+      } else {
+        console.log('Cloudinary not configured in environment, using client-provided/mock URL.');
+      }
+    } catch (uploadError) {
+      console.error('Cloudinary upload error, using local/mock fallback:', uploadError.message);
+    }
+  }
+
   const userPayload = {
     email,
     password,
     role,
+    verificationDocName: userData.verificationDocName || '',
+    verificationDocFile: userData.verificationDocFile || '',
+    cloudinaryUrl,
   };
 
   // Map role-specific parameters
@@ -70,6 +103,23 @@ export const loginUser = async (email, password) => {
   if (!isMatch) {
     const error = new Error('Invalid credentials');
     error.statusCode = 401;
+    throw error;
+  }
+
+  // Block login if the account has not been approved by the admin
+  if (user.role === 'student' && !user.isVerified) {
+    const error = new Error('Your account is pending admin approval.');
+    error.statusCode = 403;
+    throw error;
+  }
+  if (user.role === 'college' && !user.isCollegeVerified) {
+    const error = new Error('Your institution account is pending admin approval.');
+    error.statusCode = 403;
+    throw error;
+  }
+  if (user.role === 'recruiter' && !user.isRecruiterVerified) {
+    const error = new Error('Your recruiter account is pending admin approval.');
+    error.statusCode = 403;
     throw error;
   }
 
@@ -127,7 +177,7 @@ export const refreshAccessToken = async (token) => {
  */
 export const changeUserPassword = async (user, oldPassword, newPassword) => {
   const dbUser = await User.findById(user._id).select('+password');
-  
+
   const isMatch = await dbUser.comparePassword(oldPassword);
   if (!isMatch) {
     const error = new Error('Incorrect old password');

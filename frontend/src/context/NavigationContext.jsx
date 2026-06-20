@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
+import axiosInstance from '../api/axios.js'
 import useAuth from '../hooks/useAuth.js'
 
 const NavigationContext = createContext(null)
@@ -59,7 +60,71 @@ export function NavigationProvider({ children }) {
       setRole('guest')
     }
   }, [authUser, authRole])
-  
+
+  const fetchBackendApprovals = async () => {
+    try {
+      const response = await axiosInstance.get('/api/admin/users')
+      if (response.data?.success && response.data?.data?.users) {
+        const allUsers = response.data.data.users
+
+        const students = allUsers
+          .filter(u => u.role === 'student')
+          .map(u => ({
+            id: u._id,
+            name: u.fullName || 'Anonymous Student',
+            email: u.email,
+            track: u.skills && u.skills.length > 0 ? u.skills.join(', ') : 'AI Engineer',
+            idDoc: u.verificationDocName || 'No document uploaded',
+            fileUrl: u.verificationDocFile || null,
+            fileType: u.verificationDocFile ? (u.verificationDocFile.startsWith('data:image') ? 'image/png' : 'application/pdf') : null,
+            cloudinaryUrl: u.cloudinaryUrl || null,
+            uploadedAt: new Date(u.createdAt).toLocaleDateString() || 'Just now',
+            status: u.isVerified ? 'approved' : 'pending'
+          }))
+
+        const colleges = allUsers
+          .filter(u => u.role === 'college')
+          .map(u => ({
+            id: u._id,
+            name: u.collegeName || 'Accredited College',
+            domain: u.email.split('@')[1] || 'edu',
+            adminEmail: u.email,
+            identityDoc: u.verificationDocName || 'No document uploaded',
+            fileUrl: u.verificationDocFile || null,
+            fileType: u.verificationDocFile ? (u.verificationDocFile.startsWith('data:image') ? 'image/png' : 'application/pdf') : null,
+            cloudinaryUrl: u.cloudinaryUrl || null,
+            uploadedAt: new Date(u.createdAt).toLocaleDateString() || 'Just now',
+            status: u.isCollegeVerified ? 'approved' : 'pending'
+          }))
+
+        const companies = allUsers
+          .filter(u => u.role === 'recruiter')
+          .map(u => ({
+            id: u._id,
+            name: u.companyName || 'Simulated Company LLC',
+            domain: u.email.split('@')[1] || 'com',
+            recruiterEmail: u.email,
+            licenseDoc: u.verificationDocName || 'No document uploaded',
+            fileUrl: u.verificationDocFile || null,
+            fileType: u.verificationDocFile ? (u.verificationDocFile.startsWith('data:image') ? 'image/png' : 'application/pdf') : null,
+            cloudinaryUrl: u.cloudinaryUrl || null,
+            uploadedAt: new Date(u.createdAt).toLocaleDateString() || 'Just now',
+            status: u.isRecruiterVerified ? 'approved' : 'pending'
+          }))
+
+        setApprovals({ students, colleges, companies })
+      }
+    } catch (err) {
+      console.error('Failed to fetch backend approvals:', err)
+    }
+  }
+
+  useEffect(() => {
+    if (authRole === 'admin') {
+      fetchBackendApprovals()
+    }
+  }, [authRole])
+
   // Onboarding
   const [onboardingStep, setOnboardingStep] = useState(1)
   const [onboardingData, setOnboardingData] = useState({
@@ -68,10 +133,10 @@ export function NavigationProvider({ children }) {
 
   // Selected career path
   const [selectedTrack, setSelectedTrack] = useState('ai')
-  
+
   // Generated Internship details
   const [internship, setInternship] = useState(null)
-  
+
   // Kanban Task system
   const [tasks, setTasks] = useState([])
   const [selectedTaskId, setSelectedTaskId] = useState(null)
@@ -82,19 +147,9 @@ export function NavigationProvider({ children }) {
 
   // Approvals System State
   const [approvals, setApprovals] = useState({
-    students: [
-      { id: 'stud-app-1', name: 'Arjun Kapoor', email: 'arjun.kapoor@university.edu', track: 'AI Engineer', idDoc: 'student_id_mit.pdf', uploadedAt: '1 hour ago', status: 'pending' },
-      { id: 'stud-app-2', name: 'Chloe Vance', email: 'chloe.vance@stanford.edu', track: 'Frontend Engineer', idDoc: 'stanford_card_v2.png', uploadedAt: '3 hours ago', status: 'pending' },
-      { id: 'stud-app-3', name: 'Kenji Sato', email: 'kenji.sato@berkeley.edu', track: 'Backend Developer', idDoc: 'berkeley_id_sat.jpg', uploadedAt: 'Yesterday', status: 'pending' }
-    ],
-    colleges: [
-      { id: 'coll-app-1', name: 'Massachusetts Institute of Technology', domain: 'mit.edu', adminEmail: 'dean@mit.edu', identityDoc: 'mit_accreditation_seal.pdf', uploadedAt: '2 hours ago', status: 'pending' },
-      { id: 'coll-app-2', name: 'Stanford University', domain: 'stanford.edu', adminEmail: 'admin@stanford.edu', identityDoc: 'stanford_edu_charter.pdf', uploadedAt: 'Yesterday', status: 'pending' }
-    ],
-    companies: [
-      { id: 'comp-app-1', name: 'NeuralMind Technologies', domain: 'neuralmind.ai', recruiterEmail: 'sarah@neuralmind.ai', licenseDoc: 'neuralmind_corp_license.pdf', uploadedAt: '4 hours ago', status: 'pending' },
-      { id: 'comp-app-2', name: 'Google Talent Acquisition', domain: 'google.com', recruiterEmail: 'recruiting@google.com', licenseDoc: 'google_inc_tax_reg.pdf', uploadedAt: '2 days ago', status: 'pending' }
-    ]
+    students: [],
+    colleges: [],
+    companies: []
   })
 
   // Feedback notifications
@@ -212,14 +267,30 @@ export function NavigationProvider({ children }) {
   }
 
   // Approval handlers
-  const setApprovalStatus = (category, id, status) => {
-    setApprovals(prev => ({
-      ...prev,
-      [category]: prev[category].map(item => 
-        item.id === id ? { ...item, status } : item
-      )
-    }))
-    addToast(`${category.slice(0, -1).toUpperCase()} request ${status.toUpperCase()}`, status === 'approved' ? 'success' : 'error')
+  const setApprovalStatus = async (category, id, status) => {
+    let updateField = {}
+    if (category === 'students') {
+      updateField = { isVerified: status === 'approved' }
+    } else if (category === 'colleges') {
+      updateField = { isCollegeVerified: status === 'approved' }
+    } else if (category === 'companies') {
+      updateField = { isRecruiterVerified: status === 'approved' }
+    }
+
+    try {
+      await axiosInstance.put(`/api/admin/user/${id}`, updateField)
+
+      setApprovals(prev => ({
+        ...prev,
+        [category]: prev[category].map(item =>
+          item.id === id ? { ...item, status } : item
+        )
+      }))
+      addToast(`${category.slice(0, -1).toUpperCase()} request ${status.toUpperCase()}`, status === 'approved' ? 'success' : 'error')
+    } catch (err) {
+      console.error(err)
+      addToast('Failed to update verification status on server.', 'error')
+    }
   }
 
   const addPendingApproval = (category, item) => {

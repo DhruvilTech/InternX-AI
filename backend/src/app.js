@@ -3,14 +3,10 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
-import dotenv from 'dotenv';
 import authRoutes from './routes/auth.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import { setupSwagger } from './config/swagger.js';
 import { errorHandler } from './middlewares/error.middleware.js';
-
-// Load environment variables
-dotenv.config();
 
 const app = express();
 
@@ -40,8 +36,8 @@ const limiter = rateLimit({
 app.use('/api', limiter);
 
 // Express body parsers
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // Cookie Parser to parse tokens inside request cookies
 app.use(cookieParser());

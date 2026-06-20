@@ -1,13 +1,33 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Sparkles, Mail, Lock, User, KeyRound, ArrowRight, ShieldCheck, UploadCloud, Building2, GraduationCap, CheckCircle } from 'lucide-react'
 import { useNavigation } from '../context/NavigationContext'
 import { FaGithub } from 'react-icons/fa6'
+import { useNavigate, useLocation } from 'react-router-dom'
+import useAuth from '../hooks/useAuth'
+import * as authApi from '../api/authApi'
 
 export default function AuthPages() {
-  const { navigate, loadDemoStudent, loadDemoRecruiter, loadDemoCollege, loadDemoAdmin, addPendingApproval, addToast } = useNavigation()
-  const [authMode, setAuthMode] = useState('login') // login, signup, forgot, reset, otp
-  
+  const { loadDemoStudent, loadDemoRecruiter, loadDemoCollege, loadDemoAdmin, addPendingApproval, addToast } = useNavigation()
+  const { login, register: signUpApi } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  // Determine mode based on path
+  const getInitialMode = () => {
+    if (location.pathname === '/register') return 'signup'
+    if (location.pathname === '/forgot-password') return 'forgot'
+    if (location.pathname === '/reset-password') return 'reset'
+    return 'login'
+  }
+
+  const [authMode, setAuthMode] = useState(getInitialMode) // login, signup, forgot, reset, otp
+
+  // Sync authMode when path changes
+  useEffect(() => {
+    setAuthMode(getInitialMode())
+  }, [location.pathname])
+
   // Registration Role selector
   const [signupRole, setSignupRole] = useState('student') // student, recruiter, college
 
@@ -20,6 +40,23 @@ export default function AuthPages() {
   const [uploadedDocName, setUploadedDocName] = useState('')
   const [otp, setOtp] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // Additional registration fields for validation / integration
+  const [course, setCourse] = useState('')
+  const [year, setYear] = useState('')
+  const [selectedSkills, setSelectedSkills] = useState([])
+  const [collegeCode, setCollegeCode] = useState('')
+  const [website, setWebsite] = useState('')
+  const [industry, setIndustry] = useState('')
+  const [companySize, setCompanySize] = useState('')
+
+  const availableSkills = ['React', 'Node.js', 'Python', 'AI / ML', 'Tailwind CSS', 'Framer Motion', 'MongoDB', 'Cyber Security', 'TypeScript', 'Data Science', 'Docker', 'Git']
+
+  const toggleSkill = (skill) => {
+    setSelectedSkills(prev =>
+      prev.includes(skill) ? prev.filter(s => s !== skill) : [...prev, skill]
+    )
+  }
 
   // Real File Upload States
   const fileInputRef = useRef(null)
@@ -42,86 +79,128 @@ export default function AuthPages() {
     }
   }
 
-  const handleSubmit = (e) => {
+  const toBase64 = (file) =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (error) => reject(error);
+    });
+
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
 
-    setTimeout(() => {
-      setLoading(false)
-      if (authMode === 'login') {
-        loadDemoStudent('ai') // default demo
-        navigate('dashboard')
-        addToast('Welcome back, Arjun!', 'success')
-      } else if (authMode === 'signup') {
-        const fileUrl = selectedFile ? URL.createObjectURL(selectedFile) : null
-        const fileType = selectedFile ? selectedFile.type : null
+    if (authMode === 'login') {
+      try {
+        const res = await login({ email, password });
+        addToast('Welcome back to InternX AI!', 'success');
 
-        // Build pending approval payloads based on signupRole
-        if (signupRole === 'student') {
-          addPendingApproval('students', {
-            id: 'stud-app-' + Date.now().toString().slice(-4),
-            name: name || 'Anonymous Student',
-            email: email,
-            track: 'AI Engineer',
-            idDoc: uploadedDocName || 'student_id_card.pdf',
-            uploadedAt: 'Just now',
-            status: 'pending',
-            fileUrl,
-            fileType
-          })
-        } else if (signupRole === 'college') {
-          addPendingApproval('colleges', {
-            id: 'coll-app-' + Date.now().toString().slice(-4),
-            name: collegeName || 'Accredited College',
-            domain: email.split('@')[1] || 'edu',
-            adminEmail: email,
-            identityDoc: uploadedDocName || 'accreditation_proof.pdf',
-            uploadedAt: 'Just now',
-            status: 'pending',
-            fileUrl,
-            fileType
-          })
-        } else if (signupRole === 'recruiter') {
-          addPendingApproval('companies', {
-            id: 'comp-app-' + Date.now().toString().slice(-4),
-            name: companyName || 'Simulated Company LLC',
-            domain: email.split('@')[1] || 'com',
-            recruiterEmail: email,
-            licenseDoc: uploadedDocName || 'business_license.pdf',
-            uploadedAt: 'Just now',
-            status: 'pending',
-            fileUrl,
-            fileType
-          })
-        }
-
-        setAuthMode('otp')
-        addToast('Verification code transmitted!', 'info')
-      } else if (authMode === 'otp') {
-        if (otp.length < 4) {
-          addToast('Please enter a valid 4-digit code', 'error')
-        } else {
-          // Log in based on role
-          if (signupRole === 'student') {
-            loadDemoStudent('ai')
-            navigate('onboarding')
-          } else if (signupRole === 'recruiter') {
-            loadDemoRecruiter()
-            navigate('recruiter_dashboard')
-          } else if (signupRole === 'college') {
-            loadDemoCollege()
-            navigate('college_dashboard')
-          }
-          addToast('Verification successful!', 'success')
-        }
-      } else if (authMode === 'forgot') {
-        setAuthMode('reset')
-        addToast('Reset link generated!', 'info')
-      } else if (authMode === 'reset') {
-        setAuthMode('login')
-        addToast('Password reset successfully. Please log in.', 'success')
+        const role = res?.user?.role || res?.data?.user?.role;
+        if (role === 'student') navigate('/student/dashboard');
+        else if (role === 'college') navigate('/college/dashboard');
+        else if (role === 'recruiter') navigate('/recruiter/dashboard');
+        else if (role === 'admin') navigate('/admin/dashboard');
+        else navigate('/dashboard');
+      } catch (err) {
+        console.error(err);
+        addToast(err.response?.data?.message || 'Login failed. Check credentials.', 'error');
+      } finally {
+        setLoading(false);
       }
-    }, 1200)
+    } else if (authMode === 'signup') {
+      try {
+        let base64Doc = '';
+        if (selectedFile) {
+          base64Doc = await toBase64(selectedFile);
+        }
+
+        const cloudinaryUrl = selectedFile
+          ? `https://res.cloudinary.com/internx-ai/image/upload/v1718873999/${encodeURIComponent(selectedFile.name)}`
+          : '';
+
+        let payload = {
+          email,
+          password,
+          role: signupRole,
+          verificationDocName: uploadedDocName,
+          verificationDocFile: base64Doc,
+          cloudinaryUrl
+        };
+
+        if (signupRole === 'student') {
+          payload = {
+            ...payload,
+            fullName: name,
+            collegeName,
+            course,
+            year: Number(year),
+            skills: selectedSkills
+          };
+        } else if (signupRole === 'college') {
+          payload = {
+            ...payload,
+            collegeName,
+            collegeCode,
+            contactPerson: name,
+            website
+          };
+        } else if (signupRole === 'recruiter') {
+          payload = {
+            ...payload,
+            companyName,
+            industry,
+            companySize,
+            website
+          };
+        }
+
+        await signUpApi(payload);
+        addToast('Registration successful! Welcome to InternX AI.', 'success');
+
+        if (signupRole === 'student') navigate('/student/dashboard');
+        else if (signupRole === 'college') navigate('/college/dashboard');
+        else if (signupRole === 'recruiter') navigate('/recruiter/dashboard');
+        else navigate('/dashboard');
+      } catch (err) {
+        console.error(err);
+        addToast(err.response?.data?.message || 'Registration failed. Check inputs.', 'error');
+      } finally {
+        setLoading(false);
+      }
+    } else if (authMode === 'forgot') {
+      try {
+        const res = await authApi.forgotPassword({ email });
+        addToast('Reset link generated!', 'info');
+        if (res?.data?.resetToken) {
+          addToast(`Dev Token: ${res.data.resetToken}`, 'info');
+          navigate(`/reset-password?token=${res.data.resetToken}`);
+        }
+      } catch (err) {
+        console.error(err);
+        addToast(err.response?.data?.message || 'Request failed.', 'error');
+      } finally {
+        setLoading(false);
+      }
+    } else if (authMode === 'reset') {
+      try {
+        const queryToken = new URLSearchParams(window.location.search).get('token');
+        if (!queryToken) {
+          addToast('Token is missing from URL', 'error');
+          setLoading(false);
+          return;
+        }
+        await authApi.resetPassword({ token: queryToken, newPassword: password });
+        addToast('Password reset successfully! Please log in.', 'success');
+        setAuthMode('login');
+        navigate('/login');
+      } catch (err) {
+        console.error(err);
+        addToast(err.response?.data?.message || 'Reset failed.', 'error');
+      } finally {
+        setLoading(false);
+      }
+    }
   }
 
   // Handle mock file selection clicks
@@ -163,11 +242,7 @@ export default function AuthPages() {
           </p>
         </div>
 
-        <div className="text-xs text-muted flex gap-6">
-          <span>© 2026 InternX AI</span>
-          <a href="#" className="hover:text-text">Privacy Policy</a>
-          <a href="#" className="hover:text-text">Terms of Service</a>
-        </div>
+        {/* Footer details removed */}
       </div>
 
       {/* Right Column - Auth Card Container */}
@@ -267,7 +342,7 @@ export default function AuthPages() {
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       type="button"
-                      onClick={() => navigate('college_login')}
+                      onClick={() => navigate('/college-login')}
                       className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-emerald/20 bg-emerald/5 hover:bg-emerald/10 text-emerald-300 text-xs font-semibold transition-all hover:scale-[1.02] cursor-pointer"
                     >
                       <GraduationCap size={14} />
@@ -275,42 +350,11 @@ export default function AuthPages() {
                     </button>
                     <button
                       type="button"
-                      onClick={() => navigate('recruiter_login')}
+                      onClick={() => navigate('/recruiter-login')}
                       className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 text-amber-300 text-xs font-semibold transition-all hover:scale-[1.02] cursor-pointer"
                     >
                       <Building2 size={14} />
                       <span>Recruiter Login</span>
-                    </button>
-                  </div>
-                </div>
-
-                {/* Direct Persona Quick logins */}
-                <div className="border-t border-border pt-4 mt-6 text-center">
-                  <p className="text-[10px] text-muted uppercase tracking-wider mb-2.5">Demo Portals (Quick Access)</p>
-                  <div className="flex flex-wrap justify-center gap-1.5 text-[9px] font-semibold text-text">
-                    <button
-                      onClick={() => { loadDemoStudent('ai'); navigate('dashboard'); }}
-                      className="px-2.5 py-1.5 rounded-lg bg-violet/10 border border-violet/25 hover:bg-violet/20 transition-colors"
-                    >
-                      Student (AI)
-                    </button>
-                    <button
-                      onClick={() => { loadDemoRecruiter(); navigate('recruiter_dashboard'); }}
-                      className="px-2.5 py-1.5 rounded-lg bg-amber-500/10 border border-amber-500/25 hover:bg-amber-500/20 transition-colors"
-                    >
-                      Recruiter
-                    </button>
-                    <button
-                      onClick={() => { loadDemoCollege(); navigate('college_dashboard'); }}
-                      className="px-2.5 py-1.5 rounded-lg bg-emerald/10 border border-emerald/25 hover:bg-emerald/20 transition-colors"
-                    >
-                      College
-                    </button>
-                    <button
-                      onClick={() => { loadDemoAdmin(); navigate('admin_panel'); }}
-                      className="px-2.5 py-1.5 rounded-lg bg-cyan/10 border border-cyan/25 hover:bg-cyan/20 text-cyan-300 transition-colors"
-                    >
-                      Super Admin
                     </button>
                   </div>
                 </div>
@@ -348,11 +392,10 @@ export default function AuthPages() {
                           setSignupRole(tab.id)
                           setUploadedDocName('')
                         }}
-                        className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-1.5 font-semibold transition-all ${
-                          active
+                        className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-1.5 font-semibold transition-all ${active
                             ? 'bg-gradient-to-r from-accent to-violet text-white shadow-md'
                             : 'text-muted hover:text-text'
-                        }`}
+                          }`}
                       >
                         <Icon size={12} />
                         <span>{tab.label}</span>
@@ -431,6 +474,158 @@ export default function AuthPages() {
                       />
                     </div>
                   </div>
+
+                  {/* Student Dynamic Fields */}
+                  {signupRole === 'student' && (
+                    <>
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block">College Name</label>
+                        <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-border bg-void/50 focus-within:border-accent transition-colors">
+                          <GraduationCap size={14} className="text-muted" />
+                          <input
+                            type="text"
+                            required
+                            placeholder="E.g. Stanford University"
+                            value={collegeName}
+                            onChange={(e) => setCollegeName(e.target.value)}
+                            className="w-full bg-transparent text-xs text-text outline-none border-none"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block">Course</label>
+                          <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-border bg-void/50 focus-within:border-accent transition-colors">
+                            <input
+                              type="text"
+                              required
+                              placeholder="E.g. B.Tech CS"
+                              value={course}
+                              onChange={(e) => setCourse(e.target.value)}
+                              className="w-full bg-transparent text-xs text-text outline-none border-none"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block">Academic Year</label>
+                          <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-border bg-void/50 focus-within:border-accent transition-colors">
+                            <input
+                              type="number"
+                              required
+                              min="1"
+                              max="6"
+                              placeholder="3"
+                              value={year}
+                              onChange={(e) => setYear(e.target.value)}
+                              className="w-full bg-transparent text-xs text-text outline-none border-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block">Skills (Select multiple)</label>
+                        <div className="flex flex-wrap gap-1.5 p-1">
+                          {availableSkills.map(skill => {
+                            const active = selectedSkills.includes(skill)
+                            return (
+                              <button
+                                key={skill}
+                                type="button"
+                                onClick={() => toggleSkill(skill)}
+                                className={`px-2 py-1 py-1.5 rounded-lg text-[10px] font-semibold transition-all border cursor-pointer ${active
+                                    ? 'bg-accent/20 border-accent text-accent-bright shadow-sm shadow-accent/10'
+                                    : 'bg-void/40 border-border text-muted hover:text-text hover:border-muted/40'
+                                  }`}
+                              >
+                                {skill}
+                              </button>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {/* College Dynamic Fields */}
+                  {signupRole === 'college' && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block">College Code</label>
+                        <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-border bg-void/50 focus-within:border-accent transition-colors">
+                          <input
+                            type="text"
+                            required
+                            placeholder="STAN-002"
+                            value={collegeCode}
+                            onChange={(e) => setCollegeCode(e.target.value)}
+                            className="w-full bg-transparent text-xs text-text outline-none border-none"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block">Website URL</label>
+                        <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-border bg-void/50 focus-within:border-accent transition-colors">
+                          <input
+                            type="url"
+                            required
+                            placeholder="https://stanford.edu"
+                            value={website}
+                            onChange={(e) => setWebsite(e.target.value)}
+                            className="w-full bg-transparent text-xs text-text outline-none border-none"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Recruiter Dynamic Fields */}
+                  {signupRole === 'recruiter' && (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block">Industry</label>
+                          <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-border bg-void/50 focus-within:border-accent transition-colors">
+                            <input
+                              type="text"
+                              required
+                              placeholder="E.g. FinTech"
+                              value={industry}
+                              onChange={(e) => setIndustry(e.target.value)}
+                              className="w-full bg-transparent text-xs text-text outline-none border-none"
+                            />
+                          </div>
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block">Company Size</label>
+                          <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-border bg-void/50 focus-within:border-accent transition-colors">
+                            <input
+                              type="text"
+                              required
+                              placeholder="E.g. 50-200"
+                              value={companySize}
+                              onChange={(e) => setCompanySize(e.target.value)}
+                              className="w-full bg-transparent text-xs text-text outline-none border-none"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block">Company Website</label>
+                        <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-border bg-void/50 focus-within:border-accent transition-colors">
+                          <input
+                            type="url"
+                            placeholder="https://techcorp.com"
+                            value={website}
+                            onChange={(e) => setWebsite(e.target.value)}
+                            className="w-full bg-transparent text-xs text-text outline-none border-none"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
 
                   {/* File upload credentials box */}
                   <div className="space-y-1.5">

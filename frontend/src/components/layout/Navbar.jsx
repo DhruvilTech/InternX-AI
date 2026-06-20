@@ -100,9 +100,8 @@ export default function Navbar() {
 
   return (
     <header
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-        scrolled || page !== 'landing' ? 'glass border-b border-border' : 'bg-transparent'
-      }`}
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled || page !== 'landing' ? 'glass border-b border-border' : 'bg-transparent'
+        }`}
     >
       {/* Scroll indicator - only on Landing Page */}
       {page === 'landing' && (
@@ -114,7 +113,7 @@ export default function Navbar() {
 
       <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
-          
+
           {/* Logo */}
           <a href="#/" onClick={handleLogoClick} className="flex items-center gap-2.5 shrink-0 group">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-violet shadow-lg shadow-accent/20 group-hover:scale-105 transition-transform">
@@ -142,7 +141,7 @@ export default function Navbar() {
           {/* Right Action buttons */}
           <div className="hidden lg:flex items-center gap-3">
             <ThemeToggle />
-            
+
             {/* Search command shortcut trigger button */}
             <button
               onClick={() => setCommandPaletteOpen(true)}
@@ -184,7 +183,7 @@ export default function Navbar() {
                     onClick={() => setProfileMenuOpen(!profileMenuOpen)}
                     className="h-9 w-9 rounded-full bg-gradient-to-br from-accent to-violet flex items-center justify-center text-white text-xs font-bold font-display shadow-md shadow-accent/10 border border-white/10"
                   >
-                    {user?.avatar || (user?.fullName ? user.fullName.split(' ').map(n=>n[0]).join('') : user?.companyName ? user.companyName.slice(0, 2).toUpperCase() : user?.collegeName ? user.collegeName.slice(0,2).toUpperCase() : 'U')}
+                    {user?.avatar || (user?.fullName ? user.fullName.split(' ').map(n => n[0]).join('') : user?.companyName ? user.companyName.slice(0, 2).toUpperCase() : user?.collegeName ? user.collegeName.slice(0, 2).toUpperCase() : 'U')}
                   </button>
 
                   <AnimatePresence>
@@ -225,7 +224,7 @@ export default function Navbar() {
                               <span>My Portfolio</span>
                             </button>
                           )}
-                          
+
                           <button
                             onClick={() => {
                               setProfileMenuOpen(false)
@@ -290,7 +289,7 @@ export default function Navbar() {
                   {link.label}
                 </a>
               ))}
-              
+
               <div className="pt-3 flex flex-col gap-2 border-t border-border mt-3">
                 {role === 'guest' ? (
                   <>

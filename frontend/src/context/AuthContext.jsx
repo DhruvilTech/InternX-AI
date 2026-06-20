@@ -75,7 +75,6 @@ export const AuthProvider = ({ children }) => {
 
   // Log out user session
   const logout = async () => {
-    setLoading(true);
     try {
       await authApi.logout();
     } catch (err) {
@@ -132,6 +131,7 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       setRole('guest');
       setIsAuthenticated(false);
+      setLoading(false);
     };
     window.addEventListener('auth_logout', handleGlobalLogout);
 
