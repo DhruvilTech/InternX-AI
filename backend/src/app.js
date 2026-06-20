@@ -12,6 +12,7 @@ import careerRoutes from './routes/career.routes.js';
 import internshipRoutes from './routes/internship.routes.js';
 import taskRoutes from './routes/task.routes.js';
 import githubRoutes from './routes/github.routes.js';
+import interviewRoutes from './routes/interview.routes.js';
 import collegeRoutes from './modules/college/routes/college.routes.js';
 import { setupSwagger } from './config/swagger.js';
 import { errorHandler } from './middlewares/error.middleware.js';
@@ -80,6 +81,7 @@ app.use('/api/internships', internshipRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/github', githubRoutes);
 app.use('/api/college', collegeRoutes);
+app.use('/api/interview', interviewRoutes);
 
 // Base application health check
 app.get('/health', (req, res) => {

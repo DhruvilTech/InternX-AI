@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Routes, Route, useLocation } from 'react-router-dom';
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import useLenis from './hooks/useLenis';
 import Spotlight from './components/ui/Spotlight';
 import SplashCursor from './components/ui/SplashCursor';
@@ -48,6 +48,9 @@ import SkillGapPage from './pages/SkillGapPage';
 import AnalyticsPage from './pages/AnalyticsPage';
 import AICareerCoachPage from './pages/AICareerCoachPage';
 import InterviewSimulatorPage from './pages/InterviewSimulatorPage';
+import InterviewDashboardPage from './pages/InterviewDashboardPage';
+import LiveInterviewPage from './pages/LiveInterviewPage';
+import InterviewReportPage from './pages/InterviewReportPage';
 import CertificateCenterPage from './pages/CertificateCenterPage';
 import ProfilePage from './pages/ProfilePage';
 import CandidateProfilePage from './pages/CandidateProfilePage';
@@ -78,7 +81,7 @@ export default function App() {
   // Hide footer on dashboard views or active student program modules or auth views
   const isDashboardView =
     location.pathname.includes('/dashboard') ||
-    ['/company', '/kanban', '/task_details', '/submit_task', '/evaluation', '/feedback_center', '/skill_gap', '/analytics', '/career_coach', '/interview_simulator', '/candidate_profile', '/settings', '/notifications', '/login', '/register', '/forgot-password', '/reset-password', '/college-login', '/recruiter-login', '/admin/user'].some((path) =>
+    ['/company', '/kanban', '/task_details', '/submit_task', '/evaluation', '/feedback_center', '/skill_gap', '/analytics', '/career_coach', '/interview_simulator', '/interview', '/candidate_profile', '/settings', '/notifications', '/login', '/register', '/forgot-password', '/reset-password', '/college-login', '/recruiter-login', '/admin/user'].some((path) =>
       location.pathname.startsWith(path)
     );
 
@@ -144,7 +147,10 @@ export default function App() {
                   <Route path="/skill_gap" element={<SkillGapPage />} />
                   <Route path="/analytics" element={<AnalyticsPage />} />
                   <Route path="/career_coach" element={<AICareerCoachPage />} />
-                  <Route path="/interview_simulator" element={<InterviewSimulatorPage />} />
+                  <Route path="/interview_simulator" element={<Navigate to="/dashboard/interview" replace />} />
+                  <Route path="/dashboard/interview" element={<InterviewDashboardPage />} />
+                  <Route path="/interview/live/:id" element={<LiveInterviewPage />} />
+                  <Route path="/interview/report/:id" element={<InterviewReportPage />} />
                   <Route path="/certificates" element={<CertificateCenterPage />} />
                   <Route path="/profile" element={<ProfilePage />} />
                   

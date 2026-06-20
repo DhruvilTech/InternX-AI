@@ -1,0 +1,258 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import {
+  Award,
+  TrendingUp,
+  Brain,
+  ThumbsUp,
+  AlertTriangle,
+  Lightbulb,
+  ArrowLeft,
+  ChevronRight,
+  ShieldCheck,
+  Zap,
+  BookOpen
+} from 'lucide-react';
+import { useNavigation } from '../context/NavigationContext.jsx';
+import { getInterviewDetails } from '../api/interviewApi.js';
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
+
+export default function InterviewReportPage() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const { addToast } = useNavigation();
+
+  const [loading, setLoading] = useState(true);
+  const [interview, setInterview] = useState(null);
+  const [report, setReport] = useState(null);
+  const [questions, setQuestions] = useState([]);
+  const [answers, setAnswers] = useState([]);
+
+  useEffect(() => {
+    fetchReportDetails();
+  }, [id]);
+
+  const fetchReportDetails = async () => {
+    try {
+      setLoading(true);
+      const res = await getInterviewDetails(id);
+      if (res.success) {
+        setInterview(res.data.interview);
+        setReport(res.data.report);
+        setQuestions(res.data.questions || []);
+        setAnswers(res.data.answers || []);
+        if (res.data.interview.status !== 'completed' || !res.data.report) {
+          addToast('Interview is still pending. Resume session to generate scorecard.', 'warning');
+          navigate(`/interview/live/${id}`);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to load scorecard:', err);
+      addToast('Error fetching evaluation details.', 'error');
+      navigate('/dashboard/interview');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-void">
+        <div className="text-center space-y-4">
+          <div className="relative w-16 h-16 mx-auto">
+            <div className="absolute inset-0 rounded-full border-t-2 border-r-2 border-accent animate-spin" />
+            <div className="absolute inset-2 rounded-full border-b-2 border-l-2 border-violet animate-spin-reverse" />
+          </div>
+          <p className="text-xs text-muted font-mono tracking-wider">COMPILING METRIC RADAR SCORECARD...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Prep radar data
+  const radarData = [
+    { subject: 'Technical', A: report?.technicalScore || 0, fullMark: 100 },
+    { subject: 'Communication', A: report?.communicationScore || 0, fullMark: 100 },
+    { subject: 'Professionalism', A: report?.professionalismScore || report?.confidenceScore || 0, fullMark: 100 },
+    { subject: 'Problem Solving', A: report?.problemSolvingScore || 0, fullMark: 100 },
+    { subject: 'Overall Performance', A: report?.overallScore || 0, fullMark: 100 }
+  ];
+
+  const getReadinessConfig = (level) => {
+    const lvl = (level || '').toLowerCase();
+    if (lvl.includes('ready') || lvl.includes('job')) {
+      return { text: 'Job Ready', desc: 'Outstanding technical precision and articulation.', style: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/35' };
+    }
+    if (lvl.includes('intermediate') || lvl.includes('adv')) {
+      return { text: 'Intermediate', desc: 'Good baseline skills; expand system scale constraints.', style: 'bg-accent/10 text-accent border border-accent/35' };
+    }
+    return { text: 'Beginner', desc: 'Needs code foundations and concept mapping drills.', style: 'bg-amber-500/10 text-amber-400 border border-amber-500/35' };
+  };
+
+  const readiness = getReadinessConfig(report?.readinessLevel);
+
+  return (
+    <div className="min-h-screen pt-24 pb-16 bg-void relative overflow-hidden text-text">
+      {/* Background visual layers */}
+      <div className="absolute top-1/4 left-1/4 w-[450px] h-[450px] bg-violet/5 rounded-full blur-[100px] pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-[450px] h-[450px] bg-accent/5 rounded-full blur-[100px] pointer-events-none" />
+
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 relative z-10 space-y-8">
+        
+        {/* Back and Page Header */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+          <div className="space-y-1">
+            <button
+              onClick={() => navigate('/dashboard/interview')}
+              className="inline-flex items-center gap-1.5 text-xs text-muted hover:text-text transition-colors cursor-pointer group"
+            >
+              <ArrowLeft size={13} className="group-hover:-translate-x-0.5 transition-transform" />
+              <span>Back to Portal</span>
+            </button>
+            <h1 className="font-display font-bold text-3xl tracking-tight mt-2">Evaluation Report</h1>
+            <p className="text-xs text-muted">Tailored diagnostic board generated by AI evaluator panel.</p>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] text-muted font-mono uppercase">Difficulty: {interview?.difficulty}</span>
+            <span className={`text-xs px-3 py-1.5 rounded-xl font-bold ${readiness.style}`}>
+              {readiness.text}
+            </span>
+          </div>
+        </div>
+
+        {/* Dashboard grid layout */}
+        <div className="grid lg:grid-cols-12 gap-8 items-stretch">
+          
+          {/* Left panel: Overall score + Radar chart visualizer */}
+          <div className="lg:col-span-5 glass border border-border/80 rounded-2xl p-6 bg-void/25 flex flex-col justify-between space-y-6">
+            <div className="text-center py-4 relative">
+              <div className="absolute top-0 right-0 w-24 h-24 bg-accent/5 rounded-full blur-xl pointer-events-none" />
+              <span className="text-[10px] font-bold text-muted uppercase tracking-wider block">Overall readiness score</span>
+              <span className="text-7xl font-display font-black text-gradient-violet block mt-2">
+                {report?.overallScore || 0}
+              </span>
+              <p className="text-xs text-muted mt-2 max-w-xs mx-auto leading-relaxed">
+                {readiness.desc}
+              </p>
+            </div>
+
+            {/* Recharts Radar chart */}
+            <div className="h-[260px] w-full bg-void/40 border border-border/60 rounded-xl p-2 flex items-center justify-center">
+              <ResponsiveContainer width="100%" height="100%">
+                <RadarChart cx="50%" cy="50%" outerRadius="75%" data={radarData}>
+                  <PolarGrid stroke="#374151" />
+                  <PolarAngleAxis dataKey="subject" stroke="#9ca3af" fontSize={10} />
+                  <PolarRadiusAxis angle={30} domain={[0, 100]} stroke="#4b5563" fontSize={9} />
+                  <Radar name="Candidate" dataKey="A" stroke="var(--accent)" fill="var(--accent)" fillOpacity={0.25} />
+                </RadarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+
+          {/* Right panel: Strengths, Weaknesses, Advice and Recommendations */}
+          <div className="lg:col-span-7 flex flex-col gap-6">
+            
+            {/* Strengths & Weaknesses grid */}
+            <div className="grid md:grid-cols-2 gap-6">
+              
+              {/* Strengths Card */}
+              <div className="glass border border-border/80 rounded-2xl p-5 bg-void/25 space-y-4">
+                <div className="flex items-center gap-2 text-emerald-400">
+                  <ThumbsUp size={16} />
+                  <h3 className="text-xs font-bold uppercase tracking-wider">Identified Strengths</h3>
+                </div>
+                <ul className="space-y-3 text-xs text-muted">
+                  {(report?.strengths || []).map((str, idx) => (
+                    <li key={idx} className="flex gap-2 items-start leading-relaxed">
+                      <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0 mt-1.5" />
+                      <span>{str}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Weaknesses Card */}
+              <div className="glass border border-border/80 rounded-2xl p-5 bg-void/25 space-y-4">
+                <div className="flex items-center gap-2 text-rose">
+                  <AlertTriangle size={16} />
+                  <h3 className="text-xs font-bold uppercase tracking-wider">Growth Opportunities</h3>
+                </div>
+                <ul className="space-y-3 text-xs text-muted">
+                  {(report?.weaknesses || []).map((weak, idx) => (
+                    <li key={idx} className="flex gap-2 items-start leading-relaxed">
+                      <span className="h-1.5 w-1.5 rounded-full bg-rose shrink-0 mt-1.5" />
+                      <span>{weak}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+            </div>
+
+            {/* Recommendations / Actionable list */}
+            <div className="glass border border-border/80 rounded-2xl p-5 bg-void/25 space-y-4">
+              <div className="flex items-center gap-2 text-accent">
+                <Lightbulb size={16} />
+                <h3 className="text-xs font-bold uppercase tracking-wider">Actionable Recommendations</h3>
+              </div>
+              <div className="grid sm:grid-cols-3 gap-4">
+                {(report?.recommendations || []).map((rec, idx) => (
+                  <div key={idx} className="p-3 bg-surface-muted/20 border border-border/80 rounded-xl space-y-2 flex flex-col justify-between">
+                    <span className="text-[10px] font-bold text-text">Task {idx + 1}</span>
+                    <p className="text-[10px] text-muted leading-relaxed flex-1 mt-1">{rec}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Long Career Advice */}
+            <div className="glass border border-border/80 rounded-2xl p-5 bg-void/25 space-y-3">
+              <div className="flex items-center gap-2 text-violet">
+                <BookOpen size={16} />
+                <h3 className="text-xs font-bold uppercase tracking-wider">AI Executive Advisor Briefing</h3>
+              </div>
+              <p className="text-xs text-muted leading-relaxed font-mono">
+                {report?.careerAdvice}
+              </p>
+            </div>
+
+          </div>
+
+        </div>
+
+        {/* Detailed Transcript Audit details accordion/list */}
+        <div className="glass border border-border/80 rounded-2xl p-6 bg-void/25 space-y-6">
+          <div>
+            <h3 className="text-base font-bold">Full Transcript & Response Log</h3>
+            <p className="text-xs text-muted mt-1">Review the interview query flow and your transcribed feedback logs.</p>
+          </div>
+
+          <div className="space-y-4">
+            {questions.map((q, idx) => {
+              const match = answers.find(ans => ans.questionId.toString() === q._id.toString());
+              return (
+                <div key={q._id} className="p-4 bg-surface-muted/20 border border-border/60 rounded-xl space-y-2 text-xs">
+                  <div className="flex justify-between items-start gap-4">
+                    <span className="font-semibold text-text">
+                      Q{idx + 1}: {q.question}
+                    </span>
+                    <span className="text-[9px] px-1.5 py-0.5 bg-surface-muted border border-border text-muted font-mono rounded select-none uppercase">
+                      {q.category}
+                    </span>
+                  </div>
+                  <div className="bg-void/40 border border-border/40 rounded-lg p-3 text-muted leading-relaxed font-mono">
+                    <span className="text-[9px] text-accent uppercase tracking-wider block mb-1 font-bold">Your Response:</span>
+                    {match?.answer || <span className="italic text-dim">[No Answer Recorded]</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+      </div>
+    </div>
+  );
+}

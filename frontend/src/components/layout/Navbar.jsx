@@ -61,6 +61,7 @@ export default function Navbar() {
         { label: 'Internships', id: user?.selectedCareer ? 'my-career' : 'careers' },
         { label: 'GitHub', id: 'dashboard/github' },
         { label: 'Tasks', id: 'kanban' },
+        { label: 'AI Mock Interview', id: 'dashboard/interview' },
         { label: 'Certificates', id: 'certificates' },
         { label: 'Profile', id: 'profile' },
       ]
