@@ -194,7 +194,7 @@ export default function RecruiterProfilePage() {
               <select
                 value={industry}
                 onChange={(e) => setIndustry(e.target.value)}
-                className="w-full px-3 py-2.5 border border-border bg-[#0a0f1d] rounded-xl text-xs text-text outline-none focus:border-accent"
+                className="w-full px-3 py-2.5 border border-border bg-input-bg rounded-xl text-xs text-text outline-none focus:border-accent"
               >
                 <option value="Technology">Technology & Software</option>
                 <option value="Finance">Fintech & Finance</option>
@@ -210,7 +210,7 @@ export default function RecruiterProfilePage() {
               <select
                 value={companySize}
                 onChange={(e) => setCompanySize(e.target.value)}
-                className="w-full px-3 py-2.5 border border-border bg-[#0a0f1d] rounded-xl text-xs text-text outline-none focus:border-accent"
+                className="w-full px-3 py-2.5 border border-border bg-input-bg rounded-xl text-xs text-text outline-none focus:border-accent"
               >
                 <option value="1-10">1 - 10 Employees</option>
                 <option value="11-50">11 - 50 Employees</option>

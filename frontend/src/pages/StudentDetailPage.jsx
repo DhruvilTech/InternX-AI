@@ -23,7 +23,8 @@ import {
   Send,
   Loader2,
   FileCheck,
-  Sparkles
+  Sparkles,
+  CheckCircle2
 } from 'lucide-react';
 import { FaGithub } from 'react-icons/fa6';
 import { useNavigation } from '../context/NavigationContext';
@@ -189,6 +190,10 @@ export default function StudentDetailPage() {
 
   const handleSendOffer = async (e) => {
     e.preventDefault();
+    if (studentProfile.hasAcceptedOffer) {
+      addToast('This student has already accepted an internship offer.', 'error');
+      return;
+    }
     if (!companyName || !offerMessage) {
       addToast('Please fill out all offer fields.', 'error');
       return;
@@ -282,13 +287,23 @@ export default function StudentDetailPage() {
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto shrink-0 justify-end">
-            <button
-              onClick={() => setShowOfferModal(true)}
-              className="px-5 py-2.5 bg-gradient-to-r from-accent via-indigo-500 to-violet text-white text-xs font-semibold rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer"
-            >
-              <Send size={13} />
-              <span>Send Internship Offer</span>
-            </button>
+            {studentProfile.hasAcceptedOffer ? (
+              <button
+                disabled
+                className="px-5 py-2.5 bg-emerald/10 border border-emerald/20 text-emerald text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 opacity-80 cursor-not-allowed"
+              >
+                <CheckCircle2 size={13} />
+                <span>Internship Offer Accepted</span>
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowOfferModal(true)}
+                className="px-5 py-2.5 bg-gradient-to-r from-accent via-indigo-500 to-violet text-white text-xs font-semibold rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Send size={13} />
+                <span>Send Internship Offer</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -302,7 +317,7 @@ export default function StudentDetailPage() {
             <select
               value={studentProfile.pipelineStage || 'none'}
               onChange={handlePipelineChange}
-              className="w-full px-3 py-2 border border-border bg-[#0a0f1d] rounded-xl text-xs text-text outline-none"
+              className="w-full px-3 py-2 border border-border bg-input-bg rounded-xl text-xs text-text outline-none"
             >
               <option value="none">Not in Pipeline (None)</option>
               <option value="applied">Applied</option>
@@ -319,7 +334,7 @@ export default function StudentDetailPage() {
                 placeholder="Stage note (e.g. scheduled call)"
                 value={pipelineNotes}
                 onChange={(e) => setPipelineNotes(e.target.value)}
-                className="w-full bg-[#0a0f1d] border border-border rounded-xl px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent"
+                className="w-full bg-input-bg border border-border rounded-xl px-2.5 py-1.5 text-xs text-text outline-none focus:border-accent"
               />
               <button
                 onClick={handleUpdateNotes}
@@ -834,7 +849,7 @@ export default function StudentDetailPage() {
                   type="text"
                   readOnly
                   value={companyName}
-                  className="w-full bg-[#0a0f1d] border border-border/50 rounded-xl px-3.5 py-2 text-xs text-muted outline-none cursor-not-allowed opacity-70"
+                  className="w-full bg-input-bg border border-border/50 rounded-xl px-3.5 py-2 text-xs text-muted outline-none cursor-not-allowed opacity-70"
                 />
               </div>
 
@@ -846,7 +861,7 @@ export default function StudentDetailPage() {
                     placeholder="e.g. AI Research Intern"
                     value={jobRole}
                     onChange={(e) => setJobRole(e.target.value)}
-                    className="w-full bg-[#0a0f1d] border border-border rounded-xl px-3.5 py-2 text-xs text-text outline-none focus:border-accent"
+                    className="w-full bg-input-bg border border-border rounded-xl px-3.5 py-2 text-xs text-text outline-none focus:border-accent"
                   />
                 </div>
                 <div className="space-y-1.5">
@@ -858,7 +873,7 @@ export default function StudentDetailPage() {
                     placeholder="e.g. 6"
                     value={salaryPackage}
                     onChange={(e) => setSalaryPackage(e.target.value)}
-                    className="w-full bg-[#0a0f1d] border border-border rounded-xl px-3.5 py-2 text-xs text-text outline-none focus:border-accent"
+                    className="w-full bg-input-bg border border-border rounded-xl px-3.5 py-2 text-xs text-text outline-none focus:border-accent"
                   />
                 </div>
               </div>
@@ -871,7 +886,7 @@ export default function StudentDetailPage() {
                   placeholder={`Dear ${studentProfile.fullName.split(' ')[0] || 'Student'},\n\nFollowing our review of your developer metrics, we are excited to offer you a simulated AI Research Intern role at our company. The internship will cover Vector Databases, semantic search architectures, and RAG pipelines...`}
                   value={offerMessage}
                   onChange={(e) => setOfferMessage(e.target.value)}
-                  className="w-full bg-[#0a0f1d] border border-border rounded-xl px-3.5 py-2 text-xs text-text outline-none focus:border-accent resize-none"
+                  className="w-full bg-input-bg border border-border rounded-xl px-3.5 py-2 text-xs text-text outline-none focus:border-accent resize-none"
                 />
               </div>
 

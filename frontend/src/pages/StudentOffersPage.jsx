@@ -121,7 +121,7 @@ export default function StudentOffersPage() {
                 </div>
 
                 {/* Offer Message */}
-                <div className="p-4 bg-[#0a0f1d] border border-border/80 rounded-xl">
+                <div className="p-4 bg-input-bg border border-border/80 rounded-xl">
                   <p className="text-xs leading-relaxed text-text/80 whitespace-pre-wrap">{offer.message}</p>
                 </div>
 

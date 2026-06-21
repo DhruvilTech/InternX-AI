@@ -4,6 +4,7 @@ import { Star, ArrowLeft, ArrowRight, Award, Trash2, CheckCircle2, Briefcase, Bu
 import { useNavigation } from '../context/NavigationContext';
 import { getRecruiterShortlisted, toggleRecruiterShortlist } from '../store/slices/recruiterSlice.js';
 import { getSentOffers } from '../store/slices/offersSlice.js';
+import TiltCard from '../components/ui/TiltCard';
 
 export default function ShortlistedCandidatesPage() {
   const { navigate, addToast } = useNavigation();
@@ -75,10 +76,8 @@ export default function ShortlistedCandidatesPage() {
                 const studentId = offer.studentId?._id || offer.studentId;
                 const initials = studentName.split(' ').map(n => n[0]).join('').toUpperCase();
                 return (
-                  <div
-                    key={offer._id}
-                    className="p-5 border border-emerald/20 rounded-xl bg-emerald/5 flex flex-col justify-between gap-4 relative overflow-hidden"
-                  >
+                  <TiltCard key={offer._id} className="hover:glow-emerald transition-all duration-300 rounded-xl">
+                    <div className="p-5 border border-emerald/20 rounded-xl bg-emerald/5 flex flex-col justify-between gap-4 relative overflow-hidden h-full">
                     <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-emerald/60 to-transparent" />
 
                     <div className="flex items-start gap-4">
@@ -120,6 +119,7 @@ export default function ShortlistedCandidatesPage() {
                       )}
                     </div>
                   </div>
+                  </TiltCard>
                 );
               })}
             </div>
@@ -150,10 +150,8 @@ export default function ShortlistedCandidatesPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {shortlisted.map((cand) => (
-                <div
-                  key={cand.studentId}
-                  className="p-5 border border-border rounded-xl bg-void/40 hover:border-accent/40 transition-all flex flex-col justify-between gap-4 relative overflow-hidden group"
-                >
+                <TiltCard key={cand.studentId} className="hover:glow-amber transition-all duration-300 rounded-xl">
+                  <div className="p-5 border border-border rounded-xl bg-void/40 hover:border-accent/40 transition-all flex flex-col justify-between gap-4 relative overflow-hidden group h-full">
                   <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-amber-500/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
 
                   <div className="flex items-start gap-4">
@@ -212,6 +210,7 @@ export default function ShortlistedCandidatesPage() {
                     </button>
                   </div>
                 </div>
+              </TiltCard>
               ))}
             </div>
           )}

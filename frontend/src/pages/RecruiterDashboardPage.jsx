@@ -6,6 +6,7 @@ import { useNavigation } from '../context/NavigationContext';
 import { getRecruiterDashboard, toggleRecruiterShortlist } from '../store/slices/recruiterSlice.js';
 import { getSentOffers } from '../store/slices/offersSlice.js';
 import { SkeletonKPIRow, SkeletonCardList } from '../components/ui/PageSkeleton.jsx';
+import TiltCard from '../components/ui/TiltCard';
 
 export default function RecruiterDashboardPage() {
   const { navigate, addToast } = useNavigation();
@@ -80,7 +81,7 @@ export default function RecruiterDashboardPage() {
           </div>
           <button
             onClick={() => navigate('recruiter/students')}
-            className="px-4 py-2 bg-gradient-to-r from-accent to-violet text-white rounded-xl text-xs font-semibold hover:shadow-lg hover:shadow-accent/20 transition-all flex items-center gap-2 cursor-pointer"
+            className="px-4 py-2 bg-gradient-to-r from-accent to-violet text-white rounded-xl text-xs font-semibold hover:shadow-lg hover:shadow-accent/20 transition-all flex items-center gap-2 cursor-pointer animate-float"
           >
             <span>Discover Talent</span>
             <Search size={14} />
@@ -89,66 +90,78 @@ export default function RecruiterDashboardPage() {
 
         {/* Aggregate metrics */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="p-5 rounded-2xl border border-border bg-void/50 glass flex items-center justify-between">
-            <div>
-              <span className="text-[10px] text-muted uppercase tracking-wider block mb-1">Global Candidate Pool</span>
-              <span className="text-2xl font-bold text-text font-display">{kpis.totalStudents}</span>
+          <TiltCard className="hover:glow-cyan transition-all duration-300 rounded-2xl">
+            <div className="p-5 border border-border bg-void/50 glass flex items-center justify-between h-full">
+              <div>
+                <span className="text-[10px] text-muted uppercase tracking-wider block mb-1">Global Candidate Pool</span>
+                <span className="text-2xl font-bold text-text font-display">{kpis.totalStudents}</span>
+              </div>
+              <div className="h-10 w-10 bg-accent/10 border border-accent/20 rounded-xl flex items-center justify-center text-accent">
+                <Users size={18} />
+              </div>
             </div>
-            <div className="h-10 w-10 bg-accent/10 border border-accent/20 rounded-xl flex items-center justify-center text-accent">
-              <Users size={18} />
+          </TiltCard>
+          <TiltCard className="hover:glow-amber transition-all duration-300 rounded-2xl">
+            <div className="p-5 border border-border bg-void/50 glass flex items-center justify-between h-full">
+              <div>
+                <span className="text-[10px] text-muted uppercase tracking-wider block mb-1">My Shortlist</span>
+                <span className="text-2xl font-bold text-amber-500 font-display">{kpis.shortlistedCount}</span>
+              </div>
+              <div className="h-10 w-10 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center justify-center text-amber-500">
+                <Star size={18} fill="currentColor" />
+              </div>
             </div>
-          </div>
-          <div className="p-5 rounded-2xl border border-border bg-void/50 glass flex items-center justify-between">
-            <div>
-              <span className="text-[10px] text-muted uppercase tracking-wider block mb-1">My Shortlist</span>
-              <span className="text-2xl font-bold text-amber-500 font-display">{kpis.shortlistedCount}</span>
+          </TiltCard>
+          <TiltCard className="hover:glow-emerald transition-all duration-300 rounded-2xl">
+            <div className="p-5 border border-border bg-void/50 glass flex items-center justify-between h-full">
+              <div>
+                <span className="text-[10px] text-muted uppercase tracking-wider block mb-1">Hiring Pipeline (Active)</span>
+                <span className="text-2xl font-bold text-emerald font-display">{kpis.activePipelineCount}</span>
+              </div>
+              <div className="h-10 w-10 bg-emerald/10 border border-emerald/20 rounded-xl flex items-center justify-center text-emerald">
+                <Activity size={18} />
+              </div>
             </div>
-            <div className="h-10 w-10 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center justify-center text-amber-500">
-              <Star size={18} fill="currentColor" />
-            </div>
-          </div>
-          <div className="p-5 rounded-2xl border border-border bg-void/50 glass flex items-center justify-between">
-            <div>
-              <span className="text-[10px] text-muted uppercase tracking-wider block mb-1">Hiring Pipeline (Active)</span>
-              <span className="text-2xl font-bold text-emerald font-display">{kpis.activePipelineCount}</span>
-            </div>
-            <div className="h-10 w-10 bg-emerald/10 border border-emerald/20 rounded-xl flex items-center justify-center text-emerald">
-              <Activity size={18} />
-            </div>
-          </div>
+          </TiltCard>
         </div>
 
         {/* Internship Offers Stats */}
         <div className="space-y-3">
           <h3 className="text-xs font-bold text-text uppercase tracking-wider">Internship Offers Metrics</h3>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="p-5 rounded-2xl border border-border bg-void/50 glass flex items-center justify-between">
-              <div>
-                <span className="text-[10px] text-muted uppercase tracking-wider block mb-1">Pending Offer Letters</span>
-                <span className="text-2xl font-bold text-amber-500 font-display">{pendingOffersCount}</span>
+            <TiltCard className="hover:glow-amber transition-all duration-300 rounded-2xl">
+              <div className="p-5 border border-border bg-void/50 glass flex items-center justify-between h-full">
+                <div>
+                  <span className="text-[10px] text-muted uppercase tracking-wider block mb-1">Pending Offer Letters</span>
+                  <span className="text-2xl font-bold text-amber-500 font-display">{pendingOffersCount}</span>
+                </div>
+                <div className="h-10 w-10 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center justify-center text-amber-500">
+                  <Briefcase size={18} />
+                </div>
               </div>
-              <div className="h-10 w-10 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center justify-center text-amber-500">
-                <Briefcase size={18} />
+            </TiltCard>
+            <TiltCard className="hover:glow-emerald transition-all duration-300 rounded-2xl">
+              <div className="p-5 border border-border bg-void/50 glass flex items-center justify-between h-full">
+                <div>
+                  <span className="text-[10px] text-muted uppercase tracking-wider block mb-1">Offers Accepted</span>
+                  <span className="text-2xl font-bold text-emerald font-display">{acceptedOffersCount}</span>
+                </div>
+                <div className="h-10 w-10 bg-emerald/10 border border-emerald/20 rounded-xl flex items-center justify-center text-emerald">
+                  <ClipboardCheck size={18} />
+                </div>
               </div>
-            </div>
-            <div className="p-5 rounded-2xl border border-border bg-void/50 glass flex items-center justify-between">
-              <div>
-                <span className="text-[10px] text-muted uppercase tracking-wider block mb-1">Offers Accepted</span>
-                <span className="text-2xl font-bold text-emerald font-display">{acceptedOffersCount}</span>
+            </TiltCard>
+            <TiltCard className="hover:glow-rose transition-all duration-300 rounded-2xl">
+              <div className="p-5 border border-border bg-void/50 glass flex items-center justify-between h-full">
+                <div>
+                  <span className="text-[10px] text-muted uppercase tracking-wider block mb-1">Offers Declined</span>
+                  <span className="text-2xl font-bold text-rose font-display">{rejectedOffersCount}</span>
+                </div>
+                <div className="h-10 w-10 bg-rose/10 border border-rose/20 rounded-xl flex items-center justify-center text-rose">
+                  <X size={18} />
+                </div>
               </div>
-              <div className="h-10 w-10 bg-emerald/10 border border-emerald/20 rounded-xl flex items-center justify-center text-emerald">
-                <ClipboardCheck size={18} />
-              </div>
-            </div>
-            <div className="p-5 rounded-2xl border border-border bg-void/50 glass flex items-center justify-between">
-              <div>
-                <span className="text-[10px] text-muted uppercase tracking-wider block mb-1">Offers Declined</span>
-                <span className="text-2xl font-bold text-rose font-display">{rejectedOffersCount}</span>
-              </div>
-              <div className="h-10 w-10 bg-rose/10 border border-rose/20 rounded-xl flex items-center justify-center text-rose">
-                <X size={18} />
-              </div>
-            </div>
+            </TiltCard>
           </div>
         </div>
 
@@ -179,10 +192,8 @@ export default function RecruiterDashboardPage() {
                   </div>
                 ) : (
                   recentShortlists.map((cand) => (
-                    <div
-                      key={cand.studentId}
-                      className="p-4 border border-border rounded-xl bg-void/40 hover:border-accent/40 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group"
-                    >
+                    <TiltCard key={cand.studentId} className="hover:glow-accent transition-all duration-300 rounded-xl">
+                      <div className="p-4 border border-border rounded-xl bg-void/40 hover:border-accent/40 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group">
                       <div className="flex items-start gap-4">
                         <div className="h-10 w-10 bg-gradient-to-br from-accent/20 to-violet/20 border border-accent/20 rounded-full flex items-center justify-center text-accent text-xs font-bold font-display">
                           {cand.fullName.split(' ').map(n => n[0]).join('')}
@@ -220,6 +231,7 @@ export default function RecruiterDashboardPage() {
                         </div>
                       </div>
                     </div>
+                    </TiltCard>
                   ))
                 )}
               </div>
@@ -241,10 +253,8 @@ export default function RecruiterDashboardPage() {
                   </div>
                 ) : (
                   sentOffers.slice(0, 5).map((offer) => (
-                    <div
-                      key={offer._id}
-                      className="p-4 border border-border rounded-xl bg-void/40 hover:border-accent/40 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group"
-                    >
+                    <TiltCard key={offer._id} className="hover:glow-violet transition-all duration-300 rounded-xl">
+                      <div className="p-4 border border-border rounded-xl bg-void/40 hover:border-accent/40 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group">
                       <div className="flex items-start gap-4">
                         <div className="h-10 w-10 bg-gradient-to-br from-indigo-500/20 to-violet/20 border border-indigo-500/20 rounded-full flex items-center justify-center text-indigo-400 text-xs font-bold font-display">
                           {offer.studentId?.fullName ? offer.studentId.fullName.split(' ').map(n => n[0]).join('') : 'ST'}
@@ -284,6 +294,7 @@ export default function RecruiterDashboardPage() {
                         </button>
                       </div>
                     </div>
+                    </TiltCard>
                   ))
                 )}
               </div>
@@ -294,62 +305,66 @@ export default function RecruiterDashboardPage() {
           <div className="lg:col-span-4 space-y-6">
             
             {/* Pipeline Stage Summary Card */}
-            <div className="glass border border-border rounded-2xl p-5 bg-void/25 space-y-4">
-              <div className="flex items-center gap-2 border-b border-border/40 pb-3">
-                <BarChart2 size={14} className="text-accent" />
-                <h4 className="text-xs font-bold text-text uppercase tracking-wider">Hiring Funnel Summary</h4>
-              </div>
+            <TiltCard className="hover:glow-violet transition-all duration-300 rounded-2xl">
+              <div className="glass border border-border rounded-2xl p-5 bg-void/25 space-y-4 h-full">
+                <div className="flex items-center gap-2 border-b border-border/40 pb-3">
+                  <BarChart2 size={14} className="text-accent" />
+                  <h4 className="text-xs font-bold text-text uppercase tracking-wider">Hiring Funnel Summary</h4>
+                </div>
 
-              <div className="space-y-3.5 text-xs">
-                {[
-                  { key: 'applied', label: 'Applied', color: 'bg-indigo-500' },
-                  { key: 'shortlisted', label: 'Shortlisted', color: 'bg-amber-500' },
-                  { key: 'interviewing', label: 'Interviewing', color: 'bg-violet' },
-                  { key: 'offered', label: 'Offered', color: 'bg-emerald' },
-                  { key: 'rejected', label: 'Rejected', color: 'bg-rose' }
-                ].map((item) => {
-                  const count = pipelineSummary[item.key] || 0;
-                  const total = Object.values(pipelineSummary).reduce((a, b) => a + b, 0) || 1;
-                  const pct = Math.round((count / total) * 100);
-                  return (
-                    <div key={item.key} className="space-y-1">
-                      <div className="flex justify-between font-semibold">
-                        <span className="text-muted">{item.label}</span>
-                        <span className="text-text">{count} ({pct}%)</span>
+                <div className="space-y-3.5 text-xs">
+                  {[
+                    { key: 'applied', label: 'Applied', color: 'bg-indigo-500' },
+                    { key: 'shortlisted', label: 'Shortlisted', color: 'bg-amber-500' },
+                    { key: 'interviewing', label: 'Interviewing', color: 'bg-violet' },
+                    { key: 'offered', label: 'Offered', color: 'bg-emerald' },
+                    { key: 'rejected', label: 'Rejected', color: 'bg-rose' }
+                  ].map((item) => {
+                    const count = pipelineSummary[item.key] || 0;
+                    const total = Object.values(pipelineSummary).reduce((a, b) => a + b, 0) || 1;
+                    const pct = Math.round((count / total) * 100);
+                    return (
+                      <div key={item.key} className="space-y-1">
+                        <div className="flex justify-between font-semibold">
+                          <span className="text-muted">{item.label}</span>
+                          <span className="text-text">{count} ({pct}%)</span>
+                        </div>
+                        <div className="h-1.5 w-full bg-white/5 border border-border rounded-full overflow-hidden">
+                          <div className={`h-full ${item.color} rounded-full`} style={{ width: `${pct}%` }} />
+                        </div>
                       </div>
-                      <div className="h-1.5 w-full bg-white/5 border border-border rounded-full overflow-hidden">
-                        <div className={`h-full ${item.color} rounded-full`} style={{ width: `${pct}%` }} />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
+                    );
+                  })}
+                </div>
 
-              <button
-                onClick={() => navigate('recruiter/pipeline')}
-                className="w-full py-2 bg-white/5 hover:bg-white/10 border border-border text-xs text-text font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer mt-2"
-              >
-                <ClipboardCheck size={13} />
-                <span>Open Kanban Pipeline</span>
-              </button>
-            </div>
+                <button
+                  onClick={() => navigate('recruiter/pipeline')}
+                  className="w-full py-2 bg-white/5 hover:bg-white/10 border border-border text-xs text-text font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer mt-2"
+                >
+                  <ClipboardCheck size={13} />
+                  <span>Open Kanban Pipeline</span>
+                </button>
+              </div>
+            </TiltCard>
 
             {/* Quick Analytics Link */}
-            <div className="glass border border-border rounded-2xl p-5 bg-void/25 flex flex-col justify-between hover:border-accent/40 transition-colors">
-              <div className="space-y-2">
-                <h4 className="text-xs font-bold text-text uppercase tracking-wider">Discovery Insights</h4>
-                <p className="text-xs text-muted leading-relaxed">
-                  Evaluate top skills distributions, placement readiness percentages, and simulated track analytics across student cohorts.
-                </p>
+            <TiltCard className="hover:glow-accent transition-all duration-300 rounded-2xl">
+              <div className="glass border border-border rounded-2xl p-5 bg-void/25 flex flex-col justify-between h-full space-y-4">
+                <div className="space-y-2">
+                  <h4 className="text-xs font-bold text-text uppercase tracking-wider">Discovery Insights</h4>
+                  <p className="text-xs text-muted leading-relaxed">
+                    Evaluate top skills distributions, placement readiness percentages, and simulated track analytics across student cohorts.
+                  </p>
+                </div>
+                <button
+                  onClick={() => navigate('recruiter/analytics')}
+                  className="w-full py-2 bg-gradient-to-r from-accent to-violet text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <span>Analytics Dashboard</span>
+                  <ArrowRight size={13} />
+                </button>
               </div>
-              <button
-                onClick={() => navigate('recruiter/analytics')}
-                className="w-full py-2 bg-gradient-to-r from-accent to-violet text-white text-xs font-semibold rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer mt-4"
-              >
-                <span>Analytics Dashboard</span>
-                <ArrowRight size={13} />
-              </button>
-            </div>
+            </TiltCard>
 
           </div>
 

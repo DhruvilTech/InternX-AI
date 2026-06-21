@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { ArrowLeft, Plus, ChevronRight, ChevronLeft, Trash2, Edit2, CheckCircle, FileText, ArrowRight } from 'lucide-react';
 import { useNavigation } from '../context/NavigationContext';
 import { getRecruiterPipeline, updateRecruiterPipelineStage, deleteRecruiterFromPipeline } from '../store/slices/recruiterSlice.js';
+import TiltCard from '../components/ui/TiltCard';
 
 const STAGES = [
   { id: 'applied', label: 'Applied', color: 'border-t-indigo-500 bg-indigo-500/5 text-indigo-400' },
@@ -118,7 +119,7 @@ export default function HiringPipelinePage() {
               return (
                 <div
                   key={stage.id}
-                  className={`w-72 md:w-auto border-t-4 ${stage.color} border border-border bg-[#05070d]/55 backdrop-blur-md p-4 rounded-xl space-y-4 flex flex-col min-h-[500px] shadow-lg`}
+                  className={`w-72 md:w-auto border-t-4 ${stage.color} border border-border bg-surface-muted/55 backdrop-blur-md p-4 rounded-xl space-y-4 flex flex-col min-h-[500px] shadow-lg`}
                 >
                   <div className="flex justify-between items-center border-b border-border/40 pb-2">
                     <span className="text-xs font-bold uppercase tracking-wider text-text">{stage.label}</span>
@@ -134,10 +135,8 @@ export default function HiringPipelinePage() {
                       </div>
                     ) : (
                       stageItems.map((item) => (
-                        <div
-                          key={item.userId}
-                          className="p-3.5 border border-border bg-void/50 rounded-xl hover:border-accent/40 hover:shadow-lg transition-all space-y-3 relative group"
-                        >
+                        <TiltCard key={item.userId} className="hover:glow-accent transition-all duration-300 rounded-xl">
+                          <div className="p-3.5 border border-border bg-void/50 rounded-xl hover:border-accent/40 hover:shadow-lg transition-all space-y-3 relative group h-full">
                           <div className="space-y-1">
                             <span className="text-[9px] text-muted font-bold block uppercase tracking-wider">
                               Grade: {item.internshipProgress}%
@@ -182,7 +181,7 @@ export default function HiringPipelinePage() {
                               <select
                                 value={item.stage}
                                 onChange={(e) => handleMoveStage(item.userId, e.target.value)}
-                                className="bg-[#05070d] border border-border text-[9px] px-1.5 py-0.5 rounded text-muted outline-none focus:border-accent max-w-[80px]"
+                                className="bg-input-bg border border-border text-[9px] px-1.5 py-0.5 rounded text-text outline-none focus:border-accent max-w-[80px]"
                               >
                                 <option value="applied">Applied</option>
                                 <option value="shortlisted">Shortlisted</option>
@@ -201,6 +200,7 @@ export default function HiringPipelinePage() {
                             </div>
                           </div>
                         </div>
+                        </TiltCard>
                       ))
                     )}
                   </div>
@@ -233,7 +233,7 @@ export default function HiringPipelinePage() {
                 value={notesText}
                 onChange={(e) => setNotesText(e.target.value)}
                 placeholder="E.g. Passed initial HR call, scheduling technical audit review."
-                className="w-full bg-[#0a0f1d] border border-border rounded-xl px-3 py-2 text-xs text-text outline-none focus:border-accent resize-none"
+                className="w-full bg-input-bg border border-border rounded-xl px-3 py-2 text-xs text-text outline-none focus:border-accent resize-none"
               />
             </div>
 

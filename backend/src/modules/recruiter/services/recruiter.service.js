@@ -350,6 +350,7 @@ export const getStudentDetails = async (recruiterUserId, studentUserIdOrStudentI
       collegeName: student.collegeName,
       createdAt: student.createdAt,
       isShortlisted,
+      hasAcceptedOffer: !!acceptedOffer,
       pipelineStage: pipeline?.stage || null,
       pipelineNotes: pipeline?.notes || '',
     },
@@ -429,28 +430,16 @@ export const getStudentDetails = async (recruiterUserId, studentUserIdOrStudentI
  * Returns all shortlisted candidates by a specific recruiter.
  */
 export const getShortlisted = async (recruiterUserId) => {
-  // Batch fetch shortlist + accepted offers in parallel
-  const [docs, acceptedOffers] = await Promise.all([
-    ShortlistedCandidate.find({ recruiterId: recruiterUserId })
-      .populate('studentId', 'email avatar _id')
-      .lean(),
-    Offer.find({ recruiterId: recruiterUserId, status: 'accepted' })
-      .populate('studentId', 'email avatar _id')
-      .lean(),
-  ]);
+  // Fetch shortlisted candidates
+  const docs = await ShortlistedCandidate.find({ recruiterId: recruiterUserId })
+    .populate('studentId', 'email avatar _id')
+    .lean();
 
-  // Build deduplicated user map
+  // Build user map
   const studentMap = new Map();
   for (const doc of docs) {
     if (!doc.studentId) continue;
     studentMap.set(doc.studentId._id.toString(), { user: doc.studentId, addedAt: doc.addedAt });
-  }
-  for (const offer of acceptedOffers) {
-    if (!offer.studentId) continue;
-    const key = offer.studentId._id.toString();
-    if (!studentMap.has(key)) {
-      studentMap.set(key, { user: offer.studentId, addedAt: offer.updatedAt });
-    }
   }
 
   const userIds = [...studentMap.keys()];
@@ -772,6 +761,15 @@ export const createOffer = async (recruiterUserId, studentUserId, companyName, m
   const studentUser = await User.findById(studentUserId);
   if (!studentUser || studentUser.role !== 'student') {
     throw new Error('Can only send offers to active simulated students.');
+  }
+
+  const existingAcceptedOffer = await Offer.findOne({
+    recruiterId: recruiterUserId,
+    studentId: studentUserId,
+    status: 'accepted'
+  });
+  if (existingAcceptedOffer) {
+    throw new Error('This student has already accepted an internship offer from you.');
   }
 
   const recruiterUser = await User.findById(recruiterUserId);

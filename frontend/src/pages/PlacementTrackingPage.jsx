@@ -190,7 +190,7 @@ export default function PlacementTrackingPage() {
               <select
                 value={department}
                 onChange={(e) => { setDepartment(e.target.value); setPage(1); }}
-                className="w-full bg-[#0a0f1d] border border-border rounded-xl px-3.5 py-2 text-xs text-text outline-none focus:border-accent"
+                className="w-full bg-input-bg border border-border rounded-xl px-3.5 py-2 text-xs text-text outline-none focus:border-accent"
               >
                 <option value="">All Departments</option>
                 {departments.map((dept) => (
@@ -205,7 +205,7 @@ export default function PlacementTrackingPage() {
               <select
                 value={status}
                 onChange={(e) => { setStatus(e.target.value); setPage(1); }}
-                className="w-full bg-[#0a0f1d] border border-border rounded-xl px-3.5 py-2 text-xs text-text outline-none focus:border-accent"
+                className="w-full bg-input-bg border border-border rounded-xl px-3.5 py-2 text-xs text-text outline-none focus:border-accent"
               >
                 <option value="">All Statuses</option>
                 <option value="pending">Pending</option>

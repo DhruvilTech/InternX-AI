@@ -5,6 +5,7 @@ import { FaGithub } from 'react-icons/fa6';
 import { useNavigation } from '../context/NavigationContext';
 import { getRecruiterStudents, toggleRecruiterShortlist } from '../store/slices/recruiterSlice.js';
 import { SkeletonCardList } from '../components/ui/PageSkeleton.jsx';
+import TiltCard from '../components/ui/TiltCard';
 
 export default function StudentDiscoveryPage() {
   const { navigate, addToast } = useNavigation();
@@ -161,7 +162,7 @@ export default function StudentDiscoveryPage() {
                   setCareerPath(e.target.value);
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 border border-border bg-[#0a0f1d] rounded-xl text-xs text-muted outline-none"
+                className="w-full px-3 py-2 border border-border bg-input-bg rounded-xl text-xs text-text outline-none"
               >
                 <option value="">All Career Tracks</option>
                 <option value="AI Engineer">AI Engineer</option>
@@ -180,7 +181,7 @@ export default function StudentDiscoveryPage() {
                   setMinScore(e.target.value);
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 border border-border bg-[#0a0f1d] rounded-xl text-xs text-muted outline-none"
+                className="w-full px-3 py-2 border border-border bg-input-bg rounded-xl text-xs text-text outline-none"
               >
                 <option value="">Any Score</option>
                 <option value="90">90% and above</option>
@@ -201,7 +202,7 @@ export default function StudentDiscoveryPage() {
                   setYear(e.target.value);
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 border border-border bg-[#0a0f1d] rounded-xl text-xs text-muted outline-none"
+                className="w-full px-3 py-2 border border-border bg-input-bg rounded-xl text-xs text-text outline-none"
               >
                 <option value="">All Years</option>
                 <option value="1">Year 1</option>
@@ -220,7 +221,7 @@ export default function StudentDiscoveryPage() {
                   setDepartment(e.target.value);
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 border border-border bg-[#0a0f1d] rounded-xl text-xs text-muted outline-none"
+                className="w-full px-3 py-2 border border-border bg-input-bg rounded-xl text-xs text-text outline-none"
               >
                 <option value="">All Majors</option>
                 <option value="Computer Science">Computer Science</option>
@@ -239,7 +240,7 @@ export default function StudentDiscoveryPage() {
                   setGithubConnected(e.target.value);
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 border border-border bg-[#0a0f1d] rounded-xl text-xs text-muted outline-none"
+                className="w-full px-3 py-2 border border-border bg-input-bg rounded-xl text-xs text-text outline-none"
               >
                 <option value="">Any Status</option>
                 <option value="true">Connected Profile</option>
@@ -256,7 +257,7 @@ export default function StudentDiscoveryPage() {
                   setCertificateStatus(e.target.value);
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 border border-border bg-[#0a0f1d] rounded-xl text-xs text-muted outline-none"
+                className="w-full px-3 py-2 border border-border bg-input-bg rounded-xl text-xs text-text outline-none"
               >
                 <option value="">Any Status</option>
                 <option value="issued">Certificate Issued</option>
@@ -273,7 +274,7 @@ export default function StudentDiscoveryPage() {
                   setInternshipStatus(e.target.value);
                   setPage(1);
                 }}
-                className="w-full px-3 py-2 border border-border bg-[#0a0f1d] rounded-xl text-xs text-muted outline-none"
+                className="w-full px-3 py-2 border border-border bg-input-bg rounded-xl text-xs text-text outline-none"
               >
                 <option value="">Any Status</option>
                 <option value="completed">Completed Tracks</option>
@@ -306,10 +307,8 @@ export default function StudentDiscoveryPage() {
             !loading && (
               <div className="space-y-3.5">
                 {students.map((cand) => (
-                  <div
-                    key={cand._id}
-                    className="p-5 border border-border rounded-xl bg-void/40 hover:border-accent/40 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group"
-                  >
+                  <TiltCard key={cand._id} className="hover:glow-accent transition-all duration-300 rounded-xl">
+                    <div className="p-5 border border-border rounded-xl bg-void/40 hover:border-accent/40 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 group">
                     <div className="flex items-start gap-4">
                       <div className="h-10 w-10 bg-gradient-to-br from-accent/20 to-violet/20 border border-accent/20 rounded-full flex items-center justify-center text-accent text-xs font-bold font-display overflow-hidden shrink-0">
                         {cand.avatar ? (
@@ -382,7 +381,8 @@ export default function StudentDiscoveryPage() {
                         </button>
                       </div>
                     </div>
-                  </div>
+                    </div>
+                  </TiltCard>
                 ))}
               </div>
             )
