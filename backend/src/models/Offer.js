@@ -24,6 +24,14 @@ const offerSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    jobRole: {
+      type: String,
+      default: 'Software Engineer Intern',
+    },
+    package: {
+      type: Number,
+      default: 6,
+    },
     status: {
       type: String,
       enum: ['pending', 'accepted', 'rejected'],

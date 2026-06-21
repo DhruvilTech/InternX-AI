@@ -12,6 +12,8 @@ import ContactRequest from '../models/ContactRequest.js';
 import { sendMail } from '../../../utils/mailer.js';
 import Offer from '../../../models/Offer.js';
 import Notification from '../../../models/Notification.js';
+import Placement from '../../../models/Placement.js';
+import CollegeNotification from '../../../models/CollegeNotification.js';
 
 /**
  * Retrieves recruiter user and corporate profile details.
@@ -682,7 +684,7 @@ export const getAnalytics = async (recruiterUserId) => {
 /**
  * Creates a new internship offer and a notification for the student.
  */
-export const createOffer = async (recruiterUserId, studentUserId, companyName, message) => {
+export const createOffer = async (recruiterUserId, studentUserId, companyName, message, jobRole = 'Software Engineer Intern', salaryPackage = 6) => {
   const studentUser = await User.findById(studentUserId);
   if (!studentUser || studentUser.role !== 'student') {
     throw new Error('Can only send offers to active simulated students.');
@@ -697,6 +699,8 @@ export const createOffer = async (recruiterUserId, studentUserId, companyName, m
     recruiterName,
     companyName,
     message,
+    jobRole,
+    package: salaryPackage,
     status: 'pending',
   });
 
@@ -709,6 +713,28 @@ export const createOffer = async (recruiterUserId, studentUserId, companyName, m
     type: 'offer',
     isRead: false,
   });
+
+  // Centralized Placement Tracking: Create pending Placement record and alert College Reps
+  if (studentUser.collegeId) {
+    await Placement.create({
+      studentId: studentUserId,
+      collegeId: studentUser.collegeId,
+      recruiterId: recruiterUserId,
+      companyName,
+      jobRole,
+      offerStatus: 'pending',
+      package: salaryPackage,
+    });
+
+    await CollegeNotification.create({
+      collegeId: studentUser.collegeId,
+      senderId: studentUserId,
+      title: 'New Offer Received',
+      message: `A new internship offer for the role of ${jobRole} has been received by ${studentUser.fullName || 'Student'} from ${companyName} at ${salaryPackage} LPA.`,
+      type: 'offer_received',
+      isRead: false,
+    });
+  }
 
   return offer;
 };

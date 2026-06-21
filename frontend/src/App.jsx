@@ -74,6 +74,8 @@ import SkillsAnalyticsPage from './pages/SkillsAnalyticsPage';
 import PlacementReadinessPage from './pages/PlacementReadinessPage';
 import CertificateManagementPage from './pages/CertificateManagementPage';
 import ReportsPage from './pages/ReportsPage';
+import PlacementTrackingPage from './pages/PlacementTrackingPage';
+import CollegeNotificationsPage from './pages/CollegeNotificationsPage';
 
 // Recruiter Portal Pages
 import StudentDiscoveryPage from './pages/StudentDiscoveryPage';
@@ -178,6 +180,8 @@ export default function App() {
                   <Route path="/college/dashboard" element={<CollegeDashboard />} />
                   <Route path="/college/students" element={<StudentsManagementPage />} />
                   <Route path="/college/students/:id" element={<StudentDetailsPage />} />
+                  <Route path="/college/placements" element={<PlacementTrackingPage />} />
+                  <Route path="/college/notifications" element={<CollegeNotificationsPage />} />
                   <Route path="/college/internships" element={<InternshipAnalyticsPage />} />
                   <Route path="/college/skills" element={<SkillsAnalyticsPage />} />
                   <Route path="/college/placement" element={<PlacementReadinessPage />} />

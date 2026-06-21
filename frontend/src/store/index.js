@@ -4,6 +4,8 @@ import collegeReducer from './slices/collegeSlice.js';
 import recruiterReducer from './slices/recruiterSlice.js';
 import offersReducer from './slices/offersSlice.js';
 import notificationsReducer from './slices/notificationsSlice.js';
+import placementReducer from './slices/placementSlice.js';
+import collegeNotificationsReducer from './slices/collegeNotificationSlice.js';
 
 export const store = configureStore({
   reducer: {
@@ -12,6 +14,8 @@ export const store = configureStore({
     recruiter: recruiterReducer,
     offers: offersReducer,
     notifications: notificationsReducer,
+    placement: placementReducer,
+    collegeNotifications: collegeNotificationsReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

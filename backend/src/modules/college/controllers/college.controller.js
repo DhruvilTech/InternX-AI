@@ -233,3 +233,39 @@ export const createDepartment = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * Retrieves the placement records associated with the college.
+ */
+export const getPlacements = async (req, res, next) => {
+  try {
+    const results = await collegeService.queryPlacements(req.college, req.query);
+    return sendResponse(res, 200, true, 'Placements retrieved successfully', results);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Retrieves all notification logs for the college.
+ */
+export const getCollegeNotifications = async (req, res, next) => {
+  try {
+    const notifications = await collegeService.getNotifications(req.college);
+    return sendResponse(res, 200, true, 'College notifications retrieved successfully', notifications);
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Marks a specific college notification as read.
+ */
+export const readCollegeNotification = async (req, res, next) => {
+  try {
+    const notification = await collegeService.markNotificationAsRead(req.college, req.params.id);
+    return sendResponse(res, 200, true, 'Notification marked as read successfully', notification);
+  } catch (error) {
+    next(error);
+  }
+};

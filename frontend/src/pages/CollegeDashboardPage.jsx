@@ -12,7 +12,7 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import { GraduationCap, Users, CheckCircle2, TrendingUp, Award, RefreshCw, BookOpen, Star } from 'lucide-react';
+import { GraduationCap, Users, CheckCircle2, TrendingUp, Award, RefreshCw, BookOpen, Star, Briefcase, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../api/axios.js';
 import { useNavigation } from '../context/NavigationContext';
@@ -26,6 +26,7 @@ export default function CollegeDashboardPage() {
   
   const [data, setData] = useState(null);
   const [students, setStudents] = useState([]);
+  const [placements, setPlacements] = useState({ total: 0, accepted: 0, rejected: 0 });
   const [loading, setLoading] = useState(true);
 
   const gridColor = isDark ? '#1E293B' : '#E2E8F0';
@@ -34,9 +35,10 @@ export default function CollegeDashboardPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [dashRes, studRes] = await Promise.all([
+      const [dashRes, studRes, placementRes] = await Promise.all([
         axiosInstance.get('/api/college/dashboard'),
-        axiosInstance.get('/api/college/students')
+        axiosInstance.get('/api/college/students'),
+        axiosInstance.get('/api/college/placements').catch(() => ({ data: { data: [] } }))
       ]);
       
       if (dashRes.data?.success) {
@@ -45,6 +47,13 @@ export default function CollegeDashboardPage() {
       if (studRes.data?.success) {
         setStudents(studRes.data.data?.students || studRes.data.data || []);
       }
+      // Build placement KPIs from returned array (paginated response shape)
+      const pArr = placementRes.data?.data?.placements || placementRes.data?.data || [];
+      setPlacements({
+        total: pArr.length,
+        accepted: pArr.filter(p => p.offerStatus === 'accepted').length,
+        rejected: pArr.filter(p => p.offerStatus === 'rejected').length,
+      });
     } catch (err) {
       console.error(err);
       if (typeof addToast === 'function') {
@@ -121,17 +130,26 @@ export default function CollegeDashboardPage() {
               Audit student placement readiness and cohort progress diagnostics for code: <strong>{college.code}</strong>.
             </p>
           </div>
-          <button
-            onClick={handleRefresh}
-            className="p-2.5 border border-border rounded-xl text-muted hover:text-text bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
-            title="Refresh database snapshot"
-          >
-            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/college/placements')}
+              className="flex items-center gap-2 px-3 py-2 border border-violet/40 rounded-xl text-xs text-violet hover:bg-violet/10 bg-violet/5 transition-colors cursor-pointer font-semibold"
+            >
+              <Briefcase size={13} />
+              Placement Tracker
+            </button>
+            <button
+              onClick={handleRefresh}
+              className="p-2.5 border border-border rounded-xl text-muted hover:text-text bg-white/5 hover:bg-white/10 transition-colors cursor-pointer"
+              title="Refresh database snapshot"
+            >
+              <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+            </button>
+          </div>
         </div>
 
         {/* KPI Cards Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="p-5 rounded-2xl border border-border bg-void/50 glass hover:scale-[1.01] transition-transform">
             <div className="flex items-center gap-2 text-accent mb-1 justify-center">
               <Users size={16} />
@@ -163,13 +181,32 @@ export default function CollegeDashboardPage() {
             </div>
             <span className="text-2xl font-bold text-text block text-center font-mono">{stats.activeInternships}</span>
           </div>
+        </div>
 
-          <div className="p-5 rounded-2xl border border-border bg-void/50 glass hover:scale-[1.01] transition-transform col-span-2 md:col-span-1">
+        {/* Placement KPI Row */}
+        <div className="grid grid-cols-3 gap-4">
+          <div className="p-5 rounded-2xl border border-violet/20 bg-violet/5 glass hover:scale-[1.01] transition-transform">
+            <div className="flex items-center gap-2 text-violet mb-1 justify-center">
+              <Briefcase size={16} />
+              <span className="text-[10px] text-muted uppercase tracking-wider block">Total Offers</span>
+            </div>
+            <span className="text-2xl font-bold text-violet block text-center font-mono">{placements.total}</span>
+          </div>
+
+          <div className="p-5 rounded-2xl border border-emerald/20 bg-emerald/5 glass hover:scale-[1.01] transition-transform">
             <div className="flex items-center gap-2 text-emerald mb-1 justify-center">
               <CheckCircle2 size={16} />
-              <span className="text-[10px] text-muted uppercase tracking-wider block">Completed</span>
+              <span className="text-[10px] text-muted uppercase tracking-wider block">Accepted Offers</span>
             </div>
-            <span className="text-2xl font-bold text-text block text-center font-mono">{stats.completedInternships}</span>
+            <span className="text-2xl font-bold text-emerald block text-center font-mono">{placements.accepted}</span>
+          </div>
+
+          <div className="p-5 rounded-2xl border border-rose/20 bg-rose/5 glass hover:scale-[1.01] transition-transform">
+            <div className="flex items-center gap-2 text-rose mb-1 justify-center">
+              <XCircle size={16} />
+              <span className="text-[10px] text-muted uppercase tracking-wider block">Rejected Offers</span>
+            </div>
+            <span className="text-2xl font-bold text-rose block text-center font-mono">{placements.rejected}</span>
           </div>
         </div>
 

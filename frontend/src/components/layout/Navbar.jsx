@@ -3,6 +3,7 @@ import { motion, AnimatePresence, useScroll, useSpring } from 'framer-motion'
 import { Menu, X, Bell, User, Settings, LogOut, Search, ShieldCheck } from 'lucide-react'
 import { useDispatch, useSelector } from 'react-redux'
 import { fetchNotifications } from '../../store/slices/notificationsSlice.js'
+import { fetchCollegeNotifications } from '../../store/slices/collegeNotificationSlice.js'
 import MagneticButton from '../ui/MagneticButton'
 import ThemeToggle from '../ui/ThemeToggle'
 import { useNavigation } from '../../context/NavigationContext'
@@ -21,6 +22,8 @@ export default function Navbar() {
 
   const dispatch = useDispatch()
   const { unreadCount } = useSelector((state) => state.notifications)
+  const { notifications: collegeNotifications } = useSelector((state) => state.collegeNotifications || { notifications: [] })
+  const collegeUnreadCount = (collegeNotifications || []).filter(n => !n.isRead).length
 
   const isPendingApproval = user && user.role !== 'admin' && (
     (user.role === 'student' && !user.isVerified) ||
@@ -37,6 +40,12 @@ export default function Navbar() {
       dispatch(fetchNotifications());
       const interval = setInterval(() => {
         dispatch(fetchNotifications());
+      }, 30000);
+      return () => clearInterval(interval);
+    } else if ((role === 'college_representative' || role === 'college_admin') && !isLocked) {
+      dispatch(fetchCollegeNotifications());
+      const interval = setInterval(() => {
+        dispatch(fetchCollegeNotifications());
       }, 30000);
       return () => clearInterval(interval);
     }
@@ -85,11 +94,13 @@ export default function Navbar() {
       return [
         { label: 'Dashboard', id: 'college/dashboard' },
         { label: 'Students', id: 'college/students' },
+        { label: 'Placements', id: 'college/placements' },
         { label: 'Internships', id: 'college/internships' },
         { label: 'Skills', id: 'college/skills' },
-        { label: 'Placement', id: 'college/placement' },
+        { label: 'Readiness', id: 'college/placement' },
         { label: 'Certificates', id: 'college/certificates' },
         { label: 'Reports', id: 'college/reports' },
+        { label: 'Alerts', id: 'college/notifications' },
       ]
     } else if (role === 'recruiter') {
       return [
@@ -210,6 +221,8 @@ export default function Navbar() {
                     onClick={() => {
                       if (role === 'student') {
                         navigate('student/notifications');
+                      } else if (role === 'college_representative' || role === 'college_admin') {
+                        navigate('college/notifications');
                       } else {
                         setNotificationsOpen(true);
                       }
@@ -221,6 +234,12 @@ export default function Navbar() {
                       unreadCount > 0 && (
                         <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center bg-accent text-[9px] font-bold text-white rounded-full border border-void animate-pulse">
                           {unreadCount}
+                        </span>
+                      )
+                    ) : role === 'college_representative' || role === 'college_admin' ? (
+                      collegeUnreadCount > 0 && (
+                        <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center bg-accent text-[9px] font-bold text-white rounded-full border border-void animate-pulse">
+                          {collegeUnreadCount}
                         </span>
                       )
                     ) : (
