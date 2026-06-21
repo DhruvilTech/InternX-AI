@@ -13,6 +13,7 @@ import {
   Cell
 } from 'recharts';
 import { GraduationCap, Users, CheckCircle2, TrendingUp, Award, RefreshCw, BookOpen, Star, Briefcase, XCircle } from 'lucide-react';
+import { FaGithub } from 'react-icons/fa6';
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../api/axios.js';
 import { useNavigation } from '../context/NavigationContext';
@@ -165,7 +166,7 @@ export default function CollegeDashboardPage() {
         </div>
 
         {/* KPI Cards Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
           <div className="p-5 rounded-2xl border border-border bg-void/50 glass hover:scale-[1.01] transition-transform">
             <div className="flex items-center gap-2 text-accent mb-1 justify-center">
               <Users size={16} />
@@ -191,6 +192,14 @@ export default function CollegeDashboardPage() {
           </div>
 
           <div className="p-5 rounded-2xl border border-border bg-void/50 glass hover:scale-[1.01] transition-transform">
+            <div className="flex items-center gap-2 text-indigo-400 mb-1 justify-center">
+              <FaGithub size={16} />
+              <span className="text-[10px] text-muted uppercase tracking-wider block">GitHub Sync</span>
+            </div>
+            <span className="text-2xl font-bold text-text block text-center font-mono">{stats.githubConnectedCount || 0}</span>
+          </div>
+
+          <div className="p-5 rounded-2xl border border-border bg-void/50 glass hover:scale-[1.01] transition-transform col-span-2 sm:col-span-1">
             <div className="flex items-center gap-2 text-amber-500 mb-1 justify-center">
               <BookOpen size={16} />
               <span className="text-[10px] text-muted uppercase tracking-wider block">Active Interns</span>
@@ -223,6 +232,85 @@ export default function CollegeDashboardPage() {
               <span className="text-[10px] text-muted uppercase tracking-wider block">Rejected Offers</span>
             </div>
             <span className="text-2xl font-bold text-rose block text-center font-mono">{placements.rejected}</span>
+          </div>
+        </div>
+
+        {/* GitHub & Department Intelligence */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Top GitHub Contributors Leaderboard */}
+          <div className="glass border border-border rounded-2xl p-6 bg-void/25 space-y-4">
+            <div className="flex items-center gap-2 border-b border-border/40 pb-3">
+              <FaGithub size={16} className="text-violet" />
+              <div>
+                <h3 className="text-sm font-bold text-text uppercase tracking-wider">Top GitHub Contributors</h3>
+                <p className="text-[10px] text-muted">Cohort leaderboard by commit activity</p>
+              </div>
+            </div>
+            
+            <div className="space-y-3">
+              {(data?.topContributors || []).map((contrib, idx) => (
+                <div key={contrib._id} className="p-3 bg-void/40 border border-border rounded-xl flex items-center justify-between text-xs hover:border-violet/30 transition-colors">
+                  <div className="flex items-center gap-2.5">
+                    <div className="h-6 w-6 rounded-lg bg-violet/10 border border-violet/20 flex items-center justify-center font-bold text-violet">
+                      #{idx + 1}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-text">{contrib.fullName}</h4>
+                      {contrib.username && (
+                        <a 
+                          href={`https://github.com/${contrib.username}`} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="text-[9px] text-accent font-mono hover:underline"
+                        >
+                          @{contrib.username}
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <span className="px-2 py-0.5 rounded bg-emerald/10 border border-emerald/20 text-emerald text-[10px] font-bold font-mono">
+                      {contrib.commitCount} Commits
+                    </span>
+                    <span className="text-[9px] text-muted block mt-0.5">Score: {contrib.contributionScore}</span>
+                  </div>
+                </div>
+              ))}
+              {(!data?.topContributors || data.topContributors.length === 0) && (
+                <p className="text-center py-6 text-xs text-muted">No GitHub contributors index tracked yet.</p>
+              )}
+            </div>
+          </div>
+
+          {/* Department Readiness Index */}
+          <div className="glass border border-border rounded-2xl p-6 bg-void/25 space-y-4">
+            <div className="flex items-center gap-2 border-b border-border/40 pb-3">
+              <GraduationCap size={16} className="text-accent" />
+              <div>
+                <h3 className="text-sm font-bold text-text uppercase tracking-wider">Department Readiness Scores</h3>
+                <p className="text-[10px] text-muted">Average placement readiness index per course</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              {(data?.departmentScores || []).map((dept) => (
+                <div key={dept.name} className="space-y-1.5">
+                  <div className="flex justify-between text-xs">
+                    <span className="font-semibold text-text">{dept.name}</span>
+                    <span className="font-mono font-bold text-accent">{dept.averageScore}%</span>
+                  </div>
+                  <div className="h-2 w-full bg-void/60 border border-border rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-accent to-violet rounded-full transition-all" 
+                      style={{ width: `${dept.averageScore}%` }} 
+                    />
+                  </div>
+                </div>
+              ))}
+              {(!data?.departmentScores || data.departmentScores.length === 0) && (
+                <p className="text-center py-6 text-xs text-muted">No department readiness metrics generated.</p>
+              )}
+            </div>
           </div>
         </div>
 

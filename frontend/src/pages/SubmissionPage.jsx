@@ -9,6 +9,9 @@ export default function SubmissionPage() {
   const { navigate, selectedTaskId, tasks, setEvaluationReport, fetchStudentInternshipAndTasks, addToast } = useNavigation()
   
   const [githubUrl, setGithubUrl] = useState('')
+  const [githubBranch, setGithubBranch] = useState('main')
+  const [githubCommitHash, setGithubCommitHash] = useState('')
+  const [connectedRepo, setConnectedRepo] = useState(null)
   const [selectedFile, setSelectedFile] = useState(null)
   const [fileName, setFileName] = useState('')
   
@@ -26,6 +29,36 @@ export default function SubmissionPage() {
   // Polling interval reference
   const pollingIntervalRef = useRef(null)
   const terminalEndRef = useRef(null)
+
+  useEffect(() => {
+    const checkGithubConnection = async () => {
+      try {
+        const res = await axiosInstance.get('/api/github/selected-repository')
+        if (res.data?.success && res.data?.data) {
+          setConnectedRepo(res.data.data)
+          if (res.data.data.branch) {
+            setGithubBranch(res.data.data.branch)
+          }
+          // Pre-fill githubUrl if it's connected
+          try {
+            const profileRes = await axiosInstance.get('/api/github/profile')
+            if (profileRes.data?.success && profileRes.data?.data) {
+              const username = profileRes.data.data.username
+              const repoName = res.data.data.repositoryName
+              setGithubUrl(`https://github.com/${username}/${repoName}`)
+            } else {
+              setGithubUrl(`https://github.com/active-repo/${res.data.data.repositoryName}`)
+            }
+          } catch (profileErr) {
+            setGithubUrl(`https://github.com/active-repo/${res.data.data.repositoryName}`)
+          }
+        }
+      } catch (err) {
+        console.log("No connected repository retrieved:", err)
+      }
+    }
+    checkGithubConnection()
+  }, [])
 
   // Clear polling on unmount
   useEffect(() => {
@@ -159,6 +192,8 @@ export default function SubmissionPage() {
           taskId: activeTask.id,
           submissionType: type,
           githubUrl,
+          githubBranch: type === 'github' ? githubBranch : '',
+          githubCommitHash: type === 'github' ? githubCommitHash : '',
           fileData,
           fileName
         }
@@ -233,6 +268,12 @@ export default function SubmissionPage() {
       logsList.push(`[SYSTEM] Initializing code audit pipeline for task: '${activeTask.title}'...`)
       logsList.push(`[SYSTEM] Submission method: ${type.toUpperCase()}`)
       logsList.push(`[SYSTEM] Content locator: ${payloadLabel}`)
+      if (type === 'github') {
+        logsList.push(`[SYSTEM] Target Branch: ${githubBranch}`)
+        if (githubCommitHash) {
+          logsList.push(`[SYSTEM] Target Commit Hash: ${githubCommitHash}`)
+        }
+      }
       logsList.push(`[SYSTEM] Status set to 'Submitted'. Starting extraction workers.`)
     }
     if (progress >= 25) {
@@ -497,12 +538,52 @@ export default function SubmissionPage() {
             </div>
 
             <div className="space-y-4">
-              {/* Option A: GitHub Link */}
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center">
-                  <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block">Option A: GitHub Repository URL</label>
-                  <span className="text-[9px] text-accent font-medium uppercase">Mandatory if no ZIP</span>
+              {/* Connected Repository Banner */}
+              {connectedRepo && (
+                <div className="glass-bright p-4 rounded-xl border border-violet/20 flex items-center justify-between text-xs bg-violet/5 hover:border-violet/30 transition-all">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-violet/10 rounded-lg text-violet">
+                      <FaGithub size={16} />
+                    </div>
+                    <div>
+                      <span className="font-semibold text-text block">Linked Repository Active</span>
+                      <span className="text-[10px] text-muted font-mono">{connectedRepo.repositoryName} ({connectedRepo.branch || 'main'})</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      let username = 'active-repo'
+                      try {
+                        const profileRes = await axiosInstance.get('/api/github/profile')
+                        if (profileRes.data?.success && profileRes.data?.data) {
+                          username = profileRes.data.data.username
+                        }
+                      } catch (err) {
+                        console.log("Error loading profile:", err)
+                      }
+                      setGithubUrl(`https://github.com/${username}/${connectedRepo.repositoryName}`)
+                      if (connectedRepo.branch) {
+                        setGithubBranch(connectedRepo.branch)
+                      }
+                      setSelectedFile(null)
+                      setFileName('')
+                      addToast('Connected repository URL and branch pre-filled!', 'success')
+                    }}
+                    className="px-3 py-1.5 bg-violet/20 hover:bg-violet/30 border border-violet/30 hover:border-violet/40 text-violet text-[10px] font-semibold rounded-lg transition-colors cursor-pointer"
+                  >
+                    Use Linked Repo
+                  </button>
                 </div>
+              )}
+
+              {/* Option A: GitHub Link */}
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block font-display">Option A: Submit from GitHub</label>
+                  <span className="text-[9px] text-accent font-medium uppercase">Pre-fills from Connected Repository</span>
+                </div>
+                
                 <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-border bg-void/50 focus-within:border-accent transition-colors">
                   <FaGithub size={14} className="text-muted" />
                   <input
@@ -519,6 +600,31 @@ export default function SubmissionPage() {
                     className="w-full bg-transparent text-xs text-text outline-none border-none"
                   />
                 </div>
+
+                {githubUrl && (
+                  <div className="grid grid-cols-2 gap-4 pt-1.5">
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-semibold text-muted uppercase tracking-wider block">Target Branch</label>
+                      <input
+                        type="text"
+                        placeholder="main"
+                        value={githubBranch}
+                        onChange={(e) => setGithubBranch(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-border bg-void/50 focus:border-accent outline-none text-xs text-text transition-colors font-mono"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] font-semibold text-muted uppercase tracking-wider block">Commit Hash (Optional)</label>
+                      <input
+                        type="text"
+                        placeholder="a1b2c3d4..."
+                        value={githubCommitHash}
+                        onChange={(e) => setGithubCommitHash(e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-border bg-void/50 focus:border-accent outline-none text-xs text-text transition-colors font-mono"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* OR Divider */}
@@ -565,7 +671,7 @@ export default function SubmissionPage() {
               type="submit"
               className="w-full py-3 bg-gradient-to-r from-accent to-violet text-white text-xs font-semibold rounded-xl hover:shadow-lg hover:shadow-accent/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>Transmit Deliverable</span>
+              <span>{githubUrl ? 'Submit From GitHub' : 'Transmit Deliverable'}</span>
               <ArrowRight size={14} />
             </button>
           </form>

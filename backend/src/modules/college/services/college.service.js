@@ -12,6 +12,7 @@ import CareerPath from '../../../models/CareerPath.js';
 import Placement from '../../../models/Placement.js';
 import CollegeNotification from '../../../models/CollegeNotification.js';
 import Offer from '../../../models/Offer.js';
+import mongoose from 'mongoose';  
 
 // Pre-hashed password for password123 (to speed up user seeding)
 const DEFAULT_HASHED_PASSWORD = '$2a$12$R.S/O57g.1w2G4m5k2pPkuGj5B79y5B1X.eN7y3K7G1K1Q1O5Wd9S';
@@ -438,13 +439,22 @@ export const getStudentDetails = async (college, studentId) => {
 
   const userId = student.userId._id;
 
+  const Internship = mongoose.model('Internship');
+  const internship = await Internship.findOne({ studentId: userId });
   const career = await StudentCareer.findOne({ studentId: userId }).populate('careerId');
   const githubProfile = await GithubProfile.findOne({ userId });
   const githubContributions = await GithubContribution.find({ userId });
   const certificates = await Certificate.find({ studentId: userId });
   const placements = await Placement.find({ studentId: userId }).sort({ createdAt: -1 });
 
+  const CareerIntelligence = mongoose.model('CareerIntelligence');
+  const intel = await CareerIntelligence.findOne({ studentId: userId });
+  const placementReadiness = intel ? intel.placementReadiness : 0;
+  const githubScore = intel ? intel.githubScore : 0;
+
   return {
+    placementReadiness,
+    githubScore,
     studentProfile: {
       _id: student._id,
       userId,
@@ -461,7 +471,8 @@ export const getStudentDetails = async (college, studentId) => {
       completionPercentage: career.completionPercentage,
       status: career.status,
       currentLevel: career.currentLevel,
-      lastUpdated: career.updatedAt
+      lastUpdated: career.updatedAt,
+      linkedRepository: internship?.linkedRepository || null
     } : null,
     githubAnalytics: githubProfile ? {
       username: githubProfile.username,
@@ -736,6 +747,12 @@ export const getDashboardData = async (college) => {
   // 3. Fetch careers, certificates, and github profiles for these students
   const studentCareers = await StudentCareer.find({ studentId: { $in: studentUserIds } }).populate('careerId');
   const githubProfiles = await GithubProfile.find({ userId: { $in: studentUserIds } });
+  const CareerIntelligence = mongoose.model('CareerIntelligence');
+  const GithubContribution = mongoose.model('GithubContribution');
+  const intelligences = await CareerIntelligence.find({ studentId: { $in: studentUserIds } });
+  const githubContributions = await GithubContribution.find({ userId: { $in: studentUserIds } });
+
+  const intelMap = new Map(intelligences.map(i => [i.studentId.toString(), i]));
 
   // 4. Fetch placement records
   const placements = await Placement.find({ collegeId: college._id });
@@ -757,9 +774,8 @@ export const getDashboardData = async (college) => {
 
   const avgInternshipScore = studentCareers.length > 0 ? Math.round(scoreSum / studentCareers.length) : 0;
   const githubConnectedCount = githubProfiles.length;
-  const placementReadiness = totalStudents > 0
-    ? Math.min(100, Math.round(avgInternshipScore * 0.8 + (githubConnectedCount / totalStudents) * 20))
-    : 0;
+  const sumReadiness = intelligences.reduce((sum, i) => sum + (i.placementReadiness || 0), 0);
+  const placementReadiness = intelligences.length > 0 ? Math.round(sumReadiness / intelligences.length) : 0;
 
   // Placement-specific KPIs
   const totalOffers = placements.length;
@@ -776,7 +792,9 @@ export const getDashboardData = async (college) => {
     const github = githubProfiles.find(g => g.userId.toString() === student.userId._id.toString());
     const hasGithub = !!github;
     const progress = career?.completionPercentage || 0;
-    const readinessIndex = Math.min(100, Math.round(progress * 0.8 + (hasGithub ? 20 : 0)));
+
+    const intel = intelMap.get(student.userId._id.toString());
+    const readinessIndex = intel ? intel.placementReadiness : Math.min(100, Math.round(progress * 0.8 + (hasGithub ? 20 : 0)));
 
     return {
       _id: student._id,
@@ -840,6 +858,45 @@ export const getDashboardData = async (college) => {
     .sort((a, b) => b.readinessIndex - a.readinessIndex)
     .slice(0, 5);
 
+  // Compute GitHub top contributors
+  const contributionsByStudent = new Map();
+  githubContributions.forEach(gc => {
+    const studentUid = gc.userId.toString();
+    const currentContrib = contributionsByStudent.get(studentUid) || { commitCount: 0, score: 0 };
+    contributionsByStudent.set(studentUid, {
+      commitCount: currentContrib.commitCount + (gc.commitCount || 0),
+      score: currentContrib.score + (gc.contributionScore || 0)
+    });
+  });
+
+  const topContributors = students.map(student => {
+    if (!student.userId) return null;
+    const contrib = contributionsByStudent.get(student.userId._id.toString()) || { commitCount: 0, score: 0 };
+    return {
+      _id: student._id,
+      fullName: student.fullName,
+      username: githubProfiles.find(g => g.userId.toString() === student.userId._id.toString())?.username || '',
+      commitCount: contrib.commitCount,
+      contributionScore: contrib.score
+    };
+  }).filter(c => c && c.commitCount > 0)
+    .sort((a, b) => b.commitCount - a.commitCount)
+    .slice(0, 5);
+
+  // Compute Department scores
+  const departmentScoresMap = {};
+  const departmentStudentCounts = {};
+  studentMetrics.forEach(sm => {
+    const dept = sm.department;
+    departmentScoresMap[dept] = (departmentScoresMap[dept] || 0) + sm.readinessIndex;
+    departmentStudentCounts[dept] = (departmentStudentCounts[dept] || 0) + 1;
+  });
+
+  const departmentScores = Object.entries(departmentScoresMap).map(([name, sum]) => ({
+    name,
+    averageScore: Math.round(sum / departmentStudentCounts[name])
+  }));
+
   return {
     college: {
       name: college.name || college.collegeName || college.get('collegeName') || '',
@@ -859,6 +916,7 @@ export const getDashboardData = async (college) => {
       placementRate,
       studentsPlaced,
       studentsSeeking,
+      githubConnectedCount,
     },
     charts: {
       studentsByDepartment,
@@ -887,6 +945,8 @@ export const getDashboardData = async (college) => {
       createdAt: p.createdAt
     })),
     topPerformers,
+    topContributors,
+    departmentScores,
   };
 };
 

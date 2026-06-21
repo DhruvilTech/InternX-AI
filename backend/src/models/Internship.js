@@ -90,6 +90,12 @@ const internshipSchema = new mongoose.Schema(
       of: [String],
       default: {},
     },
+    linkedRepository: {
+      repoId: { type: String, default: '' },
+      repositoryName: { type: String, default: '' },
+      branch: { type: String, default: '' },
+      htmlUrl: { type: String, default: '' }
+    },
     startDate: {
       type: Date,
       default: Date.now,

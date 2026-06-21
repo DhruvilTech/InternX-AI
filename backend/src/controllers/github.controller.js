@@ -6,6 +6,7 @@ import GithubProfile from '../models/GithubProfile.js';
 import GithubRepository from '../models/GithubRepository.js';
 import GithubContribution from '../models/GithubContribution.js';
 import SubmissionRepository from '../models/SubmissionRepository.js';
+import Internship from '../models/Internship.js';
 import User from '../models/User.js';
 import { generateCareerReports } from '../services/careerReport.service.js';
 import { sendResponse } from '../utils/sendResponse.js';
@@ -337,6 +338,22 @@ export const selectRepository = async (req, res, next) => {
       { userId: req.user._id },
       { repoId, repositoryName, branch, selectedAt: new Date() },
       { returnDocument: 'after', upsert: true }
+    );
+
+    // Link the repository to the student's active Internship
+    const repo = await GithubRepository.findOne({ userId: req.user._id, repoId });
+    const htmlUrl = repo ? repo.repoUrl : '';
+
+    await Internship.findOneAndUpdate(
+      { studentId: req.user._id },
+      {
+        linkedRepository: {
+          repoId,
+          repositoryName,
+          branch,
+          htmlUrl
+        }
+      }
     );
 
     return sendResponse(res, 200, true, 'Active internship repository updated successfully', selectedRepo);

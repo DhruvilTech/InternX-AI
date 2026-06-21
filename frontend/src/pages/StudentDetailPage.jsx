@@ -360,13 +360,21 @@ export default function StudentDetailPage() {
           {activeTab === 'scorecard' && (
             <div className="space-y-6">
               {/* Scorecard KPI Cards */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
                 <div className="glass border border-border rounded-xl p-4 bg-void/25">
                   <span className="text-[10px] text-muted uppercase font-bold block mb-1">Placement Readiness</span>
                   <span className="text-xl font-bold text-accent font-display">
                     {careerReport?.readinessScore || 0}%
                   </span>
                   <span className="text-[9px] text-muted block mt-1">Weighted Candidate Rating</span>
+                </div>
+
+                <div className="glass border border-border rounded-xl p-4 bg-void/25">
+                  <span className="text-[10px] text-muted uppercase font-bold block mb-1">GitHub Score</span>
+                  <span className="text-xl font-bold text-violet font-display">
+                    {careerReport?.githubScore || 0}/100
+                  </span>
+                  <span className="text-[9px] text-muted block mt-1">AI Repository Audit</span>
                 </div>
 
                 <div className="glass border border-border rounded-xl p-4 bg-void/25">
@@ -387,7 +395,7 @@ export default function StudentDetailPage() {
                   <span className="text-[9px] text-muted block mt-1">Milestone Evaluator Avg</span>
                 </div>
 
-                <div className="glass border border-border rounded-xl p-4 bg-void/25">
+                <div className="glass border border-border rounded-xl p-4 bg-void/25 col-span-2 sm:col-span-1">
                   <span className="text-[10px] text-muted uppercase font-bold block mb-1">Salary Estimate</span>
                   <span className="text-xl font-bold text-amber font-display">
                     {careerReport?.salaryRange || 'N/A'}
@@ -695,11 +703,29 @@ export default function StudentDetailPage() {
                         </span>
                       </div>
 
+                      {sub.submissionType === 'github' && (
+                        <div className="flex flex-wrap gap-4 p-3 bg-void/50 border border-border rounded-xl text-[10px] text-muted font-mono">
+                          <div>
+                            Branch: <span className="font-semibold text-text">{sub.githubBranch || 'main'}</span>
+                          </div>
+                          {sub.githubCommitHash && (
+                            <div>
+                              Commit: <span className="font-semibold text-text">{sub.githubCommitHash}</span>
+                            </div>
+                          )}
+                          {sub.githubUrl && (
+                            <div className="truncate max-w-full">
+                              URL: <a href={sub.githubUrl} target="_blank" rel="noopener noreferrer" className="text-accent hover:underline">{sub.githubUrl}</a>
+                            </div>
+                          )}
+                        </div>
+                      )}
+
                       {/* Code grader scorecard */}
                       {sub.evaluation ? (
                         <div className="space-y-4 pt-2 border-t border-border/40">
                           {/* Code scores grid */}
-                          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center text-xs">
+                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 text-center text-xs">
                             <div className="p-2.5 bg-void/50 border border-border rounded-xl">
                               <span className="text-[9px] text-muted uppercase block">Technical Score</span>
                               <strong className="text-text font-mono text-sm">{sub.evaluation.technicalScore}/100</strong>
@@ -715,6 +741,10 @@ export default function StudentDetailPage() {
                             <div className="p-2.5 bg-void/50 border border-border rounded-xl">
                               <span className="text-[9px] text-muted uppercase block">Documentation</span>
                               <strong className="text-text font-mono text-sm">{sub.evaluation.documentationScore}/100</strong>
+                            </div>
+                            <div className="p-2.5 bg-void/50 border border-border rounded-xl">
+                              <span className="text-[9px] text-muted uppercase block">GitHub Score</span>
+                              <strong className="text-violet font-mono text-sm">{sub.evaluation.githubScore || 0}/100</strong>
                             </div>
                             <div className="p-2.5 bg-void/50 border border-border rounded-xl col-span-2 sm:col-span-1">
                               <span className="text-[9px] text-muted uppercase block">Problem Solving</span>

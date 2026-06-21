@@ -26,6 +26,14 @@ const submissionSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    githubBranch: {
+      type: String,
+      default: '',
+    },
+    githubCommitHash: {
+      type: String,
+      default: '',
+    },
     zipFile: {
       type: String,
       default: '',

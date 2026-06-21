@@ -32,7 +32,8 @@ const CORE_TECH_WHITELIST = new Set([
   'jest', 'mocha', 'chai', 'cypress', 'selenium', 'junit', 'pytest',
   'git', 'github', 'gitlab', 'bitbucket',
   'jwt', 'oauth', 'oauth2', 'saml', 'okta', 'auth0',
-  'system design', 'testing', 'unit testing', 'ci/cd', 'devops', 'microservices', 'serverless'
+  'system design', 'testing', 'unit testing', 'ci/cd', 'devops', 'microservices', 'serverless',
+  'ai/ml'
 ]);
 
 /**
@@ -294,6 +295,20 @@ export const generateCareerReports = async (studentId) => {
     }
   };
 
+  // Helper to map technologies to canonical whitelisted skills
+  const mapTechnologyToCanonical = (tech) => {
+    const t = tech.toLowerCase().trim();
+    if (t === 'react' || t.includes('reactjs') || t.includes('react.js')) return 'React';
+    if (t === 'node' || t === 'node.js' || t === 'nodejs') return 'Node.js';
+    if (t === 'mongodb' || t === 'mongo') return 'MongoDB';
+    if (t === 'python' || t === 'py') return 'Python';
+    if (t === 'java' && t !== 'javascript') return 'Java';
+    if (t === 'typescript' || t === 'ts') return 'TypeScript';
+    if (t === 'docker') return 'Docker';
+    if (t === 'ai' || t === 'ml' || t.includes('pytorch') || t.includes('tensorflow') || t.includes('huggingface') || t.includes('transformers') || t.includes('machine learning') || t.includes('artificial intelligence')) return 'AI/ML';
+    return null;
+  };
+
   const completedTasks = tasks.filter(t => t.status === 'completed');
   completedTasks.forEach(t => {
     if (t.requiredSkills) {
@@ -302,16 +317,28 @@ export const generateCareerReports = async (studentId) => {
   });
   submissions.forEach(sub => {
     if (sub.extractedMetadata?.technologies) {
-      sub.extractedMetadata.technologies.forEach(t => addIfAllowed(t));
+      sub.extractedMetadata.technologies.forEach(t => {
+        addIfAllowed(t);
+        const mapped = mapTechnologyToCanonical(t);
+        if (mapped) addIfAllowed(mapped);
+      });
     }
   });
   githubContributions.forEach(c => {
     if (c.languageBreakdown) {
-      Object.keys(c.languageBreakdown).forEach(lang => addIfAllowed(lang));
+      Object.keys(c.languageBreakdown).forEach(lang => {
+        addIfAllowed(lang);
+        const mapped = mapTechnologyToCanonical(lang);
+        if (mapped) addIfAllowed(mapped);
+      });
     }
   });
   if (studentProfile?.skills) {
-    studentProfile.skills.forEach(s => addIfAllowed(s));
+    studentProfile.skills.forEach(s => {
+      addIfAllowed(s);
+      const mapped = mapTechnologyToCanonical(s);
+      if (mapped) addIfAllowed(mapped);
+    });
   }
 
   const demonstratedArray = Array.from(demonstratedSkills);
@@ -336,25 +363,32 @@ export const generateCareerReports = async (studentId) => {
     ? interviewReports.reduce((acc, r) => acc + r.overallScore, 0) / interviewReports.length
     : 0;
 
-  // GitHub Score component (20%)
+  // GitHub Score component
   let githubScore = 0;
-  if (githubProfile) {
-    const commits = githubContributions.reduce((acc, c) => acc + (c.commitCount || 0), 0);
-    githubScore = Math.min(100, 40 + (githubProfile.publicRepos * 5) + (commits * 2));
+  const githubSubmissions = submissions.filter(s => s.submissionType === 'github' && s.status === 'Completed');
+  const submissionIds = githubSubmissions.map(s => s._id);
+  const evaluations = await Evaluation.find({ submissionId: { $in: submissionIds } });
+
+  if (evaluations.length > 0) {
+    const sumGithubScores = evaluations.reduce((acc, e) => acc + (e.githubScore || e.repositoryScore || 0), 0);
+    githubScore = Math.round(sumGithubScores / evaluations.length);
+  } else {
+    if (githubProfile) {
+      const commits = githubContributions.reduce((acc, c) => acc + (c.commitCount || 0), 0);
+      githubScore = Math.min(100, 40 + (githubProfile.publicRepos * 5) + (commits * 2));
+    }
   }
 
-  // Consistency Score component (10%)
-  const consistencyScore = tasks.length > 0 
+  // Consistency Score / Certificate Score
+  const progress = tasks.length > 0 
     ? Math.round((completedTasks.length / tasks.length) * 100) 
     : 0;
+  const certificateScore = progress >= 80 ? avgTaskScore : avgTaskScore * (progress / 100);
+  const interviewScore = avgInterviewScore || 60;
 
   // Overall Readiness Score
-  const interviewScoreFactor = avgInterviewScore || 60; // default to 60 if none
   const readinessScore = Math.min(100, Math.max(0, Math.round(
-    (avgTaskScore * 0.4) +
-    (interviewScoreFactor * 0.3) +
-    (githubScore * 0.2) +
-    (consistencyScore * 0.1)
+    (avgTaskScore + interviewScore + certificateScore + githubScore) / 4
   )));
 
   // Calculate portfolioScore
@@ -450,6 +484,7 @@ export const generateCareerReports = async (studentId) => {
     studentId,
     readinessScore,
     portfolioScore,
+    githubScore,
     careerLevel: reportData.careerLevel,
     recommendedRoles: reportData.recommendedRoles,
     recommendedSkills: reportData.recommendedSkills || [],

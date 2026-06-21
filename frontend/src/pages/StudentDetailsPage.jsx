@@ -44,7 +44,7 @@ export default function StudentDetailsPage() {
     );
   }
 
-  const { studentProfile, internshipProgress, githubAnalytics, certificates, placements } = selectedStudent;
+  const { studentProfile, internshipProgress, githubAnalytics, certificates, placements, placementReadiness, githubScore } = selectedStudent;
 
   return (
     <div className="min-h-screen pt-24 pb-16 bg-void relative overflow-hidden text-text">
@@ -93,6 +93,57 @@ export default function StudentDetailsPage() {
                   </span>
                 ))}
               </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Placement Readiness & GitHub Scores Scorecard */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="glass border border-border rounded-2xl p-5 bg-void/25 flex flex-col justify-between relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-accent/5 rounded-full blur-lg pointer-events-none" />
+            <span className="text-[10px] text-muted uppercase font-bold block mb-1">Placement Readiness Index</span>
+            <div className="flex items-baseline gap-2 mt-2">
+              <span className="text-3xl font-bold text-accent font-display">{placementReadiness || 0}%</span>
+              <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-full ${
+                (placementReadiness || 0) >= 80 
+                  ? 'bg-emerald/10 border border-emerald/20 text-emerald'
+                  : (placementReadiness || 0) >= 60 
+                  ? 'bg-indigo/10 border border-indigo/20 text-indigo-400'
+                  : 'bg-amber/10 border border-amber/20 text-amber-400'
+              }`}>
+                {(placementReadiness || 0) >= 80 ? 'Industry Ready' : (placementReadiness || 0) >= 60 ? 'Job Ready' : 'In Practice'}
+              </span>
+            </div>
+            <p className="text-[9px] text-muted mt-2">Aggregated candidate metrics baseline rating</p>
+          </div>
+
+          <div className="glass border border-border rounded-2xl p-5 bg-void/25 flex flex-col justify-between relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-violet/5 rounded-full blur-lg pointer-events-none" />
+            <span className="text-[10px] text-muted uppercase font-bold block mb-1">AI GitHub Score</span>
+            <div className="flex items-baseline gap-2 mt-2">
+              <span className="text-3xl font-bold text-violet font-display">{githubScore || 0}/100</span>
+              <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-full ${
+                (githubScore || 0) >= 80 
+                  ? 'bg-emerald/10 border border-emerald/20 text-emerald'
+                  : (githubScore || 0) >= 60 
+                  ? 'bg-indigo/10 border border-indigo/20 text-indigo-400'
+                  : 'bg-amber/10 border border-amber/20 text-amber-400'
+              }`}>
+                {(githubScore || 0) >= 80 ? 'Exceptional' : (githubScore || 0) >= 60 ? 'Consistent' : 'Developing'}
+              </span>
+            </div>
+            <p className="text-[9px] text-muted mt-2">Code standards, repository health, and activity</p>
+          </div>
+
+          <div className="glass border border-border rounded-2xl p-5 bg-void/25 flex flex-col justify-between relative overflow-hidden sm:col-span-2 md:col-span-1">
+            <div className="absolute top-0 right-0 w-24 h-24 bg-emerald/5 rounded-full blur-lg pointer-events-none" />
+            <span className="text-[10px] text-muted uppercase font-bold block mb-1">Internship Sprints Progress</span>
+            <div className="flex items-baseline gap-2 mt-2">
+              <span className="text-3xl font-bold text-emerald font-display">{internshipProgress?.completionPercentage || 0}%</span>
+              <span className="text-[10px] text-muted">Completed</span>
+            </div>
+            <div className="h-1.5 w-full bg-white/5 border border-border rounded-full mt-3 overflow-hidden">
+              <div className="h-full bg-gradient-to-r from-accent to-violet rounded-full" style={{ width: `${internshipProgress?.completionPercentage || 0}%` }} />
             </div>
           </div>
         </div>
@@ -154,19 +205,50 @@ export default function StudentDetailsPage() {
 
               {githubAnalytics ? (
                 <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <span className="px-3 py-1 rounded-full bg-emerald/10 border border-emerald/20 text-[9px] text-emerald font-semibold uppercase tracking-wider">
-                      Connected
-                    </span>
-                    <a
-                      href={githubAnalytics.profileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-accent hover:underline font-mono"
-                    >
-                      @{githubAnalytics.username}
-                    </a>
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                      <span className="px-3 py-1 rounded-full bg-emerald/10 border border-emerald/20 text-[9px] text-emerald font-semibold uppercase tracking-wider">
+                        Connected
+                      </span>
+                      <a
+                        href={githubAnalytics.profileUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-accent hover:underline font-mono"
+                      >
+                        @{githubAnalytics.username}
+                      </a>
+                    </div>
                   </div>
+
+                  {/* Linked Repository Section */}
+                  {internshipProgress?.linkedRepository ? (
+                    <div className="p-3 bg-violet/5 border border-violet/10 rounded-xl space-y-1.5">
+                      <div className="flex justify-between items-center">
+                        <span className="text-[10px] text-muted uppercase font-bold tracking-wider">Active Internship Repository</span>
+                        <span className="text-[9px] px-2 py-0.5 rounded-full bg-violet/15 text-violet border border-violet/20 font-mono font-bold">
+                          Branch: {internshipProgress.linkedRepository.branch || 'main'}
+                        </span>
+                      </div>
+                      <div className="text-xs font-mono font-bold text-text truncate">
+                        {internshipProgress.linkedRepository.repositoryName}
+                      </div>
+                      {internshipProgress.linkedRepository.htmlUrl && (
+                        <a 
+                          href={internshipProgress.linkedRepository.htmlUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-[10px] text-accent hover:underline inline-block mt-0.5"
+                        >
+                          Open Repo on GitHub &rarr;
+                        </a>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-amber/5 border border-amber/10 rounded-xl text-[10px] text-amber-300">
+                      No active repository linked to the student's internship track yet.
+                    </div>
+                  )}
 
                   {githubAnalytics.contributions.length > 0 ? (
                     <div className="grid grid-cols-3 gap-3 text-center py-2 border-t border-b border-border/30">
@@ -185,7 +267,7 @@ export default function StudentDetailsPage() {
                         </span>
                       </div>
                       <div>
-                        <span className="text-[9px] text-muted uppercase font-bold block">Git Score</span>
+                        <span className="text-[9px] text-muted uppercase font-bold block">Profile Score</span>
                         <span className="text-lg font-bold text-emerald font-mono flex items-center justify-center gap-1">
                           <Code size={12} className="text-emerald" />
                           {githubAnalytics.contributions[0].contributionScore}

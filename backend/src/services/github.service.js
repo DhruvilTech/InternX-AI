@@ -72,10 +72,12 @@ export const fetchRepositoryFiles = async (accessToken, owner, repo, path = '') 
 /**
  * Service to retrieve the content of a specific file.
  */
-export const fetchFileContent = async (accessToken, owner, repo, path) => {
+export const fetchFileContent = async (accessToken, owner, repo, path, ref = '') => {
   const client = getGithubClient(accessToken);
   const endpoint = `/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
-  const response = await client.get(endpoint);
+  const response = await client.get(endpoint, {
+    params: ref ? { ref } : {},
+  });
   
   // GitHub returns file contents base64 encoded if type is file
   if (response.data && response.data.type === 'file' && response.data.content) {

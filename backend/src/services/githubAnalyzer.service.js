@@ -36,7 +36,7 @@ export const parseGithubUrl = (url) => {
  * @param {string} [accessToken] Student's decrypted GitHub token
  * @returns {object} Analysed metadata and structure
  */
-export const analyzeGithubRepository = async (url, accessToken) => {
+export const analyzeGithubRepository = async (url, accessToken, branch = '', commitHash = '') => {
   const parsed = parseGithubUrl(url);
   if (!parsed) {
     throw new Error('Invalid GitHub repository URL. Must be in the format: https://github.com/owner/repo');
@@ -88,9 +88,13 @@ export const analyzeGithubRepository = async (url, accessToken) => {
     stats.size = repoRes.data.size;
     stats.defaultBranch = repoRes.data.default_branch || 'main';
 
+    const targetRef = commitHash || branch || stats.defaultBranch;
+
     // 2. Fetch README
     try {
-      const readmeRes = await client.get(`/repos/${owner}/${repo}/readme`);
+      const readmeRes = await client.get(`/repos/${owner}/${repo}/readme`, {
+        params: { ref: targetRef }
+      });
       if (readmeRes.data && readmeRes.data.content) {
         const decoded = Buffer.from(readmeRes.data.content, 'base64').toString('utf8');
         stats.readmeContent = decoded.slice(0, 4000); // Cap size for token safety
@@ -110,7 +114,7 @@ export const analyzeGithubRepository = async (url, accessToken) => {
 
     // 4. Fetch Commits
     try {
-      const commitsRes = await client.get(`/repos/${owner}/${repo}/commits`, { params: { per_page: 50 } });
+      const commitsRes = await client.get(`/repos/${owner}/${repo}/commits`, { params: { sha: targetRef, per_page: 50 } });
       stats.commitsCount = Array.isArray(commitsRes.data) ? commitsRes.data.length : 0;
     } catch (e) {
       console.warn(`[GitHub Analyze] Could not fetch commits:`, e.message);
@@ -136,7 +140,7 @@ export const analyzeGithubRepository = async (url, accessToken) => {
 
     // 5. Fetch File Tree (recursively or flat)
     try {
-      const treeRes = await client.get(`/repos/${owner}/${repo}/git/trees/${stats.defaultBranch}?recursive=1`);
+      const treeRes = await client.get(`/repos/${owner}/${repo}/git/trees/${targetRef}?recursive=1`);
       if (treeRes.data && Array.isArray(treeRes.data.tree)) {
         const tree = treeRes.data.tree;
         stats.fileCount = tree.filter(f => f.type === 'blob').length;
@@ -211,7 +215,7 @@ export const analyzeGithubRepository = async (url, accessToken) => {
         // Fetch snippets
         for (const filePath of keyFilesToFetch) {
           try {
-            const fileData = await fetchFileContent(accessToken, owner, repo, filePath);
+            const fileData = await fetchFileContent(accessToken, owner, repo, filePath, targetRef);
             if (fileData && fileData.content && fileData.content.trim()) {
               stats.fileSnippets.push({
                 path: filePath,
@@ -230,7 +234,7 @@ export const analyzeGithubRepository = async (url, accessToken) => {
       // Fallback if git tree recursive isn't allowed or fails
       console.warn(`[GitHub Analyze] Could not fetch recursive file tree:`, e.message);
       try {
-        const contentsRes = await client.get(`/repos/${owner}/${repo}/contents`);
+        const contentsRes = await client.get(`/repos/${owner}/${repo}/contents`, { params: { ref: targetRef } });
         if (Array.isArray(contentsRes.data)) {
           stats.fileCount = contentsRes.data.length;
           stats.folderStructure = contentsRes.data.map(item => `${item.type === 'dir' ? '[DIR]' : '[FILE]'} ${item.path}`);
@@ -251,7 +255,7 @@ export const analyzeGithubRepository = async (url, accessToken) => {
 
           for (const f of fallbackFiles) {
             try {
-              const fileData = await fetchFileContent(accessToken, owner, repo, f.path);
+              const fileData = await fetchFileContent(accessToken, owner, repo, f.path, targetRef);
               if (fileData && fileData.content && fileData.content.trim()) {
                 stats.fileSnippets.push({
                   path: f.path,

@@ -15,7 +15,7 @@ import { sendResponse } from '../utils/sendResponse.js';
 export const createSubmission = async (req, res, next) => {
   try {
     const studentId = req.user._id;
-    const { taskId, submissionType, githubUrl, driveLink, fileData, fileName } = req.body;
+    const { taskId, submissionType, githubUrl, githubBranch, githubCommitHash, driveLink, fileData, fileName } = req.body;
 
     if (!taskId) {
       return sendResponse(res, 400, false, 'Task ID is required');
@@ -63,6 +63,8 @@ export const createSubmission = async (req, res, next) => {
       internshipId: task.internshipId,
       submissionType: type,
       githubUrl: type === 'github' ? githubUrl : '',
+      githubBranch: type === 'github' ? (githubBranch || 'main') : '',
+      githubCommitHash: type === 'github' ? (githubCommitHash || '') : '',
       zipFile: type === 'zip' ? (fileName || 'deliverable.zip') : '',
       status: 'Submitted',
       progress: 10

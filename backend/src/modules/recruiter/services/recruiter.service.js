@@ -402,6 +402,8 @@ export const getStudentDetails = async (recruiterUserId, studentUserIdOrStudentI
         taskTitle: sub.taskId?.title || 'Task Deliverable',
         submissionType: sub.submissionType,
         githubUrl: sub.githubUrl,
+        githubBranch: sub.githubBranch || '',
+        githubCommitHash: sub.githubCommitHash || '',
         status: sub.status,
         progress: sub.progress,
         submittedAt: sub.submittedAt,
@@ -412,6 +414,7 @@ export const getStudentDetails = async (recruiterUserId, studentUserIdOrStudentI
           documentationScore: evalObj.documentationScore,
           problemSolvingScore: evalObj.problemSolvingScore,
           overallScore: evalObj.overallScore,
+          githubScore: evalObj.githubScore || 0,
           strengths: evalObj.strengths,
           weaknesses: evalObj.weaknesses,
           recommendations: evalObj.recommendations

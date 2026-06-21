@@ -43,6 +43,12 @@ const evaluationSchema = new mongoose.Schema(
       min: 0,
       max: 100,
     },
+    githubScore: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100,
+    },
     overallScore: {
       type: Number,
       required: true,

@@ -27,6 +27,12 @@ const careerIntelligenceSchema = new mongoose.Schema(
       min: 0,
       max: 100,
     },
+    githubScore: {
+      type: Number,
+      default: 0,
+      min: 0,
+      max: 100,
+    },
     careerReadiness: {
       type: String,
       enum: ['Beginner', 'Intermediate', 'Job Ready', 'Industry Ready'],

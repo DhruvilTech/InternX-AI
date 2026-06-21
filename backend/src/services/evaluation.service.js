@@ -7,6 +7,8 @@ import CareerIntelligence from '../models/CareerIntelligence.js';
 import StudentCareer from '../models/StudentCareer.js';
 import Interview from '../models/Interview.js';
 import InterviewReport from '../models/InterviewReport.js';
+import GithubProfile from '../models/GithubProfile.js';
+import GithubContribution from '../models/GithubContribution.js';
 import { analyzeGithubRepository } from './githubAnalyzer.service.js';
 import { extractZipMetadata } from './zipExtractor.service.js';
 import { generateFeedbackRecord, analyzeStudentSkills, generateCareerIntelligence } from './feedback.service.js';
@@ -46,7 +48,7 @@ export const runEvaluationEngine = async (submissionId, type, githubUrl, fileDat
       await submission.save();
 
       console.log(`[Evaluation service] Auditing GitHub repository: ${repoUrl}`);
-      const meta = await analyzeGithubRepository(repoUrl, decryptedToken);
+      const meta = await analyzeGithubRepository(repoUrl, decryptedToken, submission.githubBranch, submission.githubCommitHash);
       submission.extractedMetadata = meta;
       await submission.save();
     } else if (submissionType === 'zip') {
@@ -90,6 +92,7 @@ export const runEvaluationEngine = async (submissionId, type, githubUrl, fileDat
     }
 
     // Save Evaluation
+    const githubScore = submissionType === 'github' ? (evaluationData.githubScore || evaluationData.technicalScore || 0) : 0;
     const overallScore = Math.round(
       (evaluationData.technicalScore +
         evaluationData.architectureScore +
@@ -105,6 +108,7 @@ export const runEvaluationEngine = async (submissionId, type, githubUrl, fileDat
       submissionId: submission._id,
       technicalScore: evaluationData.technicalScore,
       repositoryScore: evaluationData.technicalScore, // Map technicalScore to repositoryScore
+      githubScore,
       architectureScore: evaluationData.architectureScore,
       codeQualityScore: evaluationData.codeQualityScore,
       documentationScore: evaluationData.documentationScore,
@@ -251,13 +255,15 @@ Return a structured JSON object only:
   "codeQualityScore": Number,
   "documentationScore": Number,
   "problemSolvingScore": Number,
+  "githubScore": Number,
   "overallScore": Number,
   "reasons": {
     "technicalScore": "Provide reason with evidence...",
     "architectureScore": "Provide reason with evidence...",
     "codeQualityScore": "Provide reason with evidence...",
     "documentationScore": "Provide reason with evidence...",
-    "problemSolvingScore": "Provide reason with evidence..."
+    "problemSolvingScore": "Provide reason with evidence...",
+    "githubScore": "Provide reason evaluating repository, commits, and branch code..."
   },
   "strengths": [String],
   "weaknesses": [String],
@@ -316,12 +322,14 @@ const generateHeuristicEvaluation = (task, submission) => {
       codeQualityScore: 10,
       documentationScore: 0,
       problemSolvingScore: 15,
+      githubScore: submission.submissionType === 'github' ? 10 : 0,
       reasons: {
         technicalScore: "Zero source code files detected in workspace.",
         architectureScore: "No directory separation possible due to lack of folders.",
         codeQualityScore: "Unable to evaluate style - empty repository.",
         documentationScore: "No README documentation found.",
-        problemSolvingScore: "Workspace empty. Fails milestone requirements."
+        problemSolvingScore: "Workspace empty. Fails milestone requirements.",
+        githubScore: submission.submissionType === 'github' ? "Empty repository submitted on GitHub." : "Not a GitHub submission."
       },
       strengths: ['Initial delivery configuration established'],
       weaknesses: [
@@ -373,12 +381,14 @@ const generateHeuristicEvaluation = (task, submission) => {
       codeQualityScore: 15,
       documentationScore: meta?.readmeContent ? 55 : 10,
       problemSolvingScore: 18,
+      githubScore: submission.submissionType === 'github' ? 20 : 0,
       reasons: {
         technicalScore: "Workspace contains only starter boilerplate template files.",
         architectureScore: "Boilerplate folder configuration present but no custom source components exist.",
         codeQualityScore: "Source code files lack logic implementations.",
         documentationScore: meta?.readmeContent ? "README file exists in root layout." : "No README instructions provided.",
-        problemSolvingScore: "Fails requirements. Student has not written logic."
+        problemSolvingScore: "Fails requirements. Student has not written logic.",
+        githubScore: submission.submissionType === 'github' ? "Boilerplate template files found in GitHub repo." : "Not a GitHub submission."
       },
       strengths: meta?.readmeContent ? ['README documentation structure is present'] : ['Workspace structure initialized'],
       weaknesses: [
@@ -401,6 +411,7 @@ const generateHeuristicEvaluation = (task, submission) => {
   let codeQualityScore = Math.min(100, Math.max(50, base + variance()));
   let documentationScore = Math.min(100, Math.max(50, base + variance()));
   let problemSolvingScore = Math.min(100, Math.max(50, base + variance()));
+  let githubScore = submission.submissionType === 'github' ? Math.min(100, Math.max(50, base + variance())) : 0;
 
   let strengths = ['Proper package configuration', 'Core architectural separation of layers'];
   let weaknesses = ['No unit tests mock datasets', 'Missing validation middlewares'];
@@ -433,7 +444,8 @@ const generateHeuristicEvaluation = (task, submission) => {
     architectureScore: `Layout divides project into ${Object.keys(meta?.categories || {}).filter(k => meta.categories[k].length > 0).join(', ')} layers.`,
     codeQualityScore: "Checked variable bindings and function exports.",
     documentationScore: meta?.readmeContent ? "README outlines installation, usage, and configuration settings." : "README file not detected.",
-    problemSolvingScore: "Logical script blocks successfully cover task objective parameters."
+    problemSolvingScore: "Logical script blocks successfully cover task objective parameters.",
+    githubScore: submission.submissionType === 'github' ? `Analyzed repo branch with ${meta?.commitsCount || 0} commits and clean code structure.` : "Not a GitHub submission."
   };
 
   return {
@@ -442,6 +454,7 @@ const generateHeuristicEvaluation = (task, submission) => {
     codeQualityScore,
     documentationScore,
     problemSolvingScore,
+    githubScore,
     reasons,
     strengths,
     weaknesses,
@@ -524,15 +537,32 @@ export const updateStudentCareerIntelligence = async (studentId) => {
   // 3. Compute Portfolio Index
   const portfolioScore = Math.round((avgScore * 0.85) + (completionPercentage * 0.15));
 
-  // 4. Compute Placement Readiness
-  // Factors: average task scores (50%), task completion progress (20%), interview scores (30%)
-  const placementReadiness = Math.round(
-    (avgScore * 0.50) +
-    (completionPercentage * 0.20) +
-    ((avgInterviewScore || avgScore || 70) * 0.30) // Use avg task score or 70 if no interviews conducted
-  );
+  // 4. Compute Placement Readiness & GitHub score
+  let githubScore = 0;
+  const githubSubmissions = await Submission.find({ studentId, submissionType: 'github', status: 'Completed' });
+  const submissionIds = githubSubmissions.map(s => s._id);
+  const evaluations = await Evaluation.find({ submissionId: { $in: submissionIds } });
 
-  const readinessScore = Math.round((portfolioScore + placementReadiness) / 2);
+  if (evaluations.length > 0) {
+    const sumGithubScores = evaluations.reduce((acc, e) => acc + (e.githubScore || e.repositoryScore || 0), 0);
+    githubScore = Math.round(sumGithubScores / evaluations.length);
+  } else {
+    const githubProfile = await GithubProfile.findOne({ userId: studentId });
+    const githubContributions = await GithubContribution.find({ userId: studentId });
+    if (githubProfile) {
+      const commits = githubContributions.reduce((acc, c) => acc + (c.commitCount || 0), 0);
+      githubScore = Math.min(100, 40 + (githubProfile.publicRepos * 5) + (commits * 2));
+    }
+  }
+
+  // Certificate Score component
+  const progress = completionPercentage; // task completion progress
+  const certificateScore = progress >= 80 ? avgScore : avgScore * (progress / 100);
+
+  // Interview Score component
+  const interviewScore = avgInterviewScore || 60; // default to 60 if none
+
+  const placementReadiness = Math.round((avgScore + interviewScore + certificateScore + githubScore) / 4);
 
   // 5. Update or Create Career Intelligence
   let intelligence = await CareerIntelligence.findOne({ studentId });
@@ -569,7 +599,8 @@ export const updateStudentCareerIntelligence = async (studentId) => {
 
   intelligence.portfolioScore = portfolioScore;
   intelligence.placementReadiness = placementReadiness;
-  intelligence.readinessScore = readinessScore;
+  intelligence.githubScore = githubScore;
+  intelligence.readinessScore = placementReadiness;
   intelligence.recommendedRoles = recommendedRoles;
   intelligence.recommendedSkills = recommendedSkills;
   intelligence.recommendedCertifications = recommendedCertifications;

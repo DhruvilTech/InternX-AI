@@ -28,6 +28,7 @@ import { useNavigation } from '../context/NavigationContext'
 import { useTheme } from '../context/ThemeContext'
 import ScoreRing from '../components/ui/ScoreRing'
 import PulseDot from '../components/ui/PulseDot'
+import { FaGithub } from 'react-icons/fa6'
 import { getMyCareer } from '../api/careerService.js'
 import axiosInstance from '../api/axios.js'
 import useAuth from '../hooks/useAuth'
@@ -55,6 +56,21 @@ export default function StudentDashboardPage() {
   const [careerData, setCareerData] = useState(null)
   const [careerIntel, setCareerIntel] = useState(null)
   const [managerFeedback, setManagerFeedback] = useState('')
+  const [connectedRepo, setConnectedRepo] = useState(null)
+
+  useEffect(() => {
+    const fetchConnectedRepo = async () => {
+      try {
+        const res = await axiosInstance.get('/api/github/selected-repository')
+        if (res.data?.success && res.data?.data) {
+          setConnectedRepo(res.data.data)
+        }
+      } catch (err) {
+        console.log("No connected repository retrieved:", err)
+      }
+    }
+    fetchConnectedRepo()
+  }, [])
 
   useEffect(() => {
     if (tasks && tasks.length > 0) {
@@ -389,6 +405,77 @@ export default function StudentDashboardPage() {
                   {placementScore >= 80 ? 'Placement Eligible' : 'Practice Needed'}
                 </span>
               </div>
+            </div>
+
+            {/* GitHub Performance Card */}
+            <div className="glass rounded-2xl p-5 border border-border bg-void/30 space-y-4 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-violet/5 rounded-full blur-xl pointer-events-none" />
+              
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-xs font-bold text-text uppercase tracking-wider">GitHub Performance</h3>
+                  <p className="text-[10px] text-muted">Core integration analytics</p>
+                </div>
+                <div className="p-2 bg-violet/10 rounded-lg text-violet">
+                  <FaGithub size={16} />
+                </div>
+              </div>
+
+              {connectedRepo ? (
+                <div className="space-y-4">
+                  <div className="p-3.5 rounded-xl border border-border bg-void/40 space-y-2">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[10px] text-muted uppercase tracking-wider">Linked Repository</span>
+                      <span className="px-2 py-0.5 rounded-full bg-emerald/10 border border-emerald/20 text-[9px] text-emerald font-semibold">
+                        Active
+                      </span>
+                    </div>
+                    <div className="text-xs font-mono font-bold text-text truncate">
+                      {connectedRepo.repositoryName}
+                    </div>
+                    <div className="flex items-center justify-between text-[10px] text-muted">
+                      <span>Branch: <span className="font-semibold text-text">{connectedRepo.branch || 'main'}</span></span>
+                      {connectedRepo.htmlUrl && (
+                        <a 
+                          href={connectedRepo.htmlUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="text-accent hover:underline flex items-center gap-0.5"
+                        >
+                          View Repo
+                        </a>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 bg-violet/5 border border-violet/10 p-3 rounded-xl">
+                    <div className="shrink-0 flex items-center justify-center">
+                      <ScoreRing score={careerIntel?.githubScore || 0} size={65} strokeWidth={4.5} />
+                    </div>
+                    <div className="min-w-0">
+                      <span className="text-[10px] text-muted uppercase tracking-wider block">AI GitHub Score</span>
+                      <span className="text-sm font-display font-bold text-text block mt-0.5">
+                        {careerIntel?.githubScore || 0} / 100
+                      </span>
+                      <span className="text-[9px] text-muted leading-relaxed block mt-1">
+                        {(careerIntel?.githubScore || 0) >= 80 ? 'Exceptional codebase standards.' : (careerIntel?.githubScore || 0) >= 60 ? 'Standard delivery quality.' : 'Improve repo activity & documentation.'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-6 px-4 space-y-3">
+                  <p className="text-xs text-muted">
+                    No active GitHub repository linked to your internship.
+                  </p>
+                  <button
+                    onClick={() => navigate('github')}
+                    className="w-full py-2 bg-gradient-to-r from-accent to-violet text-white text-[11px] font-semibold rounded-xl hover:shadow-lg transition-all cursor-pointer"
+                  >
+                    Connect GitHub Repository
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Recruiter Interest Trends Widget */}
