@@ -32,16 +32,10 @@ const router = express.Router();
 
 // Dynamic handlers to support both modular college users and college_representatives
 const handleDashboard = (req, res, next) => {
-  if (req.user.role === 'college_representative') {
-    return getCollegeDashboard(req, res, next);
-  }
   return requireCollegeProfile(req, res, () => getDashboard(req, res, next));
 };
 
 const handleStudents = (req, res, next) => {
-  if (req.user.role === 'college_representative') {
-    return getCollegeStudents(req, res, next);
-  }
   return requireCollegeProfile(req, res, () => getStudents(req, res, next));
 };
 

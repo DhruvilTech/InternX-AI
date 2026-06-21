@@ -42,8 +42,7 @@ export const patchProfile = async (req, res, next) => {
  */
 export const getDashboard = async (req, res, next) => {
   try {
-    await collegeService.seedDemoCohortIfEmpty(req.college);
-    const analytics = await collegeService.refreshAnalytics(req.college._id);
+    const analytics = await collegeService.getDashboardData(req.college);
     return sendResponse(res, 200, true, 'Dashboard analytics retrieved successfully', analytics);
   } catch (error) {
     next(error);
@@ -167,7 +166,7 @@ export const verifyCertificate = async (req, res, next) => {
  */
 export const getStudentGithub = async (req, res, next) => {
   try {
-    const student = await Student.findOne({ _id: req.params.id, collegeName: req.college.collegeName });
+    const student = await Student.findOne({ _id: req.params.id, collegeName: req.college.name });
     if (!student) {
       return res.status(404).json({ success: false, message: 'Student not found in college.' });
     }

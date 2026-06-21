@@ -43,7 +43,7 @@ export default function CollegeDashboardPage() {
         setData(dashRes.data.data);
       }
       if (studRes.data?.success) {
-        setStudents(studRes.data.data);
+        setStudents(studRes.data.data?.students || studRes.data.data || []);
       }
     } catch (err) {
       console.error(err);
@@ -398,9 +398,9 @@ export default function CollegeDashboardPage() {
                         <span>{student.fullName || student.name}</span>
                       </td>
                       <td className="p-3">{student.email}</td>
-                      <td className="p-3">{student.department || 'N/A'}</td>
+                      <td className="p-3">{student.department || student.course || 'N/A'}</td>
                       <td className="p-3 text-center">Year {student.year || 'N/A'}</td>
-                      <td className="p-3">{student.careerPath || 'N/A'}</td>
+                      <td className="p-3">{student.careerPath || student.careerTrack || 'N/A'}</td>
                     </tr>
                   ))}
                   {students.length === 0 && (
