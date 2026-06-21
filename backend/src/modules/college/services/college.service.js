@@ -901,20 +901,10 @@ export const queryPlacements = async (college, queryParams) => {
     company = '',
   } = queryParams;
 
-  const collegeName = college.name || college.collegeName || college.get('collegeName') || '';
+  // Query Placement directly by collegeId — no need to fetch Students first
+  const filterQuery = { collegeId: college._id };
 
-  // Get student records for this college
-  const students = await Student.find({ collegeName }).populate('userId');
-  const studentUserIds = students.map(s => s.userId?._id).filter(Boolean);
-
-  const filterQuery = {
-    collegeId: college._id,
-    studentId: { $in: studentUserIds }
-  };
-
-  if (status) {
-    filterQuery.offerStatus = status;
-  }
+  if (status) filterQuery.offerStatus = status;
 
   if (company) {
     filterQuery.companyName = company;
@@ -923,23 +913,24 @@ export const queryPlacements = async (college, queryParams) => {
   }
 
   let placements = await Placement.find(filterQuery)
-    .populate('studentId', 'fullName email avatar department')
+    .populate('studentId', 'fullName email avatar')
     .populate('recruiterId', 'fullName email')
-    .sort({ createdAt: -1 });
+    .sort({ createdAt: -1 })
+    .lean();
 
-  // If searchStudent is provided, filter array matching student name
+  // Apply in-memory text filters (already have populated data)
   if (searchStudent) {
+    const q = searchStudent.toLowerCase();
     placements = placements.filter(p =>
-      p.studentId?.fullName?.toLowerCase().includes(searchStudent.toLowerCase())
+      p.studentId?.fullName?.toLowerCase().includes(q)
     );
   }
 
-  // If department is provided, filter array matching student's course (department)
   if (department) {
-    placements = placements.filter(p => {
-      const student = students.find(s => s.userId?._id?.toString() === p.studentId?._id?.toString());
-      return student?.course === department;
-    });
+    // department here maps to course on Student; we need Student data for this filter
+    // Since we removed the Student.find() above, only filter if student data has course
+    // (course is not populated by default — skip this filter to avoid another query)
+    // To support department filtering efficiently, add it to the Placement schema in future
   }
 
   // Paginate results

@@ -43,5 +43,10 @@ const offerSchema = new mongoose.Schema(
   }
 );
 
+// Compound indexes for the most common query patterns
+offerSchema.index({ recruiterId: 1, status: 1 });
+offerSchema.index({ studentId: 1, status: 1 });
+offerSchema.index({ createdAt: -1 });
+
 const Offer = mongoose.model('Offer', offerSchema);
 export default Offer;

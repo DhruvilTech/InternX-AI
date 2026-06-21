@@ -44,5 +44,11 @@ const placementSchema = new mongoose.Schema(
   }
 );
 
+// Performance indexes for college dashboard and recruiter queries
+placementSchema.index({ collegeId: 1, offerStatus: 1 });
+placementSchema.index({ studentId: 1 });
+placementSchema.index({ recruiterId: 1 });
+placementSchema.index({ createdAt: -1 });
+
 const Placement = mongoose.models.Placement || mongoose.model('Placement', placementSchema);
 export default Placement;

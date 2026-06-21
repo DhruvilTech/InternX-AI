@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import {
   BarChart,
@@ -16,6 +16,7 @@ import { GraduationCap, Users, CheckCircle2, TrendingUp, Award, RefreshCw, BookO
 import { useNavigate } from 'react-router-dom';
 import axiosInstance from '../api/axios.js';
 import { useNavigation } from '../context/NavigationContext';
+import { SkeletonKPIRow } from '../components/ui/PageSkeleton.jsx';
 
 const pieColors = ['#8B5CF6', '#6366F1', '#38BDF8', '#10B981', '#F59E0B'];
 
@@ -77,10 +78,25 @@ export default function CollegeDashboardPage() {
 
   if (loading && !data) {
     return (
-      <div className="min-h-screen bg-void flex items-center justify-center text-text">
-        <div className="space-y-4 text-center">
-          <div className="h-10 w-10 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs text-muted font-semibold tracking-widest uppercase">Fetching academic metrics...</p>
+      <div className="min-h-screen pt-24 pb-16 bg-void relative overflow-hidden">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-violet/5 rounded-full blur-[100px] pointer-events-none" />
+        <div className="max-w-6xl mx-auto px-4 space-y-8">
+          {/* Header skeleton */}
+          <div className="flex items-start justify-between border-b border-border pb-6">
+            <div className="space-y-2">
+              <div className="h-3 w-28 bg-white/5 rounded-lg animate-pulse" />
+              <div className="h-8 w-64 bg-white/5 rounded-xl animate-pulse" />
+              <div className="h-2 w-48 bg-white/5 rounded-lg animate-pulse" />
+            </div>
+            <div className="h-9 w-28 bg-white/5 rounded-xl animate-pulse" />
+          </div>
+          {/* KPI skeleton */}
+          <SkeletonKPIRow />
+          {/* Chart area skeleton */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="h-64 bg-white/5 border border-border rounded-2xl animate-pulse" />
+            <div className="h-64 bg-white/5 border border-border rounded-2xl animate-pulse" />
+          </div>
         </div>
       </div>
     );

@@ -62,5 +62,8 @@ const githubProfileSchema = new mongoose.Schema(
   }
 );
 
+// Explicit index for batch $in lookups (unique: true already creates one, this documents intent)
+githubProfileSchema.index({ userId: 1 });
+
 const GithubProfile = mongoose.model('GithubProfile', githubProfileSchema);
 export default GithubProfile;

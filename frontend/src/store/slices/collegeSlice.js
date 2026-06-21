@@ -35,6 +35,13 @@ export const getDashboard = createAsyncThunk(
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to load dashboard metrics.');
     }
+  },
+  {
+    condition: (_, { getState }) => {
+      const { college } = getState();
+      if (college.loading) return false;
+      return true;
+    },
   }
 );
 
@@ -71,6 +78,13 @@ export const getInternships = createAsyncThunk(
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to load internship analytics.');
     }
+  },
+  {
+    condition: (_, { getState }) => {
+      const { college } = getState();
+      if (college.loading) return false;
+      return true;
+    },
   }
 );
 
@@ -83,6 +97,13 @@ export const getPlacementAnalytics = createAsyncThunk(
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to load placement analytics.');
     }
+  },
+  {
+    condition: (_, { getState }) => {
+      const { college } = getState();
+      if (college.loading) return false;
+      return true;
+    },
   }
 );
 
@@ -95,6 +116,13 @@ export const getSkillAnalytics = createAsyncThunk(
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to load skill analytics.');
     }
+  },
+  {
+    condition: (_, { getState }) => {
+      const { college } = getState();
+      if (college.loading) return false;
+      return true;
+    },
   }
 );
 
@@ -107,6 +135,13 @@ export const getCertificates = createAsyncThunk(
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to load certificates log.');
     }
+  },
+  {
+    condition: (_, { getState }) => {
+      const { college } = getState();
+      if (college.loading) return false;
+      return true;
+    },
   }
 );
 

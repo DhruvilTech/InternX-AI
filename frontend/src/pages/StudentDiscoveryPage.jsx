@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Search, Filter, Star, ArrowRight, Award, GraduationCap, ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
 import { FaGithub } from 'react-icons/fa6';
 import { useNavigation } from '../context/NavigationContext';
 import { getRecruiterStudents, toggleRecruiterShortlist } from '../store/slices/recruiterSlice.js';
+import { SkeletonCardList } from '../components/ui/PageSkeleton.jsx';
 
 export default function StudentDiscoveryPage() {
   const { navigate, addToast } = useNavigation();
@@ -23,7 +24,7 @@ export default function StudentDiscoveryPage() {
   const [internshipStatus, setInternshipStatus] = useState('');
   const [page, setPage] = useState(1);
 
-  const fetchCandidates = () => {
+  const fetchCandidates = useCallback(() => {
     dispatch(
       getRecruiterStudents({
         page,
@@ -39,7 +40,7 @@ export default function StudentDiscoveryPage() {
         internshipStatus,
       })
     );
-  };
+  }, [dispatch, page, search, college, department, year, careerPath, minScore, githubConnected, certificateStatus, internshipStatus]);
 
   useEffect(() => {
     fetchCandidates();
@@ -294,10 +295,7 @@ export default function StudentDiscoveryPage() {
         {/* Directory Output */}
         <div className="space-y-4">
           {loading && (
-            <div className="text-center py-12">
-              <div className="h-8 w-8 border-2 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-              <p className="text-xs text-muted font-mono">Syncing global student lists...</p>
-            </div>
+            <SkeletonCardList count={5} />
           )}
 
           {!loading && students.length === 0 ? (

@@ -35,5 +35,9 @@ const collegeNotificationSchema = new mongoose.Schema(
   }
 );
 
+// Fast badge count and notification list queries
+collegeNotificationSchema.index({ collegeId: 1, isRead: 1 });
+collegeNotificationSchema.index({ createdAt: -1 });
+
 const CollegeNotification = mongoose.models.CollegeNotification || mongoose.model('CollegeNotification', collegeNotificationSchema);
 export default CollegeNotification;
