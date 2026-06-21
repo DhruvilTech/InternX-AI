@@ -15,7 +15,8 @@ import {
   CheckCircle,
   AlertTriangle,
   Send,
-  Loader
+  Loader,
+  LogOut
 } from 'lucide-react';
 import { useNavigation } from '../context/NavigationContext.jsx';
 import { getInterviewDetails, getCurrentQuestion, submitAnswer, completeInterview } from '../api/interviewApi.js';
@@ -38,11 +39,13 @@ export default function LiveInterviewPage() {
   const [isMuted, setIsMuted] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
+  const [interimTranscript, setInterimTranscript] = useState('');
   const [typedAnswer, setTypedAnswer] = useState('');
   
   // Timer state
   const [timerSeconds, setTimerSeconds] = useState(0);
   const [questionTimer, setQuestionTimer] = useState(0);
+  const [inactivitySeconds, setInactivitySeconds] = useState(0);
 
   // Visual waves state
   const [isAvatarSpeaking, setIsAvatarSpeaking] = useState(false);
@@ -53,6 +56,16 @@ export default function LiveInterviewPage() {
   const synthesisRef = useRef(null);
   const currentUtteranceRef = useRef(null);
   const waveIntervalRef = useRef(null);
+  const stateRef = useRef({ isAvatarSpeaking, submitting, evaluating });
+
+  useEffect(() => {
+    stateRef.current = { isAvatarSpeaking, submitting, evaluating };
+  }, [isAvatarSpeaking, submitting, evaluating]);
+
+  // Reset inactivity seconds when user types or speaks, or when avatar is speaking or question changes
+  useEffect(() => {
+    setInactivitySeconds(0);
+  }, [transcript, interimTranscript, typedAnswer, isAvatarSpeaking, currentQuestion]);
 
   // Fetch initial details
   useEffect(() => {
@@ -63,9 +76,16 @@ export default function LiveInterviewPage() {
       setTimerSeconds(prev => prev + 1);
     }, 1000);
 
-    // Question duration timer
+    // Question duration timer & inactivity monitor
     const qTimer = setInterval(() => {
       setQuestionTimer(prev => prev + 1);
+      setInactivitySeconds(prev => {
+        const { isAvatarSpeaking: speaking, submitting: sub, evaluating: evalStatus } = stateRef.current;
+        if (!speaking && !sub && !evalStatus) {
+          return prev + 1;
+        }
+        return 0;
+      });
     }, 1000);
 
     return () => {
@@ -116,9 +136,10 @@ export default function LiveInterviewPage() {
     }
   };
 
-  const loadQuestion = async (idx) => {
+  const loadQuestion = async (idx, speechPrefix = '') => {
     try {
       setTranscript('');
+      setInterimTranscript('');
       setTypedAnswer('');
       setQuestionTimer(0);
       
@@ -129,7 +150,7 @@ export default function LiveInterviewPage() {
         
         // Narration trigger after a short delay to allow component to render
         setTimeout(() => {
-          speakQuestion(res.data.question.question);
+          speakQuestion(speechPrefix + res.data.question.question);
         }, 600);
       } else {
         // No more questions -> complete
@@ -144,7 +165,11 @@ export default function LiveInterviewPage() {
   // TTS implementation
   const speakQuestion = (text) => {
     stopSpeaking();
-    if (isMuted) return;
+    stopListening();
+    if (isMuted) {
+      startVoiceRecognition();
+      return;
+    }
 
     if ('speechSynthesis' in window) {
       setIsAvatarSpeaking(true);
@@ -168,10 +193,13 @@ export default function LiveInterviewPage() {
 
       utterance.onerror = () => {
         setIsAvatarSpeaking(false);
+        startVoiceRecognition();
       };
 
       currentUtteranceRef.current = utterance;
       window.speechSynthesis.speak(utterance);
+    } else {
+      startVoiceRecognition();
     }
   };
 
@@ -204,13 +232,19 @@ export default function LiveInterviewPage() {
 
     rec.onresult = (event) => {
       let finalTranscript = '';
+      let currentInterim = '';
       for (let i = event.resultIndex; i < event.results.length; ++i) {
         if (event.results[i].isFinal) {
           finalTranscript += event.results[i][0].transcript;
+        } else {
+          currentInterim += event.results[i][0].transcript;
         }
       }
       if (finalTranscript) {
         setTranscript(prev => (prev + ' ' + finalTranscript).trim());
+        setInterimTranscript('');
+      } else {
+        setInterimTranscript(currentInterim);
       }
     };
 
@@ -219,10 +253,12 @@ export default function LiveInterviewPage() {
       if (event.error !== 'no-speech') {
         setIsListening(false);
       }
+      setInterimTranscript('');
     };
 
     rec.onend = () => {
       setIsListening(false);
+      setInterimTranscript('');
     };
 
     recognitionRef.current = rec;
@@ -262,7 +298,7 @@ export default function LiveInterviewPage() {
     stopSpeaking();
     stopListening();
 
-    const finalAnswer = (transcript + '\n' + typedAnswer).trim();
+    const finalAnswer = (transcript + ' ' + interimTranscript + '\n' + typedAnswer).trim();
     if (!finalAnswer) {
       addToast('Please provide an answer either via speech or by typing.', 'warning');
       return;
@@ -273,7 +309,7 @@ export default function LiveInterviewPage() {
       const res = await submitAnswer(id, {
         questionId: currentQuestion._id,
         answer: finalAnswer,
-        transcript: transcript,
+        transcript: (transcript + ' ' + interimTranscript).trim(),
         duration: questionTimer
       });
 
@@ -291,6 +327,45 @@ export default function LiveInterviewPage() {
       setSubmitting(false);
     }
   };
+
+  const handleAutoTimeout = async () => {
+    stopSpeaking();
+    stopListening();
+
+    try {
+      setSubmitting(true);
+      const res = await submitAnswer(id, {
+        questionId: currentQuestion._id,
+        answer: "[No response provided due to inactivity]",
+        transcript: "",
+        duration: questionTimer
+      });
+
+      if (res.success) {
+        if (res.data.isFinished || questionIndex + 1 >= totalQuestions) {
+          await handleCompleteInterview();
+        } else {
+          await loadQuestion(res.data.currentQuestionIndex, "As you did not give an answer, the next question is: ");
+        }
+      }
+    } catch (err) {
+      console.error('Error saving answer on timeout:', err);
+      if (questionIndex + 1 < totalQuestions) {
+        await loadQuestion(questionIndex + 1, "As you did not give an answer, the next question is: ");
+      } else {
+        await handleCompleteInterview();
+      }
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Monitor inactivity seconds and trigger auto-timeout
+  useEffect(() => {
+    if (inactivitySeconds >= 15 && currentQuestion && !submitting && !evaluating) {
+      handleAutoTimeout();
+    }
+  }, [inactivitySeconds, currentQuestion, submitting, evaluating]);
 
   const handleCompleteInterview = async () => {
     try {
@@ -390,6 +465,17 @@ export default function LiveInterviewPage() {
             <div className="px-2.5 py-1 bg-surface-muted/20 border border-border/80 rounded-lg text-text">
               Q: {questionIndex + 1} / {totalQuestions}
             </div>
+            <button
+              onClick={() => {
+                stopSpeaking();
+                stopListening();
+                navigate('/dashboard/interview');
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 border border-rose-500/30 bg-rose-500/5 hover:bg-rose-500/10 text-rose-400 hover:text-rose-300 rounded-lg text-xs font-semibold font-sans transition-all hover:scale-[1.02] cursor-pointer"
+            >
+              <LogOut size={13} />
+              <span>Exit Interview</span>
+            </button>
           </div>
         </div>
 
@@ -490,7 +576,14 @@ export default function LiveInterviewPage() {
                 </div>
                 
                 <div className="flex-1 bg-void/60 border border-border/60 rounded-xl p-4 overflow-y-auto max-h-[160px] text-xs text-muted leading-relaxed font-mono">
-                  {transcript || (
+                  {transcript || interimTranscript ? (
+                    <span>
+                      {transcript}
+                      {interimTranscript && (
+                        <span className="text-accent/70 italic"> {interimTranscript}</span>
+                      )}
+                    </span>
+                  ) : (
                     <span className="italic text-dim">
                       Enable microphone and speak. Your voice transcript will populate here in real-time...
                     </span>

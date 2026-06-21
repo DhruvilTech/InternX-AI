@@ -146,6 +146,11 @@ export default function Navbar() {
     }
   }
 
+  // Do not render navbar on active live interview simulator page
+  if (page && (page.startsWith('interview/live') || page.startsWith('/interview/live'))) {
+    return null;
+  }
+
   return (
     <header
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${scrolled || page !== 'landing' ? 'glass border-b border-border' : 'bg-transparent'

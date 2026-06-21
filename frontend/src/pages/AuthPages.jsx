@@ -507,30 +507,6 @@ export default function AuthPages() {
                     </button>
                   </p>
                 </div>
-
-                {/* College or Recruiter Login Portal Redirections */}
-                <div className="mt-6 pt-6 border-t border-border/60">
-                  <p className="text-[10px] text-muted text-center uppercase tracking-wider mb-3">Institutional Gateways</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => navigate('/college-login')}
-                      className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-emerald/20 bg-emerald/5 hover:bg-emerald/10 text-emerald-300 text-xs font-semibold transition-all hover:scale-[1.02] cursor-pointer"
-                    >
-                      <GraduationCap size={14} />
-                      <span>College Login</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => navigate('/recruiter-login')}
-                      className="flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 text-amber-300 text-xs font-semibold transition-all hover:scale-[1.02] cursor-pointer"
-                    >
-                      <Building2 size={14} />
-                      <span>Recruiter Login</span>
-                    </button>
-                  </div>
-                </div>
-
               </motion.div>
             )}
 
