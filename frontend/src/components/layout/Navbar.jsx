@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence, useScroll, useSpring } from 'framer-motion'
 import { Menu, X, Bell, User, Settings, LogOut, Search, ShieldCheck } from 'lucide-react'
+import { useDispatch, useSelector } from 'react-redux'
+import { fetchNotifications } from '../../store/slices/notificationsSlice.js'
 import MagneticButton from '../ui/MagneticButton'
 import ThemeToggle from '../ui/ThemeToggle'
 import { useNavigation } from '../../context/NavigationContext'
@@ -17,6 +19,9 @@ export default function Navbar() {
 
   const { role, user, logout } = useAuth()
 
+  const dispatch = useDispatch()
+  const { unreadCount } = useSelector((state) => state.notifications)
+
   const isPendingApproval = user && user.role !== 'admin' && (
     (user.role === 'student' && !user.isVerified) ||
     (user.role === 'recruiter' && !user.isRecruiterVerified) ||
@@ -26,6 +31,16 @@ export default function Navbar() {
   const isEmailPending = user && !user.isEmailVerified
 
   const isLocked = isPendingApproval || isEmailPending
+
+  useEffect(() => {
+    if (role === 'student' && !isLocked) {
+      dispatch(fetchNotifications());
+      const interval = setInterval(() => {
+        dispatch(fetchNotifications());
+      }, 30000);
+      return () => clearInterval(interval);
+    }
+  }, [role, isLocked, dispatch]);
 
   const handleLogout = async () => {
     await logout()
@@ -58,6 +73,7 @@ export default function Navbar() {
     if (role === 'student') {
       return [
         { label: 'Dashboard', id: 'student/dashboard' },
+        { label: 'Offers', id: 'student/offers' },
         { label: 'Internships', id: user?.selectedCareer ? 'my-career' : 'careers' },
         { label: 'GitHub', id: 'dashboard/github' },
         { label: 'Tasks', id: 'kanban' },
@@ -78,9 +94,11 @@ export default function Navbar() {
     } else if (role === 'recruiter') {
       return [
         { label: 'Dashboard', id: 'recruiter/dashboard' },
-        { label: 'Talent Pool', id: 'recruiter/dashboard' },
-        { label: 'Certificates', id: 'recruiter/dashboard' },
-        { label: 'Hiring', id: 'recruiter/dashboard' },
+        { label: 'Talent Pool', id: 'recruiter/students' },
+        { label: 'Shortlisted', id: 'recruiter/shortlisted' },
+        { label: 'Pipeline', id: 'recruiter/pipeline' },
+        { label: 'Analytics', id: 'recruiter/analytics' },
+        { label: 'Profile', id: 'recruiter/profile' },
       ]
     } else if (role === 'admin') {
       return [
@@ -189,11 +207,25 @@ export default function Navbar() {
                 {/* Notification bell */}
                 {!isLocked && (
                   <button
-                    onClick={() => setNotificationsOpen(true)}
+                    onClick={() => {
+                      if (role === 'student') {
+                        navigate('student/notifications');
+                      } else {
+                        setNotificationsOpen(true);
+                      }
+                    }}
                     className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface-muted/50 text-muted hover:text-text hover:border-border-strong transition-colors"
                   >
                     <Bell size={15} />
-                    <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 bg-accent rounded-full animate-pulse" />
+                    {role === 'student' ? (
+                      unreadCount > 0 && (
+                        <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center bg-accent text-[9px] font-bold text-white rounded-full border border-void animate-pulse">
+                          {unreadCount}
+                        </span>
+                      )
+                    ) : (
+                      <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 bg-accent rounded-full animate-pulse" />
+                    )}
                   </button>
                 )}
 
