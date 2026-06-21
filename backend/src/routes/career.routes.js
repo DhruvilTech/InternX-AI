@@ -7,6 +7,9 @@ import {
   deleteCareer,
   selectCareer,
   getMyCareer,
+  getSkillAnalysis,
+  getCareerIntelligence,
+  getCertificateProgress,
 } from '../controllers/career.controller.js';
 import { protect } from '../middlewares/auth.middleware.js';
 import { authorizeRoles } from '../middlewares/role.middleware.js';
@@ -20,6 +23,9 @@ router.use(protect);
 // Student only endpoints
 router.get('/my-career', authorizeRoles('student'), getMyCareer);
 router.post('/select', authorizeRoles('student'), selectCareer);
+router.get('/skill-analysis', authorizeRoles('student'), getSkillAnalysis);
+router.get('/career-intelligence', authorizeRoles('student'), getCareerIntelligence);
+router.get('/certificate-progress', authorizeRoles('student'), getCertificateProgress);
 
 // Shared endpoints (read-only for student, recruiter, college, admin)
 router.get('/', getAllCareers);

@@ -50,6 +50,8 @@ export default function StudentDashboardPage() {
   const [score, setScore] = useState(0)
   const [progress, setProgress] = useState(0)
   const [interviewReadyScore, setInterviewReadyScore] = useState(0)
+  const [portfolioScore, setPortfolioScore] = useState(0)
+  const [placementScore, setPlacementScore] = useState(0)
   const [careerData, setCareerData] = useState(null)
 
   useEffect(() => {
@@ -71,6 +73,21 @@ export default function StudentDashboardPage() {
       setScore(0)
       setInterviewReadyScore(0)
     }
+  }, [tasks])
+
+  useEffect(() => {
+    const fetchIntel = async () => {
+      try {
+        const res = await axiosInstance.get('/api/careers/career-intelligence')
+        if (res.data?.success && res.data?.data) {
+          setPortfolioScore(res.data.data.portfolioScore || 0)
+          setPlacementScore(res.data.data.placementReadiness || 0)
+        }
+      } catch (err) {
+        console.error('Failed to load career intelligence for dashboard:', err)
+      }
+    }
+    fetchIntel()
   }, [tasks])
 
   useEffect(() => {
@@ -282,15 +299,19 @@ export default function StudentDashboardPage() {
             {/* Circular Scores Row */}
             <div className="grid grid-cols-2 gap-4">
               <div className="glass rounded-2xl p-4 border border-border bg-void/30 text-center flex flex-col items-center">
-                <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block mb-3">Eval Index</span>
-                <ScoreRing score={score} size={85} strokeWidth={5} />
-                <span className="text-[9px] text-emerald font-semibold mt-2 block">Top 8% Cohort</span>
+                <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block mb-3">Portfolio Score</span>
+                <ScoreRing score={portfolioScore} size={85} strokeWidth={5} />
+                <span className="text-[9px] text-emerald font-semibold mt-2 block">
+                  {portfolioScore >= 80 ? 'Top 10% Cohort' : 'Building Track'}
+                </span>
               </div>
               
               <div className="glass rounded-2xl p-4 border border-border bg-void/30 text-center flex flex-col items-center">
-                <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block mb-3">Interview Ready</span>
-                <ScoreRing score={interviewReadyScore} size={85} strokeWidth={5} />
-                <span className="text-[9px] text-accent font-semibold mt-2 block">Practice Needed</span>
+                <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block mb-3">Placement Ready</span>
+                <ScoreRing score={placementScore} size={85} strokeWidth={5} />
+                <span className="text-[9px] text-accent font-semibold mt-2 block">
+                  {placementScore >= 80 ? 'Placement Eligible' : 'Practice Needed'}
+                </span>
               </div>
             </div>
 

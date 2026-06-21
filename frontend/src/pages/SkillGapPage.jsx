@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { useTheme } from '../context/ThemeContext'
 import {
   RadarChart,
@@ -8,8 +9,9 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import { ShieldCheck, Target, ArrowUpRight, Award, Zap } from 'lucide-react'
+import axiosInstance from '../api/axios.js'
 
-const skillComparisonData = [
+const defaultSkillData = [
   { subject: 'LangChain Orchestrator', current: 65, benchmark: 85, fullMark: 100 },
   { subject: 'Vector DB Indexes', current: 94, benchmark: 80, fullMark: 100 },
   { subject: 'PyTorch models', current: 50, benchmark: 75, fullMark: 100 },
@@ -18,16 +20,39 @@ const skillComparisonData = [
   { subject: 'System Architecture', current: 85, benchmark: 80, fullMark: 100 },
 ]
 
+const defaultGaps = [
+  { skill: 'Prometheus metrics', gap: '-30%', recommend: 'Implement the Prometheus metric endpoints task to build latency graphs.', level: 'Beginner' },
+  { skill: 'PyTorch models', gap: '-25%', recommend: 'Fine-tune SentenceTransformers embedding networks. Read the custom training guides.', level: 'Intermediate' },
+  { skill: 'LangChain Orchestrator', gap: '-20%', recommend: 'Develop streaming tokens route using fallback logic details.', level: 'Advanced' },
+]
+
 export default function SkillGapPage() {
   const { isDark } = useTheme()
+  const [skillComparisonData, setSkillComparisonData] = useState(defaultSkillData)
+  const [gaps, setGaps] = useState(defaultGaps)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchSkillAnalysis = async () => {
+      try {
+        const response = await axiosInstance.get('/api/careers/skill-analysis')
+        if (response.data?.success && response.data?.data) {
+          if (response.data.data.skillComparisonData?.length > 0) {
+            setSkillComparisonData(response.data.data.skillComparisonData)
+          }
+          setGaps(response.data.data.gaps || [])
+        }
+      } catch (err) {
+        console.error('Failed to load dynamic skill analysis from server:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchSkillAnalysis()
+  }, [])
+
   const gridColor = isDark ? '#1E293B' : '#E2E8F0'
   const tickColor = isDark ? '#94A3B8' : '#64748B'
-
-  const gaps = [
-    { skill: 'Prometheus metrics', gap: '-30%', recommend: 'Implement the Prometheus metric endpoints task to build latency graphs.', level: 'Beginner' },
-    { skill: 'PyTorch models', gap: '-25%', recommend: 'Fine-tune SentenceTransformers embedding networks. Read the custom training guides.', level: 'Intermediate' },
-    { skill: 'LangChain Orchestrator', gap: '-20%', recommend: 'Develop streaming tokens route using fallback logic details.', level: 'Advanced' },
-  ]
 
   return (
     <div className="min-h-screen pt-24 pb-16 bg-void relative overflow-hidden text-text">

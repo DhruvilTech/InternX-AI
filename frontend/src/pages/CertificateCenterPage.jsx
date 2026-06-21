@@ -1,43 +1,60 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Award, Download, CheckCircle2, ShieldCheck, Copy, ExternalLink, Calendar } from 'lucide-react'
 import { FaLinkedin } from 'react-icons/fa6'
 import { useNavigation } from '../context/NavigationContext'
 import useAuth from '../hooks/useAuth'
+import axiosInstance from '../api/axios.js'
 
 export default function CertificateCenterPage() {
-  const { internship, tasks, addToast } = useNavigation()
+  const { addToast } = useNavigation()
   const { user } = useAuth()
   const [verificationCode, setVerificationCode] = useState('IX-92-2026')
   const [verifiedData, setVerifiedData] = useState(null)
-
-  const companyInfo = internship || {
-    name: 'NeuralMind Technologies',
-    manager: 'Sarah Johnson',
-    department: 'Artificial Intelligence',
+  const [certDetails, setCertDetails] = useState({
+    completionPercentage: 0,
+    requiredPercentage: 80,
+    isEligible: false,
+    grade: 0,
+    verificationCode: 'IX-92-2026',
+    issueDate: 'June 20, 2026',
+    company: 'NeuralMind Technologies',
     roleTitle: 'AI Research Intern',
-  }
+    manager: 'Sarah Johnson'
+  })
 
-  // Calculate task completion percentage
-  const completedTasks = tasks ? tasks.filter(t => t.status === 'completed') : []
-  const totalTasksCount = tasks ? tasks.length : 0
-  const completionPercentage = totalTasksCount > 0 ? Math.round((completedTasks.length / totalTasksCount) * 100) : 0
-  const requiredPercentage = 80 // At least 80% tasks must be completed to unlock certificate download
+  useEffect(() => {
+    const fetchProgress = async () => {
+      try {
+        const res = await axiosInstance.get('/api/careers/certificate-progress')
+        if (res.data?.success && res.data?.data) {
+          setCertDetails(res.data.data)
+          setVerificationCode(res.data.data.verificationCode)
+        }
+      } catch (err) {
+        console.error('Failed to load certificate progress:', err)
+      }
+    }
+    fetchProgress()
+  }, [])
+
+  const completionPercentage = certDetails.completionPercentage
+  const requiredPercentage = certDetails.requiredPercentage
 
   const handleVerify = (e) => {
     e.preventDefault()
-    if (verificationCode.trim() === 'IX-92-2026') {
+    if (verificationCode.trim() === certDetails.verificationCode) {
       setVerifiedData({
         recipient: user?.fullName || 'Arjun Kapoor',
-        company: companyInfo.name,
-        track: companyInfo.roleTitle,
-        grade: '92/100',
-        date: 'June 20, 2026',
+        company: certDetails.company,
+        track: certDetails.roleTitle,
+        grade: `${certDetails.grade}/100`,
+        date: certDetails.issueDate,
         status: 'Active & Verified'
       })
       addToast('Certificate verified successfully!', 'success')
     } else {
-      addToast('Invalid credential ID. Try "IX-92-2026"', 'error')
+      addToast(`Invalid credential ID. Try "${certDetails.verificationCode}"`, 'error')
       setVerifiedData(null)
     }
   }
@@ -111,7 +128,7 @@ export default function CertificateCenterPage() {
                   <span className="text-[9px] font-mono tracking-widest text-muted">INTERNX CREDENTIAL</span>
                 </div>
                 <div className="text-right">
-                  <span className="text-[9px] font-mono block text-amber-500 font-semibold">ID: IX-92-2026</span>
+                  <span className="text-[9px] font-mono block text-amber-500 font-semibold">ID: {certDetails.verificationCode}</span>
                   <span className="text-[7px] text-muted block">VERIFIED RECORD</span>
                 </div>
               </div>
@@ -122,9 +139,9 @@ export default function CertificateCenterPage() {
                 <h3 className="font-display text-2xl font-bold text-text">{user?.fullName || 'Arjun Kapoor'}</h3>
                 <p className="text-xs text-muted max-w-md mx-auto leading-relaxed">
                   has successfully completed all milestones and sprints of the simulated professional internship as a
-                  <span className="text-text font-bold block mt-1 text-sm">{companyInfo.roleTitle}</span>
+                  <span className="text-text font-bold block mt-1 text-sm">{certDetails.roleTitle}</span>
                   at the host company
-                  <span className="text-accent font-bold block mt-1 text-sm">{companyInfo.name}</span>
+                  <span className="text-accent font-bold block mt-1 text-sm">{certDetails.company}</span>
                 </p>
               </div>
 
@@ -134,7 +151,7 @@ export default function CertificateCenterPage() {
                 {/* Date */}
                 <div className="text-left text-[9px] text-muted space-y-1">
                   <span>DATE OF ISSUE:</span>
-                  <span className="font-bold text-text block">June 20, 2026</span>
+                  <span className="font-bold text-text block">{certDetails.issueDate}</span>
                 </div>
 
                 {/* Seal Icon */}
@@ -148,7 +165,7 @@ export default function CertificateCenterPage() {
                 {/* Signature */}
                 <div className="text-right text-[9px] text-muted space-y-1">
                   <span>AUTHORIZED MANAGER:</span>
-                  <span className="font-bold text-text block font-mono italic">{companyInfo.manager}</span>
+                  <span className="font-bold text-text block font-mono italic">{certDetails.manager}</span>
                 </div>
 
               </div>

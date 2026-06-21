@@ -14,17 +14,18 @@ import {
   Tooltip,
   Cell,
 } from 'recharts'
-import { Award, AlertTriangle, ShieldCheck, HelpCircle, Code, ArrowRight } from 'lucide-react'
+import { Award, AlertTriangle, ShieldCheck, HelpCircle, Code, ArrowRight, ArrowLeft } from 'lucide-react'
 import ScoreRing from '../components/ui/ScoreRing'
 
 const defaultReport = {
   overallScore: 92,
   metrics: [
-    { name: 'Code Quality', score: 94 },
-    { name: 'Architecture', score: 88 },
-    { name: 'Security', score: 91 },
-    { name: 'Performance', score: 85 },
-    { name: 'Documentation', score: 96 }
+    { name: 'Code Quality', score: 94, reason: 'Follows consistent naming conventions and has zero syntax check warnings.' },
+    { name: 'Architecture', score: 88, reason: 'Clean layer division with dedicated router and service layers.' },
+    { name: 'Security', score: 91, reason: 'Implements JWT verification and token validations on access routes.' },
+    { name: 'Performance', score: 85, reason: 'API response times remain within the expected 200ms bounds.' },
+    { name: 'Documentation', score: 96, reason: 'Provides a detailed README with installation steps and API endpoints guide.' }
+
   ],
   feedback: 'The submission meets all core functional requirements. The semantic index optimization logic uses advanced cosine models that optimize index matching. The latency graphs show stable scaling profiles under load.',
   suggestions: [
@@ -57,8 +58,17 @@ export default function AIEvaluationPage() {
       <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-violet/5 rounded-full blur-[100px] pointer-events-none" />
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/5 rounded-full blur-[100px] pointer-events-none" />
 
-      <div className="max-w-6xl mx-auto px-4 space-y-8 relative z-10">
+      <div className="max-w-6xl mx-auto px-4 space-y-6 relative z-10">
         
+        {/* Back button */}
+        <button
+          onClick={() => navigate('task_details')}
+          className="inline-flex items-center gap-2 text-xs text-muted hover:text-text transition-colors cursor-pointer mb-2"
+        >
+          <ArrowLeft size={14} />
+          <span>Back to Task Details</span>
+        </button>
+
         {/* Title */}
         <div>
           <span className="text-xs font-semibold text-accent uppercase tracking-[0.2em] block">Evaluation Audit</span>
@@ -80,20 +90,28 @@ export default function AIEvaluationPage() {
             </div>
 
             {/* Metrics Checklist */}
-            <div className="glass border border-border rounded-2xl p-5 bg-void/25 space-y-3.5">
+            <div className="glass border border-border rounded-2xl p-5 bg-void/25 space-y-4">
               <h4 className="text-xs font-bold text-text uppercase tracking-wider">Metrics Breakdown</h4>
-              <div className="space-y-2">
+              <div className="space-y-4">
                 {report.metrics.map((m, idx) => (
-                  <div key={m.name} className="flex justify-between items-center text-xs">
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-2 rounded-full" style={{ backgroundColor: barColors[idx] }} />
-                      <span className="text-muted">{m.name}</span>
+                  <div key={m.name} className="space-y-1">
+                    <div className="flex justify-between items-center text-xs">
+                      <div className="flex items-center gap-2">
+                        <div className="h-2 w-2 rounded-full" style={{ backgroundColor: barColors[idx] }} />
+                        <span className="text-text font-semibold">{m.name}</span>
+                      </div>
+                      <span className="font-bold text-accent">{m.score}/100</span>
                     </div>
-                    <span className="font-bold text-text">{m.score}/100</span>
+                    {m.reason && (
+                      <p className="text-[10px] text-muted pl-4 italic leading-relaxed">
+                        Evidence: {m.reason}
+                      </p>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
+
           </div>
 
           {/* Right Column - Recharts Radar Chart & Logs */}

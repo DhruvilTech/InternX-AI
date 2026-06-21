@@ -16,6 +16,7 @@ import interviewRoutes from './routes/interview.routes.js';
 import collegeRoutes from './modules/college/routes/college.routes.js';
 import collegesRoutes from './routes/colleges.routes.js';
 import representativeRoutes from './routes/representative.routes.js';
+import submissionRoutes from './routes/submission.routes.js';
 import { setupSwagger } from './config/swagger.js';
 import { errorHandler } from './middlewares/error.middleware.js';
 
@@ -47,8 +48,9 @@ const limiter = rateLimit({
 app.use('/api', limiter);
 
 // Express body parsers
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ limit: '10mb', extended: true }));
+app.use(express.json({ limit: '200mb' }));
+app.use(express.urlencoded({ limit: '200mb', extended: true }));
+
 
 // Cookie Parser to parse tokens inside request cookies
 app.use(cookieParser());
@@ -86,6 +88,7 @@ app.use('/api/college', collegeRoutes);
 app.use('/api/colleges', collegesRoutes);
 app.use('/api/college-representative', representativeRoutes);
 app.use('/api/interview', interviewRoutes);
+app.use('/api/submissions', submissionRoutes);
 
 // Base application health check
 app.get('/health', (req, res) => {

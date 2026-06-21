@@ -362,6 +362,7 @@ export function NavigationProvider({ children }) {
         setSubmissions,
         evaluationReport,
         setEvaluationReport,
+        fetchStudentInternshipAndTasks,
         notifications,
         setNotifications,
         toasts,

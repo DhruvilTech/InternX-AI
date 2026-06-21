@@ -1,77 +1,290 @@
-import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { Link, FileText, CheckCircle2, ArrowLeft, ArrowRight, ShieldCheck, Terminal, UploadCloud } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { FileText, CheckCircle2, ArrowLeft, ArrowRight, ShieldCheck, Terminal, UploadCloud, AlertTriangle, Loader2 } from 'lucide-react'
 import { FaGithub } from 'react-icons/fa6'
 import { useNavigation } from '../context/NavigationContext'
+import axiosInstance from '../api/axios.js'
 
 export default function SubmissionPage() {
-  const { navigate, selectedTaskId, tasks, setEvaluationReport, addToast } = useNavigation()
+  const { navigate, selectedTaskId, tasks, setEvaluationReport, fetchStudentInternshipAndTasks, addToast } = useNavigation()
   
   const [githubUrl, setGithubUrl] = useState('')
-  const [driveUrl, setDriveUrl] = useState('')
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [fileName, setFileName] = useState('')
   
-  const [uploading, setUploading] = useState(false)
-  const [uploadProgress, setUploadProgress] = useState(0)
-  const [uploadStep, setUploadStep] = useState('')
+  // Polling & progress state
+  const [polling, setPolling] = useState(false)
+  const [progress, setProgress] = useState(10)
+  const [status, setStatus] = useState('Submitted')
+  const [errorDetails, setErrorDetails] = useState('')
+  const [hasFailed, setHasFailed] = useState(false)
   const [submitted, setSubmitted] = useState(false)
+  const [currentSubmission, setCurrentSubmission] = useState(null)
 
   const activeTask = tasks.find(t => t.id === selectedTaskId) || tasks[0]
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    if (!githubUrl && !driveUrl) {
-      addToast('Please provide a GitHub URL, Google Drive link, or upload a ZIP file.', 'error')
-      return
+  // Polling interval reference
+  const pollingIntervalRef = useRef(null)
+  const terminalEndRef = useRef(null)
+
+  // Clear polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current)
+      }
+    }
+  }, [])
+
+  // Auto-scroll logs terminal to bottom
+  useEffect(() => {
+    if (terminalEndRef.current) {
+      terminalEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    }
+  }, [status, progress, hasFailed])
+
+  const validateInputs = () => {
+    if (!githubUrl && !selectedFile) {
+      addToast('Please upload a ZIP file or provide a GitHub repository URL.', 'error')
+      return false
     }
 
-    setUploading(true)
-    setUploadProgress(0)
-    setUploadStep('Initiating secure file stream...')
+    if (githubUrl) {
+      const lowerUrl = githubUrl.toLowerCase()
+      const blockedKeywords = ['youtube.com', 'youtu.be', 'drive.google.com', 'linkedin.com', 'portfolio']
+      const isBlocked = blockedKeywords.some(keyword => lowerUrl.includes(keyword)) || !lowerUrl.includes('github.com')
+      if (isBlocked) {
+        addToast('Invalid GitHub URL. YouTube, Google Drive, Portfolio, and other random URLs are not allowed.', 'error')
+        return false
+      }
+    }
 
-    // Simulate upload phases
-    const interval = setInterval(() => {
-      setUploadProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval)
-          setUploading(false)
-          setSubmitted(true)
-          
-          // Generate simulated report matching track
-          setEvaluationReport({
-            taskId: activeTask.id,
-            title: activeTask.title,
-            overallScore: 92,
-            metrics: [
-              { name: 'Code Quality', score: 94 },
-              { name: 'Architecture', score: 88 },
-              { name: 'Security', score: 91 },
-              { name: 'Performance', score: 85 },
-              { name: 'Documentation', score: 96 }
-            ],
-            feedback: 'The submission meets all core functional requirements. The semantic index optimization logic uses advanced cosine models that optimize index matching. The latency graphs show stable scaling profiles under load.',
-            suggestions: [
-              'Add comprehensive error catching block inside query parameters sanitizers.',
-              'Export Prometheus telemetry metrics routes.',
-              'Expand setup documentation guides.'
-            ]
-          })
+    if (selectedFile && !selectedFile.name.endsWith('.zip')) {
+      addToast('Only ZIP files are supported for Option B upload.', 'error')
+      return false
+    }
 
-          addToast('Deliverable uploaded successfully!', 'success')
-          return 100
+    return true
+  }
+
+  const startPolling = (submissionId) => {
+    setPolling(true)
+    setHasFailed(false)
+    setSubmitted(false)
+    setProgress(10)
+    setStatus('Submitted')
+    setErrorDetails('')
+
+    pollingIntervalRef.current = setInterval(async () => {
+      try {
+        const response = await axiosInstance.get(`/api/submissions/${submissionId}/progress`)
+        if (response.data?.success && response.data?.data) {
+          const { status: backendStatus, progress: backendProgress } = response.data.data
+          setStatus(backendStatus)
+          setProgress(backendProgress)
+
+          if (backendStatus === 'Completed') {
+            clearInterval(pollingIntervalRef.current)
+            pollingIntervalRef.current = null
+
+            // Retrieve final report details
+            try {
+              const reportRes = await axiosInstance.get(`/api/submissions/${submissionId}/report`)
+              if (reportRes.data?.success && reportRes.data?.data) {
+                const evalData = reportRes.data.data.evaluation
+                setEvaluationReport({
+                  taskId: activeTask.id,
+                  title: activeTask.title,
+                  overallScore: evalData.overallScore,
+                  metrics: [
+                    { name: 'Code Quality', score: evalData.codeQualityScore, reason: evalData.reasons?.codeQualityScore },
+                    { name: 'Architecture', score: evalData.architectureScore, reason: evalData.reasons?.architectureScore },
+                    { name: 'Security', score: evalData.technicalScore, reason: evalData.reasons?.technicalScore },
+                    { name: 'Performance', score: evalData.problemSolvingScore, reason: evalData.reasons?.problemSolvingScore },
+                    { name: 'Documentation', score: evalData.documentationScore, reason: evalData.reasons?.documentationScore }
+                  ],
+
+                  feedback: evalData.strengths.join('. ') + '. Weaknesses: ' + evalData.weaknesses.join('. '),
+                  suggestions: evalData.recommendations
+                })
+              }
+            } catch (reportErr) {
+              console.error('Failed to load completed evaluation report:', reportErr)
+            }
+
+            await fetchStudentInternshipAndTasks() // refresh dashboard tasks list
+            setPolling(false)
+            setSubmitted(true)
+            addToast('Deliverable audited and evaluated successfully!', 'success')
+          } else if (backendStatus === 'Failed') {
+            clearInterval(pollingIntervalRef.current)
+            pollingIntervalRef.current = null
+
+            // Find failure reason
+            let reason = 'An error occurred during evaluation. No source code detected or repository private.'
+            try {
+              // Wait 500ms to let backend update task details
+              await new Promise(resolve => setTimeout(resolve, 500))
+              const refreshedTasksRes = await axiosInstance.get('/api/tasks')
+              if (refreshedTasksRes.data?.success && refreshedTasksRes.data?.data?.tasks) {
+                const updatedTask = refreshedTasksRes.data.data.tasks.find(t => t.id === activeTask.id)
+                if (updatedTask && updatedTask.feedback) {
+                  reason = updatedTask.feedback.replace('Evaluation failed: ', '')
+                }
+              }
+            } catch (tErr) {
+              console.error('Failed to pull updated task feedback:', tErr)
+            }
+
+            setErrorDetails(reason)
+            setPolling(false)
+            setHasFailed(true)
+            addToast('Evaluation Failed: ' + reason, 'error')
+          }
         }
-        
-        const next = prev + 10
-        if (next === 30) setUploadStep('Hashing code payload...')
-        if (next === 60) setUploadStep('Running initial static syntax checks...')
-        if (next === 90) setUploadStep('Compiling compilation metrics...')
-        return next
-      })
-    }, 250)
+      } catch (err) {
+        console.error('Polling error:', err)
+      }
+    }, 1500)
+  }
+
+  const handleSubmit = (e) => {
+    e.preventDefault()
+    if (!validateInputs()) return
+
+    const processApiSubmission = async (fileData = null) => {
+      try {
+        const type = githubUrl ? 'github' : 'zip'
+        const payload = {
+          taskId: activeTask.id,
+          submissionType: type,
+          githubUrl,
+          fileData,
+          fileName
+        }
+
+        // Post to create the submission record (begins background evaluation immediately)
+        const response = await axiosInstance.post('/api/submissions/create', payload)
+
+        if (response.data?.success && response.data?.data?.submission) {
+          const submission = response.data.data.submission
+          setCurrentSubmission(submission)
+          startPolling(submission._id)
+        } else {
+          throw new Error(response.data?.message || 'Failed to initialize submission')
+        }
+      } catch (err) {
+        console.error(err)
+        addToast(err.response?.data?.message || err.message || 'Submission initialization failed.', 'error')
+      }
+    }
+
+    if (selectedFile) {
+      const reader = new FileReader()
+      reader.onload = () => {
+        const base64 = reader.result.split(',')[1]
+        processApiSubmission(base64)
+      }
+      reader.onerror = () => {
+        addToast('Failed to read uploaded ZIP file.', 'error')
+      }
+      reader.readAsDataURL(selectedFile)
+    } else {
+      processApiSubmission()
+    }
   }
 
   const handleOpenEvaluation = () => {
     navigate('evaluation')
   }
+
+  const handleZipClick = () => {
+    const input = document.createElement('input')
+    input.type = 'file'
+    input.accept = '.zip'
+    input.onchange = (e) => {
+      const file = e.target.files[0]
+      if (file) {
+        setSelectedFile(file)
+        setFileName(file.name)
+        setGithubUrl('')
+        addToast(`Selected ZIP archive: ${file.name}`, 'info')
+      }
+    }
+    input.click()
+  }
+
+  const handleReset = () => {
+    setGithubUrl('')
+    setSelectedFile(null)
+    setFileName('')
+    setPolling(false)
+    setSubmitted(false)
+    setHasFailed(false)
+  }
+
+  // Generate terminal logs dynamically based on the current status & progress
+  const getLogs = () => {
+    const logsList = []
+    const type = githubUrl ? 'github' : 'zip'
+    const payloadLabel = type === 'github' ? githubUrl : fileName
+
+    if (progress >= 10) {
+      logsList.push(`[SYSTEM] Initializing code audit pipeline for task: '${activeTask.title}'...`)
+      logsList.push(`[SYSTEM] Submission method: ${type.toUpperCase()}`)
+      logsList.push(`[SYSTEM] Content locator: ${payloadLabel}`)
+      logsList.push(`[SYSTEM] Status set to 'Submitted'. Starting extraction workers.`)
+    }
+    if (progress >= 25) {
+      if (type === 'github') {
+        logsList.push(`[WORKER] Running Repository Validation...`)
+        logsList.push(`[WORKER] Verifying repository access permissions on GitHub API...`)
+        logsList.push(`[WORKER] Public repository confirmed. Crawling commits data, contributors profile, and language weights.`)
+      } else {
+        logsList.push(`[WORKER] Running ZIP Extraction...`)
+        logsList.push(`[WORKER] Unpacking compression buffer in temporary memory sandbox...`)
+        logsList.push(`[WORKER] Extracted successfully. Scanning directory layout recursively.`)
+      }
+    }
+    if (progress >= 50) {
+      logsList.push(`[ANALYZER] Running AST Code Analysis...`)
+      logsList.push(`[ANALYZER] Mapping file layouts to directories (controllers, models, routes, middlewares, services, utils)...`)
+      logsList.push(`[ANALYZER] Parsing primary package configuration modules and code file counts...`)
+    }
+    if (progress >= 70) {
+      logsList.push(`[AI_ENGINE] Packing telemetry metadata summary context...`)
+      logsList.push(`[AI_ENGINE] Launching AI Evaluation prompt. Dispatching logical snippets to Groq Qwen-32B Endpoint...`)
+      logsList.push(`[AI_ENGINE] Assessing metrics: Code Cleanliness, REST architecture, security, documentation, and logic correctness...`)
+    }
+    if (progress >= 85) {
+      logsList.push(`[AI_ENGINE] Scorecards and logical evidence reports parsed successfully.`)
+      logsList.push(`[SKILLS] Running Skill Analysis. Comparing technologies stack with student capability profiles...`)
+      logsList.push(`[SKILLS] Updating skill index percentages: ${activeTask.requiredSkills.join(', ')}`)
+    }
+    if (progress >= 95) {
+      logsList.push(`[CAREER] Running Career Intelligence gap analysis diagnostics...`)
+      logsList.push(`[CAREER] Computing placement readiness indicator, portfolio metrics, and matching suitable job roles.`)
+    }
+    if (status === 'Completed') {
+      logsList.push(`[SYSTEM] SUCCESS: Evaluation engine pipeline finished successfully.`)
+      logsList.push(`[SYSTEM] Completed at: ${new Date().toLocaleTimeString()}`)
+    } else if (status === 'Failed') {
+      logsList.push(`[SYSTEM] FATAL ERROR: Evaluation pipeline aborted.`)
+      logsList.push(`[SYSTEM] Reason: ${errorDetails || 'No source code files detected.'}`)
+    }
+
+    return logsList
+  }
+
+  // Step-by-step progress timeline configuration
+  const steps = [
+    { label: 'Submitted', key: 'Submitted', progressThreshold: 10 },
+    { label: githubUrl ? 'Repository Validated' : 'ZIP Extracted', key: 'Validation', progressThreshold: 25 },
+    { label: 'Project Structure Analyzed', key: 'Analysis', progressThreshold: 50 },
+    { label: 'AI Evaluation Completed', key: 'AI', progressThreshold: 70 },
+    { label: 'Skill Analysis Completed', key: 'Skill', progressThreshold: 85 },
+    { label: 'Career Report Generated', key: 'Career', progressThreshold: 95 }
+  ]
 
   return (
     <div className="min-h-screen pt-24 pb-16 bg-void text-text relative overflow-hidden">
@@ -88,7 +301,28 @@ export default function SubmissionPage() {
           <span>Back to Task Details</span>
         </button>
 
-        {submitted ? (
+        {activeTask.status === 'completed' && !polling && !submitted ? (
+          <div className="glass-bright rounded-2xl border border-border p-6 sm:p-10 text-center space-y-6 glow-accent bg-void/50">
+            <div className="mx-auto w-16 h-16 bg-emerald/10 border border-emerald/20 text-emerald flex items-center justify-center rounded-full animate-pulse">
+              <CheckCircle2 size={32} />
+            </div>
+            
+            <div className="space-y-2">
+              <h3 className="font-display text-2xl font-bold text-text">Task Already Completed</h3>
+              <p className="text-xs text-muted">
+                This milestone task has been successfully audited and graded. Multiple submissions are not allowed for completed milestones.
+              </p>
+            </div>
+
+            <button
+              onClick={() => navigate('task_details')}
+              className="w-full max-w-sm py-3 bg-gradient-to-r from-accent to-violet text-white text-xs font-semibold rounded-xl hover:shadow-lg hover:shadow-accent/20 transition-all flex items-center justify-center gap-2 mx-auto cursor-pointer"
+            >
+              <ArrowLeft size={14} />
+              <span>Return to Task Details</span>
+            </button>
+          </div>
+        ) : submitted ? (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -104,20 +338,26 @@ export default function SubmissionPage() {
             </motion.div>
             
             <div className="space-y-2">
-              <h3 className="font-display text-2xl font-bold text-text">Deliverable Submitted!</h3>
+              <h3 className="font-display text-2xl font-bold text-text">Deliverable Evaluated!</h3>
               <p className="text-xs text-muted">
-                Your code is currently being audited by the InternX AI evaluation engines.
+                Your code has been successfully audited by the InternX AI evaluation engines.
               </p>
             </div>
 
             <div className="p-4 bg-void/40 border border-border rounded-xl text-xs space-y-2 max-w-sm mx-auto text-left font-mono">
               <div className="flex justify-between">
-                <span className="text-muted">Repository:</span>
-                <span className="text-text font-bold truncate max-w-[200px]">{githubUrl || 'zip_archive.zip'}</span>
+                <span className="text-muted">Submission Type:</span>
+                <span className="text-text font-bold">
+                  {githubUrl ? 'GitHub Repository' : 'ZIP Archive'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted">Submitted Content:</span>
+                <span className="text-text font-bold truncate max-w-[200px]">{githubUrl || fileName}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted">Status:</span>
-                <span className="text-emerald font-bold">Auditing Complete</span>
+                <span className="text-emerald font-bold">Completed</span>
               </div>
             </div>
 
@@ -129,23 +369,103 @@ export default function SubmissionPage() {
               <ArrowRight size={14} />
             </button>
           </motion.div>
-        ) : uploading ? (
-          <div className="glass-bright rounded-2xl border border-border p-6 sm:p-10 space-y-6 glow-accent bg-void/50">
-            <div className="flex justify-between items-center text-xs">
-              <span className="font-semibold text-accent uppercase tracking-wider">{uploadStep}</span>
-              <span className="font-mono font-bold text-accent">{uploadProgress}%</span>
-            </div>
-            
-            <div className="h-2 w-full bg-surface-muted rounded-full overflow-hidden border border-border">
-              <div className="h-full bg-gradient-to-r from-accent to-violet" style={{ width: `${uploadProgress}%` }} />
+        ) : polling ? (
+          <div className="glass-bright rounded-2xl border border-border p-6 sm:p-10 space-y-8 glow-accent bg-void/50">
+            {/* Header */}
+            <div>
+              <span className="text-[10px] text-accent uppercase tracking-wider font-semibold">AI Evaluation Pipeline</span>
+              <h3 className="font-display text-lg font-bold text-text mt-0.5">Auditing: {activeTask.title}</h3>
             </div>
 
-            <div className="bg-void/60 border border-border rounded-xl p-4 font-mono text-[9px] text-muted space-y-1.5 h-32 overflow-y-auto">
-              <div>FILE_STREAM: initialized</div>
-              {uploadProgress >= 30 && <div>HASH_CHECK: md5 sum matches</div>}
-              {uploadProgress >= 60 && <div>STATIC_ANALYSIS: running (no blocker syntax errors detected)</div>}
-              {uploadProgress >= 90 && <div>COMPILING: metrics compiled successfully</div>}
+            {/* Progress metrics */}
+            <div className="space-y-2">
+              <div className="flex justify-between items-center text-xs">
+                <span className="font-semibold text-accent uppercase tracking-wider flex items-center gap-1.5">
+                  <Loader2 size={13} className="animate-spin text-accent" />
+                  <span>Stage: {status}</span>
+                </span>
+                <span className="font-mono font-bold text-accent">{progress}%</span>
+              </div>
+              
+              <div className="h-2 w-full bg-surface-muted rounded-full overflow-hidden border border-border">
+                <div 
+                  className="h-full bg-gradient-to-r from-accent to-violet transition-all duration-500 ease-out" 
+                  style={{ width: `${progress}%` }} 
+                />
+              </div>
             </div>
+
+            {/* Timeline */}
+            <div className="space-y-3.5 border-t border-border pt-6">
+              <h4 className="text-[11px] font-semibold text-muted uppercase tracking-wider">Evaluation Steps</h4>
+              <div className="space-y-3 pl-1">
+                {steps.map((step) => {
+                  const isDone = progress >= step.progressThreshold
+                  const isActive = status === step.key || (progress >= step.progressThreshold && progress < (step.progressThreshold + 15))
+                  
+                  return (
+                    <div key={step.label} className="flex items-center gap-3 text-xs">
+                      {isDone ? (
+                        <CheckCircle2 size={14} className="text-emerald shrink-0" />
+                      ) : isActive ? (
+                        <div className="h-3.5 w-3.5 rounded-full border-2 border-accent border-t-transparent animate-spin shrink-0" />
+                      ) : (
+                        <div className="h-3.5 w-3.5 rounded-full border border-border bg-void shrink-0" />
+                      )}
+                      <span className={`${isDone ? 'text-text font-medium' : isActive ? 'text-accent font-semibold' : 'text-muted'}`}>
+                        {step.label}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Terminal logs console */}
+            <div className="space-y-2">
+              <span className="text-[11px] font-semibold text-muted uppercase tracking-wider block">Live Audit Logs</span>
+              <div className="bg-void/80 border border-border rounded-xl p-4 font-mono text-[10px] text-muted space-y-1.5 h-44 overflow-y-auto shadow-inner">
+                {getLogs().map((log, idx) => {
+                  let logColor = 'text-muted'
+                  if (log.includes('[SYSTEM] SUCCESS')) logColor = 'text-emerald'
+                  else if (log.includes('[SYSTEM] FATAL') || log.includes('[SYSTEM] Reason')) logColor = 'text-rose-400'
+                  else if (log.includes('[AI_ENGINE]')) logColor = 'text-violet-400'
+                  
+                  return (
+                    <div key={idx} className={`${logColor} leading-relaxed break-all`}>
+                      {log}
+                    </div>
+                  )
+                })}
+                <div ref={terminalEndRef} />
+              </div>
+            </div>
+          </div>
+        ) : window.location.hash.includes('failed') || hasFailed ? (
+          <div className="glass-bright rounded-2xl border border-border p-6 sm:p-10 space-y-6 glow-accent bg-void/50 text-center">
+            <div className="mx-auto w-16 h-16 bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center rounded-full">
+              <AlertTriangle size={32} />
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="font-display text-2xl font-bold text-text">Evaluation Failed</h3>
+              <p className="text-xs text-muted">
+                The code review engine could not complete verification.
+              </p>
+            </div>
+
+            <div className="p-4 bg-void/40 border border-border rounded-xl text-xs max-w-sm mx-auto text-left font-mono text-rose-400">
+              <div className="font-semibold mb-1">Feedback/Logs:</div>
+              <p className="leading-relaxed text-[11px]">{errorDetails || 'No source code detected or repository configuration invalid.'}</p>
+            </div>
+
+            <button
+              onClick={handleReset}
+              className="w-full max-w-sm py-3 bg-gradient-to-r from-accent to-violet text-white text-xs font-semibold rounded-xl hover:shadow-lg hover:shadow-accent/20 transition-all flex items-center justify-center gap-2 mx-auto cursor-pointer"
+            >
+              <span>Try Submission Again</span>
+              <ArrowRight size={14} />
+            </button>
           </div>
         ) : (
           <form onSubmit={handleSubmit} className="glass-bright rounded-2xl border border-border p-6 sm:p-10 space-y-6 glow-accent bg-void/50">
@@ -155,62 +475,68 @@ export default function SubmissionPage() {
             </div>
 
             <div className="space-y-4">
-              {/* GitHub Link */}
+              {/* Option A: GitHub Link */}
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block">GitHub Repository URL</label>
+                <div className="flex justify-between items-center">
+                  <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block">Option A: GitHub Repository URL</label>
+                  <span className="text-[9px] text-accent font-medium uppercase">Mandatory if no ZIP</span>
+                </div>
                 <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-border bg-void/50 focus-within:border-accent transition-colors">
                   <FaGithub size={14} className="text-muted" />
                   <input
                     type="url"
                     placeholder="https://github.com/yourusername/reponame"
                     value={githubUrl}
-                    onChange={(e) => setGithubUrl(e.target.value)}
+                    onChange={(e) => {
+                      setGithubUrl(e.target.value)
+                      if (e.target.value) {
+                        setSelectedFile(null)
+                        setFileName('')
+                      }
+                    }}
                     className="w-full bg-transparent text-xs text-text outline-none border-none"
                   />
                 </div>
               </div>
 
-              {/* Shared Doc Link */}
+              {/* OR Divider */}
+              <div className="relative flex py-2 items-center">
+                <div className="flex-grow border-t border-border/60"></div>
+                <span className="flex-shrink mx-4 text-[10px] text-muted font-bold uppercase tracking-widest">OR</span>
+                <div className="flex-grow border-t border-border/60"></div>
+              </div>
+
+              {/* Option B: Zip Upload */}
               <div className="space-y-1.5">
-                <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block">Google Drive or Doc Link</label>
-                <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-border bg-void/50 focus-within:border-accent transition-colors">
-                  <Link size={14} className="text-muted" />
-                  <input
-                    type="url"
-                    placeholder="https://drive.google.com/drive/folders/..."
-                    value={driveUrl}
-                    onChange={(e) => setDriveUrl(e.target.value)}
-                    className="w-full bg-transparent text-xs text-text outline-none border-none"
-                  />
+                <div className="flex justify-between items-center">
+                  <label className="text-[11px] font-semibold text-muted uppercase tracking-wider block">Option B: Upload ZIP Archive</label>
+                  <span className="text-[9px] text-accent font-medium uppercase">Mandatory if no GitHub URL</span>
                 </div>
-              </div>
-
-              {/* Zip/PDF Upload simulator */}
-              <div className="grid grid-cols-2 gap-4">
                 <div
-                  onClick={() => {
-                    setGithubUrl('https://github.com/demo/project-archive')
-                    addToast('ZIP Archive simulated selection', 'info')
-                  }}
+                  onClick={handleZipClick}
                   className="border border-dashed border-border hover:border-accent/40 bg-void/30 p-5 rounded-xl text-center space-y-2 cursor-pointer group transition-colors"
                 >
                   <UploadCloud size={20} className="text-muted group-hover:text-accent mx-auto transition-colors" />
                   <span className="text-[10px] text-text font-bold block">Upload ZIP Archive</span>
                   <span className="text-[8px] text-muted block">Max file size: 50MB</span>
                 </div>
-
-                <div
-                  onClick={() => {
-                    setDriveUrl('https://drive.google.com/drive/demo-pdf')
-                    addToast('PDF documentation simulated selection', 'info')
-                  }}
-                  className="border border-dashed border-border hover:border-accent/40 bg-void/30 p-5 rounded-xl text-center space-y-2 cursor-pointer group transition-colors"
-                >
-                  <FileText size={20} className="text-muted group-hover:text-accent mx-auto transition-colors" />
-                  <span className="text-[10px] text-text font-bold block">Upload PDF Report</span>
-                  <span className="text-[8px] text-muted block">Max file size: 10MB</span>
-                </div>
               </div>
+
+              {selectedFile && (
+                <div className="p-3 bg-accent/10 border border-accent/20 rounded-xl text-xs flex justify-between items-center">
+                  <div>
+                    <span className="font-semibold text-text block">Selected ZIP Archive:</span>
+                    <span className="text-[10px] text-muted font-mono">{fileName} ({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedFile(null); setFileName(''); }}
+                    className="text-[10px] text-rose-400 hover:underline cursor-pointer"
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
             </div>
 
             <button
