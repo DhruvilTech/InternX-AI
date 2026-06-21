@@ -1,11 +1,17 @@
 import { configureStore } from '@reduxjs/toolkit';
 import githubReducer from './slices/githubSlice.js';
 import collegeReducer from './slices/collegeSlice.js';
+import recruiterReducer from './slices/recruiterSlice.js';
+import offersReducer from './slices/offersSlice.js';
+import notificationsReducer from './slices/notificationsSlice.js';
 
 export const store = configureStore({
   reducer: {
     github: githubReducer,
     college: collegeReducer,
+    recruiter: recruiterReducer,
+    offers: offersReducer,
+    notifications: notificationsReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

@@ -54,6 +54,8 @@ import CertificateCenterPage from './pages/CertificateCenterPage';
 import ProfilePage from './pages/ProfilePage';
 import CandidateProfilePage from './pages/CandidateProfilePage';
 import NotificationsPage from './pages/NotificationsPage';
+import StudentNotificationsPage from './pages/StudentNotificationsPage';
+import StudentOffersPage from './pages/StudentOffersPage';
 import SettingsPage from './pages/SettingsPage';
 import { Page404 } from './pages/ErrorPages';
 
@@ -73,6 +75,15 @@ import PlacementReadinessPage from './pages/PlacementReadinessPage';
 import CertificateManagementPage from './pages/CertificateManagementPage';
 import ReportsPage from './pages/ReportsPage';
 
+// Recruiter Portal Pages
+import StudentDiscoveryPage from './pages/StudentDiscoveryPage';
+import StudentDetailPage from './pages/StudentDetailPage';
+import ShortlistedCandidatesPage from './pages/ShortlistedCandidatesPage';
+import HiringPipelinePage from './pages/HiringPipelinePage';
+import RecruiterAnalyticsPage from './pages/RecruiterAnalyticsPage';
+import RecruiterProfilePage from './pages/RecruiterProfilePage';
+import RecruiterDashboardPage from './pages/RecruiterDashboardPage';
+
 export default function App() {
   useLenis();
   const location = useLocation();
@@ -80,7 +91,7 @@ export default function App() {
   // Hide footer on dashboard views or active student program modules or auth views
   const isDashboardView =
     location.pathname.includes('/dashboard') ||
-    ['/company', '/kanban', '/task_details', '/submit_task', '/evaluation', '/feedback_center', '/skill_gap', '/analytics', '/career_coach', '/interview_simulator', '/interview', '/candidate_profile', '/settings', '/notifications', '/login', '/register', '/forgot-password', '/reset-password', '/recruiter-login', '/admin/user'].some((path) =>
+    ['/company', '/kanban', '/task_details', '/submit_task', '/evaluation', '/feedback_center', '/skill_gap', '/analytics', '/career_coach', '/interview_simulator', '/interview', '/candidate_profile', '/settings', '/notifications', '/login', '/register', '/forgot-password', '/reset-password', '/recruiter-login', '/admin/user', '/recruiter'].some((path) =>
       location.pathname.startsWith(path)
     );
 
@@ -151,6 +162,8 @@ export default function App() {
                   <Route path="/interview/report/:id" element={<InterviewReportPage />} />
                   <Route path="/certificates" element={<CertificateCenterPage />} />
                   <Route path="/profile" element={<ProfilePage />} />
+                  <Route path="/student/notifications" element={<StudentNotificationsPage />} />
+                  <Route path="/student/offers" element={<StudentOffersPage />} />
                   
                   {/* GitHub Module Views */}
                   <Route path="/dashboard/github" element={<GitHubConnectPage />} />
@@ -174,7 +187,13 @@ export default function App() {
 
                 {/* Recruiter specific views */}
                 <Route element={<RoleRoute allowedRoles={['recruiter']} />}>
-                  <Route path="/recruiter/dashboard" element={<RecruiterDashboard />} />
+                  <Route path="/recruiter/dashboard" element={<RecruiterDashboardPage />} />
+                  <Route path="/recruiter/students" element={<StudentDiscoveryPage />} />
+                  <Route path="/recruiter/students/:id" element={<StudentDetailPage />} />
+                  <Route path="/recruiter/shortlisted" element={<ShortlistedCandidatesPage />} />
+                  <Route path="/recruiter/pipeline" element={<HiringPipelinePage />} />
+                  <Route path="/recruiter/analytics" element={<RecruiterAnalyticsPage />} />
+                  <Route path="/recruiter/profile" element={<RecruiterProfilePage />} />
                   <Route path="/candidate_profile" element={<CandidateProfilePage />} />
                 </Route>
 

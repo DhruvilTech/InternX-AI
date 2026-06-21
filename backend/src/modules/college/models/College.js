@@ -4,8 +4,10 @@ const collegeSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, 'College name is required'],
-      unique: true,
+      trim: true,
+    },
+    collegeName: {
+      type: String,
       trim: true,
     },
     shortName: {
@@ -14,12 +16,10 @@ const collegeSchema = new mongoose.Schema(
     },
     city: {
       type: String,
-      required: [true, 'City is required'],
       trim: true,
     },
     state: {
       type: String,
-      required: [true, 'State is required'],
       trim: true,
     },
     country: {

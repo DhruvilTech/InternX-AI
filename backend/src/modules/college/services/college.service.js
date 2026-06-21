@@ -17,7 +17,8 @@ const DEFAULT_HASHED_PASSWORD = '$2a$12$R.S/O57g.1w2G4m5k2pPkuGj5B79y5B1X.eN7y3K
  * Seeding helper to generate a realistic cohort of students for the college if 0 exist.
  */
 export const seedDemoCohortIfEmpty = async (college) => {
-  const count = await Student.countDocuments({ collegeName: college.collegeName });
+  const collegeName = college.name || college.collegeName || college.get('collegeName') || '';
+  const count = await Student.countDocuments({ collegeName });
   if (count > 0) return; // Cohort already exists
 
   // Ensure we have some CareerPaths in the database to link students to.
@@ -69,88 +70,108 @@ export const seedDemoCohortIfEmpty = async (college) => {
 
   let studentIndex = 0;
   for (const n of names) {
-    // 1. Create User
-    const user = await User.create({
-      fullName: `${n.first} ${n.last}`,
-      email: n.email,
-      password: DEFAULT_HASHED_PASSWORD,
-      role: 'student',
-      avatar: n.avatar,
-      isVerified: true,
-      profileCompleted: true,
-      githubId: (100000 + studentIndex).toString(),
-    });
+    const suffix = (college.collegeCode || college.shortName || 'IX').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const uniqueEmail = n.email.replace('@', `.${suffix}@`);
 
-    // 2. Create Student
-    const student = await Student.create({
-      userId: user._id,
-      fullName: user.fullName,
-      collegeName: college.collegeName,
-      course: n.course,
-      year: n.year,
-      skills: ['React', 'Node.js', 'Express', 'MongoDB', 'Python', 'Tailwind CSS'].slice(0, 3 + (studentIndex % 4)),
-    });
+    // 1. Find or Create User
+    let user = await User.findOne({ email: uniqueEmail });
+    if (!user) {
+      user = await User.create({
+        fullName: `${n.first} ${n.last}`,
+        email: uniqueEmail,
+        password: DEFAULT_HASHED_PASSWORD,
+        role: 'student',
+        avatar: n.avatar,
+        isVerified: true,
+        profileCompleted: true,
+        githubId: `${(100000 + studentIndex)}${suffix}`,
+      });
+    }
 
-    // 3. Create StudentCareer
+    // 2. Find or Create Student
+    let student = await Student.findOne({ userId: user._id });
+    if (!student) {
+      student = await Student.create({
+        userId: user._id,
+        fullName: user.fullName,
+        collegeName,
+        course: n.course,
+        year: n.year,
+        skills: ['React', 'Node.js', 'Express', 'MongoDB', 'Python', 'Tailwind CSS'].slice(0, 3 + (studentIndex % 4)),
+      });
+    }
+
+    // 3. Find or Create StudentCareer
     const randomCareer = careers[studentIndex % careers.length];
     const completionPercent = n.prRate;
     const status = completionPercent >= 100 ? 'completed' : 'in-progress';
-    const studentCareer = await StudentCareer.create({
-      studentId: user._id,
-      careerId: randomCareer._id,
-      completionPercentage: completionPercent,
-      currentLevel: completionPercent > 80 ? 'Advanced' : completionPercent > 40 ? 'Intermediate' : 'Beginner',
-      status,
-    });
-
-    // Link student career to User selectedCareer virtual reference manually if needed (already populated dynamically)
-
-    // 4. Create GithubProfile
-    const gitProfile = await GithubProfile.create({
-      userId: user._id,
-      githubId: user.githubId,
-      username: n.gitUser,
-      displayName: user.fullName,
-      avatar: n.avatar,
-      profileUrl: `https://github.com/${n.gitUser}`,
-      email: user.email,
-      publicRepos: 12 + (studentIndex * 3),
-      followers: 45 + (studentIndex * 7),
-      following: 30 + (studentIndex * 4),
-      lastSync: new Date(),
-      connectedAt: new Date(),
-    });
-
-    // 5. Create GithubContribution
-    await GithubContribution.create({
-      userId: user._id,
-      repoId: `repo-${studentIndex}`,
-      commitCount: 50 + (studentIndex * 15),
-      pullRequestCount: 5 + (studentIndex * 2),
-      issueCount: 2 + (studentIndex),
-      contributionScore: 100 + (studentIndex * 30),
-      languageBreakdown: {
-        JavaScript: 60,
-        HTML: 15,
-        CSS: 10,
-        Python: 15
-      }
-    });
-
-    // 6. Create Certificate if progress is high or mock-ready
-    if (completionPercent >= 85) {
-      await Certificate.create({
+    let studentCareer = await StudentCareer.findOne({ studentId: user._id });
+    if (!studentCareer) {
+      studentCareer = await StudentCareer.create({
         studentId: user._id,
-        collegeId: college._id,
         careerId: randomCareer._id,
-        certificateId: `IX-${n.prRate}-${2026 + studentIndex}`,
-        recipientName: user.fullName,
-        companyName: 'NeuralMind Technologies',
-        roleTitle: `${randomCareer.title} Intern`,
-        grade: completionPercent,
-        issueDate: new Date(Date.now() - (studentIndex * 86400000 * 5)),
-        status: 'Active & Verified',
+        completionPercentage: completionPercent,
+        currentLevel: completionPercent > 80 ? 'Advanced' : completionPercent > 40 ? 'Intermediate' : 'Beginner',
+        status,
       });
+    }
+
+    // 4. Find or Create GithubProfile
+    let gitProfile = await GithubProfile.findOne({ userId: user._id });
+    if (!gitProfile) {
+      gitProfile = await GithubProfile.create({
+        userId: user._id,
+        githubId: user.githubId,
+        username: n.gitUser,
+        displayName: user.fullName,
+        avatar: n.avatar,
+        profileUrl: `https://github.com/${n.gitUser}`,
+        email: user.email,
+        publicRepos: 12 + (studentIndex * 3),
+        followers: 45 + (studentIndex * 7),
+        following: 30 + (studentIndex * 4),
+        lastSync: new Date(),
+        connectedAt: new Date(),
+      });
+    }
+
+    // 5. Find or Create GithubContribution
+    let gitContrib = await GithubContribution.findOne({ userId: user._id });
+    if (!gitContrib) {
+      await GithubContribution.create({
+        userId: user._id,
+        repoId: `repo-${studentIndex}`,
+        commitCount: 50 + (studentIndex * 15),
+        pullRequestCount: 5 + (studentIndex * 2),
+        issueCount: 2 + (studentIndex),
+        contributionScore: 100 + (studentIndex * 30),
+        languageBreakdown: {
+          JavaScript: 60,
+          HTML: 15,
+          CSS: 10,
+          Python: 15
+        }
+      });
+    }
+
+    // 6. Find or Create Certificate if progress is high or mock-ready
+    if (completionPercent >= 85) {
+      const certId = `IX-${n.prRate}-${2026 + studentIndex}-${suffix}`;
+      let cert = await Certificate.findOne({ certificateId: certId });
+      if (!cert) {
+        await Certificate.create({
+          studentId: user._id,
+          collegeId: college._id,
+          careerId: randomCareer._id,
+          certificateId: certId,
+          recipientName: user.fullName,
+          companyName: 'NeuralMind Technologies',
+          roleTitle: `${randomCareer.title} Intern`,
+          grade: completionPercent,
+          issueDate: new Date(Date.now() - (studentIndex * 86400000 * 5)),
+          status: 'Active & Verified',
+        });
+      }
     }
 
     studentIndex++;
@@ -159,7 +180,7 @@ export const seedDemoCohortIfEmpty = async (college) => {
   // Update department student counts
   for (const dept of createdDepts) {
     const studentCount = await Student.countDocuments({
-      collegeName: college.collegeName,
+      collegeName,
       course: dept.departmentName
     });
     dept.studentCount = studentCount;
@@ -179,8 +200,10 @@ export const refreshAnalytics = async (collegeId) => {
   const college = await College.findById(collegeId);
   if (!college) return null;
 
+  const collegeName = college.name || college.collegeName || college.get('collegeName') || '';
+
   // Retrieve students associated with this college
-  const students = await Student.find({ collegeName: college.collegeName });
+  const students = await Student.find({ collegeName });
   const studentUserIds = students.map(s => s.userId);
 
   const totalStudents = students.length;
@@ -266,8 +289,10 @@ export const queryStudents = async (college, queryParams) => {
     githubConnected = '',
   } = queryParams;
 
+  const collegeName = college.name || college.collegeName || college.get('collegeName') || '';
+
   // Build filter query for Students
-  const filterQuery = { collegeName: college.collegeName };
+  const filterQuery = { collegeName };
 
   if (search) {
     filterQuery.fullName = { $regex: search, $options: 'i' };
@@ -402,7 +427,8 @@ export const queryStudents = async (college, queryParams) => {
  * Resolves a detailed student dashboard profile.
  */
 export const getStudentDetails = async (college, studentId) => {
-  const student = await Student.findOne({ _id: studentId, collegeName: college.collegeName }).populate('userId');
+  const collegeName = college.name || college.collegeName || college.get('collegeName') || '';
+  const student = await Student.findOne({ _id: studentId, collegeName }).populate('userId');
   if (!student) {
     throw new Error('Student record not found in college registry.');
   }
@@ -464,7 +490,8 @@ export const getStudentDetails = async (college, studentId) => {
 export const getInternshipAnalytics = async (college) => {
   await seedDemoCohortIfEmpty(college);
 
-  const students = await Student.find({ collegeName: college.collegeName });
+  const collegeName = college.name || college.collegeName || college.get('collegeName') || '';
+  const students = await Student.find({ collegeName });
   const studentUserIds = students.map(s => s.userId);
 
   const careers = await StudentCareer.find({ studentId: { $in: studentUserIds } });
@@ -527,7 +554,8 @@ export const getInternshipAnalytics = async (college) => {
 export const getSkillAnalytics = async (college) => {
   await seedDemoCohortIfEmpty(college);
 
-  const students = await Student.find({ collegeName: college.collegeName });
+  const collegeName = college.name || college.collegeName || college.get('collegeName') || '';
+  const students = await Student.find({ collegeName });
   const skillsCount = {};
 
   students.forEach(s => {
@@ -614,7 +642,8 @@ export const getCertificateStatistics = async (college) => {
 export const getPlacementReadiness = async (college) => {
   await seedDemoCohortIfEmpty(college);
 
-  const students = await Student.find({ collegeName: college.collegeName }).populate('userId');
+  const collegeName = college.name || college.collegeName || college.get('collegeName') || '';
+  const students = await Student.find({ collegeName }).populate('userId');
   const studentUserIds = students.map(s => s.userId?._id).filter(id => !!id);
 
   const careers = await StudentCareer.find({ studentId: { $in: studentUserIds } }).populate('careerId');
@@ -676,4 +705,112 @@ export const compileReportData = async (college, type) => {
   }
 
   throw new Error('Unsupported report compilation type.');
+};
+
+/**
+ * Compiles a full unified dashboard metrics package matching the UI structure.
+ */
+export const getDashboardData = async (college) => {
+  // 1. Ensure cohort is seeded if empty
+  await seedDemoCohortIfEmpty(college);
+
+  const collegeName = college.name || college.collegeName || college.get('collegeName') || '';
+
+  // 2. Fetch all student records for this college
+  const students = await Student.find({ collegeName }).populate('userId');
+  const studentUserIds = students.map(s => s.userId?._id).filter(id => !!id);
+
+  // 3. Fetch careers, certificates, and github profiles for these students
+  const studentCareers = await StudentCareer.find({ studentId: { $in: studentUserIds } }).populate('careerId');
+  const githubProfiles = await GithubProfile.find({ userId: { $in: studentUserIds } });
+
+  // 4. Calculate KPI Cards
+  const totalStudents = students.length;
+  let activeInternships = 0;
+  let completedInternships = 0;
+  let scoreSum = 0;
+
+  studentCareers.forEach(sc => {
+    if (sc.status === 'completed' || sc.completionPercentage === 100) {
+      completedInternships++;
+    } else {
+      activeInternships++;
+    }
+    scoreSum += sc.completionPercentage || 0;
+  });
+
+  const avgInternshipScore = studentCareers.length > 0 ? Math.round(scoreSum / studentCareers.length) : 0;
+  const githubConnectedCount = githubProfiles.length;
+  const placementReadiness = totalStudents > 0
+    ? Math.min(100, Math.round(avgInternshipScore * 0.8 + (githubConnectedCount / totalStudents) * 20))
+    : 0;
+
+  // 5. Placement Readiness Engine calculations for each student (for topPerformers and charts)
+  const studentMetrics = students.map(student => {
+    if (!student.userId) return null;
+    const career = studentCareers.find(c => c.studentId.toString() === student.userId._id.toString());
+    const github = githubProfiles.find(g => g.userId.toString() === student.userId._id.toString());
+    const hasGithub = !!github;
+    const progress = career?.completionPercentage || 0;
+    const readinessIndex = Math.min(100, Math.round(progress * 0.8 + (hasGithub ? 20 : 0)));
+
+    return {
+      _id: student._id,
+      fullName: student.fullName,
+      department: student.course || 'Computer Science',
+      year: student.year || 3,
+      careerPath: career?.careerId?.title || 'AI Engineer',
+      internshipProgress: progress,
+      averageTaskScore: progress,
+      readinessIndex,
+      avgScore: progress,
+    };
+  }).filter(Boolean);
+
+  // 6. Student Analytics Distributions for charts
+  const departmentStats = {};
+  const yearStats = {};
+  const careerPathStats = {};
+
+  studentMetrics.forEach(sm => {
+    departmentStats[sm.department] = (departmentStats[sm.department] || 0) + 1;
+    yearStats[`Year ${sm.year}`] = (yearStats[`Year ${sm.year}`] || 0) + 1;
+    careerPathStats[sm.careerPath] = (careerPathStats[sm.careerPath] || 0) + 1;
+  });
+
+  const studentsByDepartment = Object.keys(departmentStats).map(name => ({ name, count: departmentStats[name] }));
+  const studentsByYear = Object.keys(yearStats).map(name => ({ name, count: yearStats[name] }));
+  const studentsByCareerPath = Object.keys(careerPathStats).map(name => ({ name, value: careerPathStats[name] }));
+
+  // 7. Top Performers List (sort by readinessIndex)
+  const topPerformers = [...studentMetrics]
+    .sort((a, b) => b.readinessIndex - a.readinessIndex)
+    .slice(0, 5);
+
+  return {
+    college: {
+      name: college.name || college.collegeName || college.get('collegeName') || '',
+      shortName: college.shortName || college.name || college.collegeName || '',
+      code: college.collegeCode || 'N/A',
+      verified: college.verified,
+    },
+    kpis: {
+      totalStudents,
+      activeInternships,
+      completedInternships,
+      avgInternshipScore,
+      placementReadiness,
+    },
+    charts: {
+      studentsByDepartment,
+      studentsByYear,
+      studentsByCareerPath,
+      internshipStats: [
+        { status: 'Started', count: studentCareers.filter(c => c.completionPercentage > 0 && c.completionPercentage <= 25).length },
+        { status: 'In Progress', count: studentCareers.filter(c => c.completionPercentage > 25 && c.completionPercentage < 100).length },
+        { status: 'Completed', count: studentCareers.filter(c => c.completionPercentage === 100).length },
+      ],
+    },
+    topPerformers,
+  };
 };
