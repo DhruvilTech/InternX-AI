@@ -14,6 +14,7 @@ import FeedbackReport from '../models/FeedbackReport.js';
 import SkillGapReport from '../models/SkillGapReport.js';
 import CareerReport from '../models/CareerReport.js';
 import axios from 'axios';
+import { callGroq } from './groq.service.js';
 
 const CORE_TECH_WHITELIST = new Set([
   'javascript', 'typescript', 'react', 'vue', 'angular', 'next.js', 'nuxt.js', 'svelte',
@@ -175,6 +176,22 @@ export const getFallbackHeuristicData = (
   };
 };
 
+const mapToValidCareerLevel = (level) => {
+  const allowed = ['Beginner', 'Intermediate', 'Job Ready', 'Industry Ready'];
+  if (!level) return 'Beginner';
+  const clean = level.trim();
+  if (allowed.includes(clean)) return clean;
+  
+  // Normalization mapping
+  const lower = clean.toLowerCase();
+  if (lower.includes('begin') || lower.includes('entry') || lower.includes('junior')) return 'Beginner';
+  if (lower.includes('inter') || lower.includes('mid')) return 'Intermediate';
+  if (lower.includes('job') || lower.includes('ready')) return 'Job Ready';
+  if (lower.includes('industry') || lower.includes('senior') || lower.includes('expert')) return 'Industry Ready';
+  
+  return 'Beginner'; // Safe fallback
+};
+
 /**
  * Interfaces with Groq completions endpoint to generate a report.
  */
@@ -207,6 +224,7 @@ You must return a raw JSON object matching the following structure:
   "careerAdvice": String
 }
 CRITICAL CRITERIA:
+- "careerLevel" must strictly be one of: "Beginner", "Intermediate", "Job Ready", "Industry Ready". Do not use any other values.
 - Do not mention LangChain, Prometheus, or PyTorch unless they exist in missingSkills or demonstratedSkills.
 - Skill gaps/weaknesses should focus strictly on the missing skills: ${JSON.stringify(missingSkills)}.
 - The recommended roles and certifications must match the career path: ${careerPath}.
@@ -225,31 +243,17 @@ Demonstrated Skills: ${JSON.stringify(demonstratedSkills)}
 Missing Required Skills: ${JSON.stringify(missingSkills)}
   `;
 
-  const response = await axios.post(
-    'https://api.groq.com/openai/v1/chat/completions',
-    {
-      model: 'qwen-2.5-coder-32b',
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ],
-      temperature: 0.3
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      timeout: 15000
-    }
-  );
+  const parsedJson = await callGroq({
+    model: 'qwen/qwen3-32b',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt }
+    ],
+    temperature: 0.3,
+    jsonMode: true
+  });
 
-  let data = response.data.choices[0].message.content.trim();
-  // Strip any markdown code block wrapper if present
-  if (data.startsWith('```')) {
-    data = data.replace(/^```json\s*/, '').replace(/```$/, '').trim();
-  }
-  return JSON.parse(data);
+  return parsedJson;
 };
 
 /**
@@ -485,7 +489,7 @@ export const generateCareerReports = async (studentId) => {
     readinessScore,
     portfolioScore,
     githubScore,
-    careerLevel: reportData.careerLevel,
+    careerLevel: mapToValidCareerLevel(reportData.careerLevel),
     recommendedRoles: reportData.recommendedRoles,
     recommendedSkills: reportData.recommendedSkills || [],
     recommendedProjects: reportData.recommendedProjects || [],

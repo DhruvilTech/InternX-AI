@@ -56,6 +56,7 @@ const InterviewDashboardPage = lazy(() => import('./pages/InterviewDashboardPage
 const LiveInterviewPage = lazy(() => import('./pages/LiveInterviewPage'));
 const InterviewReportPage = lazy(() => import('./pages/InterviewReportPage'));
 const CertificateCenterPage = lazy(() => import('./pages/CertificateCenterPage'));
+const VerifyCertificatePage = lazy(() => import('./pages/VerifyCertificatePage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
 const StudentNotificationsPage = lazy(() => import('./pages/StudentNotificationsPage'));
 const StudentOffersPage = lazy(() => import('./pages/StudentOffersPage'));
@@ -135,6 +136,7 @@ export default function App() {
                 {/* Public Routes */}
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/landing" element={<LandingPage />} />
+                <Route path="/verify/:id" element={<VerifyCertificatePage />} />
                 
                 {/* Guest Only Auth Routes */}
                 <Route element={<PublicRoute />}>

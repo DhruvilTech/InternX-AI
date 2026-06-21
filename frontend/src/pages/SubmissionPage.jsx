@@ -112,7 +112,7 @@ export default function SubmissionPage() {
     setStatus('Submitted')
     setErrorDetails('')
 
-    pollingIntervalRef.current = setInterval(async () => {
+    const intervalId = setInterval(async () => {
       try {
         const response = await axiosInstance.get(`/api/submissions/${submissionId}/progress`)
         if (response.data?.success && response.data?.data) {
@@ -121,8 +121,10 @@ export default function SubmissionPage() {
           setProgress(backendProgress)
 
           if (backendStatus === 'Completed') {
-            clearInterval(pollingIntervalRef.current)
-            pollingIntervalRef.current = null
+            clearInterval(intervalId)
+            if (pollingIntervalRef.current === intervalId) {
+              pollingIntervalRef.current = null
+            }
 
             // Retrieve final report details
             try {
@@ -155,8 +157,10 @@ export default function SubmissionPage() {
             setIsSubmitting(false)
             addToast('Deliverable audited and evaluated successfully!', 'success')
           } else if (backendStatus === 'Failed') {
-            clearInterval(pollingIntervalRef.current)
-            pollingIntervalRef.current = null
+            clearInterval(intervalId)
+            if (pollingIntervalRef.current === intervalId) {
+              pollingIntervalRef.current = null
+            }
 
             // Find failure reason
             let reason = 'An error occurred during evaluation. No source code detected or repository private.'
@@ -167,7 +171,7 @@ export default function SubmissionPage() {
               if (refreshedTasksRes.data?.success && refreshedTasksRes.data?.data?.tasks) {
                 const updatedTask = refreshedTasksRes.data.data.tasks.find(t => t.id === activeTask.id)
                 if (updatedTask && updatedTask.feedback) {
-                  reason = updatedTask.feedback.replace('Evaluation failed: ', '')
+                   reason = updatedTask.feedback.replace('Evaluation failed: ', '')
                 }
               }
             } catch (tErr) {
@@ -185,6 +189,8 @@ export default function SubmissionPage() {
         console.error('Polling error:', err)
       }
     }, 1500)
+
+    pollingIntervalRef.current = intervalId
   }
 
   const handleSubmit = (e) => {

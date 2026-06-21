@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { callGroq } from './groq.service.js';
 import Evaluation from '../models/Evaluation.js';
 import Submission from '../models/Submission.js';
 import Task from '../models/Task.js';
@@ -263,14 +264,6 @@ ${meta.folderStructure ? meta.folderStructure.slice(0, 50).join('\n') : 'None'}
     }
   }
 
-  // Inject file snippets if present in metadata
-  if (meta && meta.fileSnippets && meta.fileSnippets.length > 0) {
-    detailsText += `\nKey Source Code File Snippets (Inspect the implementation logic in these files):\n`;
-    meta.fileSnippets.forEach(snippet => {
-      detailsText += `--- File: ${snippet.path} ---\n${snippet.content}\n-------------------------\n`;
-    });
-  }
-
   const systemPrompt = `You are a Senior Software Architect, AI Engineering lead, and technical auditor.
 Your job is to strictly and accurately evaluate a student's task submission against the provided task description and functional requirements.
 
@@ -307,6 +300,54 @@ Return a structured JSON object only:
   "recommendations": [String]
 }`;
 
+  const userPromptBase = `Task Title: ${task.title}
+Task Description: ${task.description}
+Task Difficulty: ${task.difficulty}
+Required Skills: ${task.requiredSkills.join(', ')}
+
+Submission Deliverable Information:
+Submission Type: ${submission.submissionType}
+${detailsText}
+
+Grade this work objectively.`;
+
+  // Size calculation to protect against oversized prompt limits
+  const baseSize = systemPrompt.length + userPromptBase.length;
+  let snippetsSize = 0;
+  if (meta && meta.fileSnippets && meta.fileSnippets.length > 0) {
+    meta.fileSnippets.forEach(snippet => {
+      snippetsSize += (snippet.path.length + snippet.content.length + 50);
+    });
+  }
+
+  let includeSnippets = true;
+  if (baseSize + snippetsSize > 30000) {
+    includeSnippets = false;
+    console.log(`[Evaluation AI] Prompt size limit protection triggered. Total size estimate (${baseSize + snippetsSize}) exceeds 30,000 characters limit. Summarizing files instead of raw code snippets.`);
+  }
+
+  // Inject file snippets or a summary based on size limit check
+  if (meta && meta.fileSnippets && meta.fileSnippets.length > 0) {
+    if (includeSnippets) {
+      detailsText += `\nKey Source Code File Snippets (Inspect the implementation logic in these files):\n`;
+      meta.fileSnippets.forEach(snippet => {
+        detailsText += `--- File: ${snippet.path} ---\n${snippet.content}\n-------------------------\n`;
+      });
+    } else {
+      detailsText += `\nKey Source Code Files (Contents omitted due to size constraints - summary provided):\n`;
+      meta.fileSnippets.forEach(snippet => {
+        const lines = snippet.content.split('\n').length;
+        detailsText += `- File: ${snippet.path} (${lines} lines, ${snippet.content.length} characters)\n`;
+      });
+      detailsText += `\nRepository Summary:
+- Total Key Source Files: ${meta.fileSnippets.length}
+- Detected Skills: ${task.requiredSkills.join(', ')}
+- Technologies Found: ${meta.technologies ? meta.technologies.join(', ') : 'None'}
+- Submission Metadata: File Count=${meta.fileCount || 0}, Primary Tech=${meta.technologies ? meta.technologies.join(', ') : 'None'}
+`;
+    }
+  }
+
   const userPrompt = `Task Title: ${task.title}
 Task Description: ${task.description}
 Task Difficulty: ${task.difficulty}
@@ -318,29 +359,16 @@ ${detailsText}
 
 Grade this work objectively.`;
 
-  const modelName = 'qwen-2.5-coder-32b';
+  const parsedJson = await callGroq({
+    model: 'qwen/qwen3-32b',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt }
+    ],
+    temperature: 0.1,
+    jsonMode: true
+  });
 
-  const response = await axios.post(
-    'https://api.groq.com/openai/v1/chat/completions',
-    {
-      model: modelName,
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt }
-      ],
-      temperature: 0.1,
-      response_format: { type: 'json_object' }
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
-        'Content-Type': 'application/json'
-      },
-      timeout: 25000
-    }
-  );
-
-  const parsedJson = JSON.parse(response.data.choices[0].message.content);
   return parsedJson;
 };
 

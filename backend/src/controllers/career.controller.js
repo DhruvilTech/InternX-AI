@@ -8,6 +8,9 @@ import Interview from '../models/Interview.js';
 import InterviewReport from '../models/InterviewReport.js';
 import { checkReportCache, generateCareerReports } from '../services/careerReport.service.js';
 import { sendResponse } from '../utils/sendResponse.js';
+import Certificate from '../modules/college/models/Certificate.js';
+import Student from '../models/Student.js';
+import College from '../modules/college/models/College.js';
 
 
 /**
@@ -459,7 +462,53 @@ export const getCertificateProgress = async (req, res, next) => {
     const manager = internship ? internship.managerName : 'Sarah Johnson';
 
     const isEligible = completionPercentage >= requiredPercentage;
-    const verificationCode = `IX-${studentId.toString().slice(-4)}-2026`;
+    let verificationCode = `IX-${studentId.toString().slice(-4)}-2026`;
+
+    if (isEligible) {
+      // Find the student's selected career
+      const studentCareer = await StudentCareer.findOne({ studentId });
+      const careerId = studentCareer ? studentCareer.careerId : null;
+
+      if (careerId) {
+        // Find college info to populate collegeId in certificate
+        const studentRecord = await Student.findOne({ userId: studentId });
+        let collegeId = null;
+        if (studentRecord) {
+          const college = await College.findOne({
+            $or: [
+              { name: studentRecord.collegeName },
+              { collegeName: studentRecord.collegeName }
+            ]
+          });
+          if (college) {
+            collegeId = college._id;
+          }
+        }
+
+        // Check if certificate already exists for this student
+        let cert = await Certificate.findOne({ studentId });
+        if (!cert) {
+          const careerObj = await CareerPath.findById(careerId);
+          const finalRole = careerObj ? `${careerObj.title} Intern` : roleTitle;
+          
+          cert = await Certificate.create({
+            studentId,
+            collegeId,
+            careerId,
+            certificateId: verificationCode,
+            recipientName: req.user.fullName,
+            companyName: company,
+            roleTitle: finalRole,
+            grade: avgScore || 80,
+            issueDate: new Date(),
+            status: 'Active & Verified'
+          });
+        } else {
+          // Use the certificateId from the database
+          verificationCode = cert.certificateId;
+        }
+      }
+    }
 
     return sendResponse(res, 200, true, 'Certificate progress retrieved successfully', {
       completionPercentage,

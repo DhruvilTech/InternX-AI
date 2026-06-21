@@ -64,10 +64,10 @@ export default function CertificateCenterPage() {
       addToast(`You must complete at least ${requiredPercentage}% of your tasks to download your certificate. Current progress is ${completionPercentage}%.`, 'error')
       return
     }
-    addToast('Generating PDF file stream...', 'info')
+    addToast('Opening print dialog to save certificate...', 'info')
     setTimeout(() => {
-      addToast('Certificate PDF downloaded successfully!', 'success')
-    }, 1500)
+      window.print()
+    }, 500)
   }
 
   const handleShare = () => {
@@ -79,7 +79,7 @@ export default function CertificateCenterPage() {
   }
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText('https://internx.ai/verify/IX-92-2026')
+    navigator.clipboard.writeText(`${window.location.origin}/#/verify/${verificationCode}`)
     addToast('Verification link copied to clipboard!', 'success')
   }
 
@@ -117,7 +117,73 @@ export default function CertificateCenterPage() {
           <div className="lg:col-span-8 space-y-6">
             
             {/* Glowing Certificate Card */}
-            <div className="relative border border-amber-500/30 rounded-2xl p-6 sm:p-10 bg-gradient-to-br from-amber-500/5 via-violet/5 to-void overflow-hidden text-center glow-accent shadow-2xl space-y-8 flex flex-col justify-between min-h-[460px] max-w-2xl mx-auto">
+            <style dangerouslySetInnerHTML={{ __html: `
+              @media print {
+                html, body {
+                  background: #ffffff !important;
+                  color: #000000 !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                  height: 100vh !important;
+                  max-height: 100vh !important;
+                  overflow: hidden !important;
+                  -webkit-print-color-adjust: exact !important;
+                  print-color-adjust: exact !important;
+                }
+                body * {
+                  visibility: hidden !important;
+                }
+                .certificate-card-print, .certificate-card-print * {
+                  visibility: visible !important;
+                }
+                .certificate-card-print {
+                  position: absolute !important;
+                  left: 50% !important;
+                  top: 50% !important;
+                  transform: translate(-50%, -50%) !important;
+                  width: 680px !important;
+                  height: 440px !important;
+                  border: 2px solid #f59e0b !important;
+                  background: #09090b !important;
+                  background-image: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(124, 58, 237, 0.15), #09090b) !important;
+                  -webkit-print-color-adjust: exact !important;
+                  print-color-adjust: exact !important;
+                  box-shadow: 0 10px 35px rgba(0, 0, 0, 0.4) !important;
+                  margin: 0 !important;
+                  padding: 40px !important;
+                  border-radius: 16px !important;
+                  box-sizing: border-box !important;
+                  display: flex !important;
+                  flex-direction: column !important;
+                  justify-content: space-between !important;
+                }
+                .certificate-card-print, 
+                .certificate-card-print span, 
+                .certificate-card-print h3, 
+                .certificate-card-print p,
+                .certificate-card-print div {
+                  color: #ffffff !important;
+                }
+                .certificate-card-print .text-muted {
+                  color: #a1a1aa !important;
+                }
+                .certificate-card-print .text-amber-500, 
+                .certificate-card-print .text-amber-500\/80 {
+                  color: #f59e0b !important;
+                }
+                .certificate-card-print .text-accent {
+                  color: #a78bfa !important;
+                }
+                .certificate-card-print .absolute {
+                  border: 1px dashed rgba(245, 158, 11, 0.3) !important;
+                }
+                @page {
+                  size: landscape;
+                  margin: 0;
+                }
+              }
+            ` }} />
+            <div className="certificate-card-print relative border border-amber-500/30 rounded-2xl p-6 sm:p-10 bg-gradient-to-br from-amber-500/5 via-violet/5 to-void overflow-hidden text-center glow-accent shadow-2xl space-y-8 flex flex-col justify-between min-h-[460px] max-w-2xl mx-auto">
               {/* Outer double borders */}
               <div className="absolute inset-2 border border-dashed border-amber-500/10 rounded-xl pointer-events-none" />
               
@@ -146,26 +212,38 @@ export default function CertificateCenterPage() {
               </div>
 
               {/* Seals, Dates, Signatures */}
-              <div className="grid grid-cols-3 items-end pt-6 relative z-10">
+              <div className="grid grid-cols-4 items-end pt-6 relative z-10 gap-2">
                 
                 {/* Date */}
                 <div className="text-left text-[9px] text-muted space-y-1">
                   <span>DATE OF ISSUE:</span>
-                  <span className="font-bold text-text block">{certDetails.issueDate}</span>
+                  <span className="font-bold text-text block whitespace-nowrap">{certDetails.issueDate}</span>
+                </div>
+
+                {/* QR Code */}
+                <div className="flex flex-col items-center justify-center space-y-1">
+                  <div className="bg-white p-1 rounded border border-amber-500/20">
+                    <img 
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=60x60&data=${encodeURIComponent(`${window.location.origin}/#/verify/${verificationCode}`)}`} 
+                      alt="Verification QR Code" 
+                      className="h-10 w-10 object-contain"
+                    />
+                  </div>
+                  <span className="text-[7px] text-muted uppercase block font-semibold tracking-wider whitespace-nowrap">Scan to Verify</span>
                 </div>
 
                 {/* Seal Icon */}
                 <div className="flex flex-col items-center justify-center">
-                  <div className="h-14 w-14 rounded-full border-2 border-amber-500/30 flex items-center justify-center bg-amber-500/5 text-amber-500 animate-pulse">
-                    <Award size={28} />
+                  <div className="h-12 w-12 rounded-full border-2 border-amber-500/30 flex items-center justify-center bg-amber-500/5 text-amber-500 animate-pulse">
+                    <Award size={22} />
                   </div>
-                  <span className="text-[7px] text-muted uppercase mt-2 block font-semibold tracking-wider">Verified Seal</span>
+                  <span className="text-[7px] text-muted uppercase mt-1 block font-semibold tracking-wider whitespace-nowrap">Verified Seal</span>
                 </div>
 
                 {/* Signature */}
                 <div className="text-right text-[9px] text-muted space-y-1">
                   <span>AUTHORIZED MANAGER:</span>
-                  <span className="font-bold text-text block font-mono italic">{certDetails.manager}</span>
+                  <span className="font-bold text-text block font-mono italic whitespace-nowrap">{certDetails.manager}</span>
                 </div>
 
               </div>

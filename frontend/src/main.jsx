@@ -10,6 +10,11 @@ import { NavigationProvider } from './context/NavigationContext'
 import { HashRouter } from 'react-router-dom'
 import { AuthProvider } from './context/AuthContext'
 
+if (window.location.pathname.startsWith('/verify/')) {
+  const code = window.location.pathname.split('/verify/')[1];
+  window.location.replace(`${window.location.origin}/#/verify/${code}`);
+}
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <Provider store={store}>

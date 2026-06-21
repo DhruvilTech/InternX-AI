@@ -8,13 +8,18 @@ import axios from 'axios';
  * @returns {AxiosInstance}
  */
 export const getGithubClient = (accessToken) => {
+  const headers = {
+    Accept: 'application/vnd.github.v3+json',
+    'User-Agent': 'InternX-AI',
+  };
+
+  if (accessToken && accessToken.trim() !== '' && accessToken !== 'undefined' && accessToken !== 'null') {
+    headers.Authorization = `Bearer ${accessToken}`;
+  }
+
   const client = axios.create({
     baseURL: 'https://api.github.com',
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      Accept: 'application/vnd.github.v3+json',
-      'User-Agent': 'InternX-AI',
-    },
+    headers,
     timeout: 15000,
   });
 

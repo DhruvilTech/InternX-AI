@@ -25,6 +25,7 @@ import skillsRoutes from './routes/skills.routes.js';
 import careerIntelRoutes from './routes/careerIntel.routes.js';
 import evaluationRoutes from './routes/evaluation.routes.js';
 import { setupSwagger } from './config/swagger.js';
+import { callGroq } from './services/groq.service.js';
 
 import { errorHandler } from './middlewares/error.middleware.js';
 
@@ -115,6 +116,31 @@ app.use('/api/skills', skillsRoutes);
 app.use('/api/career', careerIntelRoutes);
 app.use('/api/evaluation', evaluationRoutes);
 
+
+// GET /api/debug/groq
+app.get('/api/debug/groq', async (req, res, next) => {
+  try {
+    await callGroq({
+      model: 'llama-3.1-8b-instant',
+      messages: [
+        { role: 'user', content: 'Reply with OK' }
+      ],
+      temperature: 0.3,
+      jsonMode: false
+    });
+    return res.json({
+      status: 'success',
+      message: 'OK'
+    });
+  } catch (error) {
+    console.error('[Debug Groq Route Error]:', error.message);
+    return res.status(400).json({
+      status: 'error',
+      message: error.message,
+      details: error.response?.data || error.stack
+    });
+  }
+});
 
 // Base application health check
 app.get('/health', (req, res) => {

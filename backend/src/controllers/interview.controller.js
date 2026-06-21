@@ -5,6 +5,7 @@ import InterviewReport from '../models/InterviewReport.js';
 import Internship from '../models/Internship.js';
 import { generateCareerReports } from '../services/careerReport.service.js';
 import { sendResponse } from '../utils/sendResponse.js';
+import { callGroq } from '../services/groq.service.js';
 
 // Fallback mock questions by career path
 const fallbackQuestions = {
@@ -106,60 +107,46 @@ export const startInterview = async (req, res, next) => {
     if (process.env.GROQ_API_KEY) {
       try {
         console.log(`[INTERVIEW] Calling Groq API to generate questions for ${careerPath}...`);
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
-          },
-          body: JSON.stringify({
-            model: 'llama-3.1-8b-instant',
-            response_format: { type: 'json_object' },
-            messages: [
+        const groqJson = await callGroq({
+          model: 'llama-3.1-8b-instant',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a Senior Engineering Manager at Google. Generate exactly 10 interview questions. Output in JSON format only.'
+            },
+            {
+              role: 'user',
+              content: `Generate exactly 10 interview questions for a simulated internship role.
+              Career Path / Track: ${careerPath}
+              Difficulty Level: ${difficulty}
+              Interview Type Focus: ${interviewType} (options: technical, behavioral, hr, mixed)
+              
+              The questions should include a mix of technical concepts, behavioral scenarios, and cultural/HR fit, heavily tailored to the candidate's target track of ${careerPath}.
+              
+              You MUST return a JSON object with a single "questions" array containing 10 question objects.
+              Each question object MUST strictly look like:
               {
-                role: 'system',
-                content: 'You are a Senior Engineering Manager at Google. Generate exactly 10 interview questions. Output in JSON format only.'
-              },
-              {
-                role: 'user',
-                content: `Generate exactly 10 interview questions for a candidate applying for a simulated internship role.
-                Career Path / Track: ${careerPath}
-                Difficulty Level: ${difficulty}
-                Interview Type Focus: ${interviewType} (options: technical, behavioral, hr, mixed)
-                
-                The questions should include a mix of technical concepts, behavioral scenarios, and cultural/HR fit, heavily tailored to the candidate's target track of ${careerPath}.
-                
-                You MUST return a JSON object with a single "questions" array containing 10 question objects.
-                Each question object MUST strictly look like:
-                {
-                  "question": "Question text here?",
-                  "category": "Technical" | "Behavioral" | "HR",
-                  "difficulty": "easy" | "medium" | "hard",
-                  "order": 1
-                }
-                `
+                "question": "Question text here?",
+                "category": "Technical" | "Behavioral" | "HR",
+                "difficulty": "easy" | "medium" | "hard",
+                "order": 1
               }
-            ],
-            temperature: 0.7,
-            max_tokens: 1500
-          })
+              `
+            }
+          ],
+          temperature: 0.7,
+          jsonMode: true
         });
 
-        if (response.ok) {
-          const resData = await response.json();
-          const groqJson = JSON.parse(resData.choices[0].message.content);
-          if (groqJson && Array.isArray(groqJson.questions) && groqJson.questions.length > 0) {
-            questionsList = groqJson.questions.map((q, idx) => ({
-              interviewId: interview._id,
-              question: q.question,
-              category: q.category || 'Technical',
-              difficulty: q.difficulty || difficulty,
-              order: idx + 1
-            }));
-            console.log(`[INTERVIEW] Groq generated ${questionsList.length} questions successfully.`);
-          }
-        } else {
-          console.warn(`[INTERVIEW] Groq API returned status ${response.status}. Using pre-seeded fallback questions.`);
+        if (groqJson && Array.isArray(groqJson.questions) && groqJson.questions.length > 0) {
+          questionsList = groqJson.questions.map((q, idx) => ({
+            interviewId: interview._id,
+            question: q.question,
+            category: q.category || 'Technical',
+            difficulty: q.difficulty || difficulty,
+            order: idx + 1
+          }));
+          console.log(`[INTERVIEW] Groq generated ${questionsList.length} questions successfully.`);
         }
       } catch (groqErr) {
         console.error('[INTERVIEW] Groq generation failure:', groqErr.message);
@@ -345,60 +332,45 @@ export const completeInterview = async (req, res, next) => {
     if (process.env.GROQ_API_KEY) {
       try {
         console.log(`[INTERVIEW] Evaluator calling Groq for interview ${id}...`);
-        const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
-          },
-          body: JSON.stringify({
-            model: 'llama-3.1-8b-instant',
-            response_format: { type: 'json_object' },
-            messages: [
-              {
-                role: 'system',
-                content: 'You are a Senior Technical Engineering Interview Panel. Grade the candidate response logs honestly. Output in JSON format only.'
-              },
-              {
-                role: 'user',
-                content: `You must evaluate the student's mock interview answers.
-                Career Path: ${interview.careerPath}
-                Interview Type: ${interview.interviewType}
-                Difficulty: ${interview.difficulty}
-                
-                Here is the complete question-and-answer transcript:
-                -----------------------------------------------------
-                ${transcriptLog}
-                -----------------------------------------------------
-                
-                Analyze the response logs and output a single JSON object.
-                The JSON MUST contain:
-                - technicalScore (integer 0-100)
-                - communicationScore (integer 0-100)
-                - professionalismScore (integer 0-100)
-                - problemSolvingScore (integer 0-100)
-                - overallScore (integer 0-100)
-                - strengths (array of strings, exactly 3 strings)
-                - weaknesses (array of strings, exactly 3 strings)
-                - recommendations (array of strings, exactly 3 strings)
-                - careerAdvice (string, detailed technical advice matching their path of ${interview.careerPath})
-                - readinessLevel (string: "Beginner" | "Intermediate" | "Job Ready")
-                
-                Do not include other explanation. Return only JSON.`
-              }
-            ],
-            temperature: 0.6,
-            max_tokens: 1800
-          })
+        reportPayload = await callGroq({
+          model: 'llama-3.1-8b-instant',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a Senior Technical Engineering Interview Panel. Grade the candidate response logs honestly. Output in JSON format only.'
+            },
+            {
+              role: 'user',
+              content: `You must evaluate the student's mock interview answers.
+              Career Path: ${interview.careerPath}
+              Interview Type: ${interview.interviewType}
+              Difficulty: ${interview.difficulty}
+              
+              Here is the complete question-and-answer transcript:
+              -----------------------------------------------------
+              ${transcriptLog}
+              -----------------------------------------------------
+              
+              Analyze the response logs and output a single JSON object.
+              The JSON MUST contain:
+              - technicalScore (integer 0-100)
+              - communicationScore (integer 0-100)
+              - professionalismScore (integer 0-100)
+              - problemSolvingScore (integer 0-100)
+              - overallScore (integer 0-100)
+              - strengths (array of strings, exactly 3 strings)
+              - weaknesses (array of strings, exactly 3 strings)
+              - recommendations (array of strings, exactly 3 strings)
+              - careerAdvice (string, detailed technical advice matching their path of ${interview.careerPath})
+              - readinessLevel (string: "Beginner" | "Intermediate" | "Job Ready")
+              
+              Do not include other explanation. Return only JSON.`
+            }
+          ],
+          temperature: 0.6,
+          jsonMode: true
         });
-
-        if (response.ok) {
-          const resData = await response.json();
-          reportPayload = JSON.parse(resData.choices[0].message.content);
-          console.log(`[INTERVIEW] Evaluation completed by Groq for ${id}.`);
-        } else {
-          console.warn(`[INTERVIEW] Groq evaluator API error: status ${response.status}. Using fallback scoring.`);
-        }
+        console.log(`[INTERVIEW] Evaluation completed by Groq for ${id}.`);
       } catch (evalErr) {
         console.error('[INTERVIEW] Groq evaluator failure:', evalErr.message);
       }
