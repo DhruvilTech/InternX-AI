@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { getReceivedOffers, respondToOffer } from '../store/slices/offersSlice.js';
-import { ArrowLeft, Check, X, Calendar, User, Briefcase, Eye, Loader2 } from 'lucide-react';
+import { ArrowLeft, Check, X, Calendar, User, Briefcase, Eye, Loader2, DollarSign, Activity } from 'lucide-react';
 import { useNavigation } from '../context/NavigationContext';
 
 export default function StudentOffersPage() {
@@ -117,6 +117,31 @@ export default function StudentOffersPage() {
                   </div>
                   <div>
                     {getStatusBadge(offer.status)}
+                  </div>
+                </div>
+
+                {/* Offer Details Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-surface-muted/30 border border-border/40 rounded-xl p-4">
+                  <div className="space-y-1">
+                    <span className="text-[10px] text-muted uppercase tracking-wider block font-medium">Job Role</span>
+                    <div className="flex items-center gap-1.5 text-xs text-text font-semibold">
+                      <Briefcase size={14} className="text-accent" />
+                      <span>{offer.jobRole || 'Software Engineer Intern'}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-1 border-t sm:border-t-0 sm:border-l border-border/40 pt-3 sm:pt-0 sm:pl-4">
+                    <span className="text-[10px] text-muted uppercase tracking-wider block font-medium">Salary Package</span>
+                    <div className="flex items-center gap-1.5 text-xs text-text font-semibold">
+                      <DollarSign size={14} className="text-accent" />
+                      <span>{offer.package || 6} LPA</span>
+                    </div>
+                  </div>
+                  <div className="space-y-1 border-t sm:border-t-0 sm:border-l border-border/40 pt-3 sm:pt-0 sm:pl-4">
+                    <span className="text-[10px] text-muted uppercase tracking-wider block font-medium">Hiring Pipeline Stage</span>
+                    <div className="flex items-center gap-1.5 text-xs text-text font-semibold">
+                      <Activity size={14} className="text-accent" />
+                      <span className="capitalize">Offered</span>
+                    </div>
                   </div>
                 </div>
 
