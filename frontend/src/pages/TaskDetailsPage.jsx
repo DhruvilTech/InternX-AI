@@ -28,7 +28,7 @@ export default function TaskDetailsPage() {
     if (activeTask?.id) {
       fetchHistory()
     }
-  }, [activeTask, tasks])
+  }, [activeTask?.id])
 
   const handleStartTask = async () => {
     try {

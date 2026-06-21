@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTheme } from '../context/ThemeContext'
+import useAuth from '../hooks/useAuth.js'
 import {
   RadarChart,
   PolarGrid,
@@ -8,7 +9,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts'
-import { ShieldCheck, Target, ArrowUpRight, Award, Zap } from 'lucide-react'
+import { ShieldCheck, Target, ArrowUpRight, Award, Zap, AlertCircle } from 'lucide-react'
 import axiosInstance from '../api/axios.js'
 
 const defaultSkillData = []
@@ -16,31 +17,66 @@ const defaultSkillData = []
 const defaultGaps = []
 
 export default function SkillGapPage() {
+  const { user } = useAuth()
   const { isDark } = useTheme()
   const [skillComparisonData, setSkillComparisonData] = useState(defaultSkillData)
   const [gaps, setGaps] = useState(defaultGaps)
   const [recommendedModules, setRecommendedModules] = useState([])
   const [loading, setLoading] = useState(true)
+  const [evalError, setEvalError] = useState('')
 
   useEffect(() => {
+    if (!user) return
     const fetchSkillAnalysis = async () => {
       try {
-        const response = await axiosInstance.get('/api/careers/skill-analysis')
-        if (response.data?.success && response.data?.data) {
-          if (response.data.data.skillComparisonData?.length > 0) {
-            setSkillComparisonData(response.data.data.skillComparisonData)
-          }
-          setGaps(response.data.data.gaps || [])
-          setRecommendedModules(response.data.data.recommendedModules || [])
+        const studentId = user._id || user.id
+        const response = await axiosInstance.get(`/api/evaluation/student/${studentId}`)
+        const data = response.data
+        if (data) {
+          const identifiedSkills = data.identifiedSkills || []
+          const identifiedSkillGaps = data.identifiedSkillGaps || []
+          
+          const radarData = [
+            ...identifiedSkills.map(s => ({ subject: s, current: 85, benchmark: 80 })),
+            ...identifiedSkillGaps.map(s => ({ subject: s, current: 45, benchmark: 80 }))
+          ]
+          setSkillComparisonData(radarData)
+
+          const compiledGaps = identifiedSkillGaps.map(skillName => {
+            let recommend = `Complete more deliverables requiring ${skillName} to close the capability gap.`;
+            if (skillName.toLowerCase() === 'system design') {
+              recommend = 'Practice rate limiters, database indexes optimizations, and caching design patterns.';
+            } else if (skillName.toLowerCase() === 'testing' || skillName.toLowerCase() === 'unit testing') {
+              recommend = 'Write centralized testing scripts with Jest, Supertest, or PyTest and check code coverage.';
+            } else if (skillName.toLowerCase() === 'authentication' || skillName.toLowerCase() === 'jwt') {
+              recommend = 'Implement JWT-based session security cookies and secure password hashing flows.';
+            }
+            return {
+              skill: skillName,
+              gap: '35%',
+              level: 'Intermediate',
+              recommend
+            }
+          })
+          setGaps(compiledGaps)
+
+          // Compile certifications as modules
+          const suggestedModules = (data.careerRecommendations || []).map(cert => ({
+            title: cert,
+            duration: '3 hrs'
+          }))
+          setRecommendedModules(suggestedModules)
+          setEvalError('')
         }
       } catch (err) {
         console.error('Failed to load dynamic skill analysis from server:', err)
+        setEvalError('No evaluation available yet.\nStudent has not completed any evaluated submissions.')
       } finally {
         setLoading(false)
       }
     }
     fetchSkillAnalysis()
-  }, [])
+  }, [user])
 
   const formattedRadarData = (skillComparisonData || []).slice(0, 8).map(item => ({
     ...item,
@@ -64,92 +100,106 @@ export default function SkillGapPage() {
           <p className="text-xs text-muted mt-1">Compare your current capability score against industry hire benchmarks.</p>
         </div>
 
-        {/* Content split */}
-        <div className="grid lg:grid-cols-12 gap-8 items-start">
-          
-          {/* Radar Chart side */}
-          <div className="lg:col-span-6 glass border border-border rounded-2xl p-6 bg-void/25 flex flex-col items-center">
-            <span className="text-xs font-bold text-text uppercase tracking-wider block mb-6">Capability Radar Comparison</span>
-            <div className="h-[320px] w-full flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <RadarChart data={formattedRadarData} cx="50%" cy="50%" outerRadius="70%">
-                  <PolarGrid stroke={gridColor} />
-                  <PolarAngleAxis dataKey="subject" tick={{ fill: tickColor, fontSize: 8 }} />
-                  <Radar
-                    name="Your Score"
-                    dataKey="current"
-                    stroke="#8B5CF6"
-                    fill="#8B5CF6"
-                    fillOpacity={0.15}
-                    strokeWidth={2}
-                  />
-                  <Radar
-                    name="Industry Hire Benchmark"
-                    dataKey="benchmark"
-                    stroke="#38BDF8"
-                    fill="#38BDF8"
-                    fillOpacity={0.05}
-                    strokeWidth={1.5}
-                    strokeDasharray="4 4"
-                  />
-                  <Legend iconSize={10} wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
-                </RadarChart>
-              </ResponsiveContainer>
-            </div>
+        {evalError ? (
+          <div className="glass rounded-2xl p-8 border border-border bg-void/30 text-center flex flex-col items-center justify-center space-y-3 py-16">
+            <AlertCircle className="text-amber h-8 w-8 animate-pulse" />
+            <h3 className="text-sm font-bold text-text">No evaluation available yet</h3>
+            <p className="text-xs text-muted whitespace-pre-line leading-relaxed">
+              No evaluation available yet.
+              Student has not completed any evaluated submissions.
+            </p>
           </div>
-
-          {/* Recommendations side */}
-          <div className="lg:col-span-6 space-y-6">
+        ) : (
+          /* Content split */
+          <div className="grid lg:grid-cols-12 gap-8 items-start">
             
-            {/* Gaps List */}
-            <div className="glass border border-border rounded-2xl p-6 bg-void/25 space-y-4">
-              <div className="flex items-center gap-2">
-                <Target size={16} className="text-rose" />
-                <h3 className="text-sm font-bold text-text uppercase tracking-wider">Identified Skill Gaps</h3>
-              </div>
-
-              <div className="space-y-3">
-                {gaps.map((g) => (
-                  <div key={g.skill} className="p-4 border border-border rounded-xl bg-void/40 hover:border-accent/30 transition-colors space-y-2">
-                    <div className="flex justify-between items-center text-xs">
-                      <span className="font-bold text-text">{g.skill}</span>
-                      <span className="font-semibold text-rose-400 bg-rose/10 border border-rose/20 px-2 py-0.5 rounded">
-                        Gap: {g.gap}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-muted leading-relaxed">{g.recommend}</p>
-                    <span className="text-[9px] font-mono text-accent uppercase font-bold tracking-wider block mt-1">Level: {g.level}</span>
-                  </div>
-                ))}
+            {/* Radar Chart side */}
+            <div className="lg:col-span-6 glass border border-border rounded-2xl p-6 bg-void/25 flex flex-col items-center">
+              <span className="text-xs font-bold text-text uppercase tracking-wider block mb-6">Capability Radar Comparison</span>
+              <div className="h-[320px] w-full flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RadarChart data={formattedRadarData} cx="50%" cy="50%" outerRadius="70%">
+                    <PolarGrid stroke={gridColor} />
+                    <PolarAngleAxis dataKey="subject" tick={{ fill: tickColor, fontSize: 8 }} />
+                    <Radar
+                      name="Your Score"
+                      dataKey="current"
+                      stroke="#8B5CF6"
+                      fill="#8B5CF6"
+                      fillOpacity={0.15}
+                      strokeWidth={2}
+                    />
+                    <Radar
+                      name="Industry Hire Benchmark"
+                      dataKey="benchmark"
+                      stroke="#38BDF8"
+                      fill="#38BDF8"
+                      fillOpacity={0.05}
+                      strokeWidth={1.5}
+                      strokeDasharray="4 4"
+                    />
+                    <Legend iconSize={10} wrapperStyle={{ fontSize: '10px', paddingTop: '10px' }} />
+                  </RadarChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
-            {/* Micro-learning credentials */}
-            <div className="glass border border-border rounded-2xl p-6 bg-void/25 space-y-4">
-              <div className="flex items-center gap-2">
-                <Zap size={16} className="text-amber" />
-                <h3 className="text-sm font-bold text-text uppercase tracking-wider">Recommended Career Modules</h3>
+            {/* Recommendations side */}
+            <div className="lg:col-span-6 space-y-6">
+              
+              {/* Gaps List */}
+              <div className="glass border border-border rounded-2xl p-6 bg-void/25 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Target size={16} className="text-rose" />
+                  <h3 className="text-sm font-bold text-text uppercase tracking-wider">Identified Skill Gaps</h3>
+                </div>
+
+                <div className="space-y-3">
+                  {gaps.map((g) => (
+                    <div key={g.skill} className="p-4 border border-border rounded-xl bg-void/40 hover:border-accent/30 transition-colors space-y-2">
+                      <div className="flex justify-between items-center text-xs">
+                        <span className="font-bold text-text">{g.skill}</span>
+                        <span className="font-semibold text-rose-400 bg-rose/10 border border-rose/20 px-2 py-0.5 rounded">
+                          Gap: {g.gap}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-muted leading-relaxed">{g.recommend}</p>
+                      <span className="text-[9px] font-mono text-accent uppercase font-bold tracking-wider block mt-1">Level: {g.level}</span>
+                    </div>
+                  ))}
+                  {(!gaps || gaps.length === 0) && (
+                    <p className="text-xs text-muted py-4 text-center">No skill gaps identified.</p>
+                  )}
+                </div>
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-3 text-xs text-muted">
-                {recommendedModules.map((mod, idx) => (
-                  <div key={idx} className="p-3 bg-surface-muted/30 border border-border rounded-xl flex justify-between items-center group cursor-pointer hover:border-accent/40 transition-colors">
-                    <div>
-                      <span className="font-semibold text-text block">{mod.title}</span>
-                      <span className="text-[9px] text-muted block mt-0.5">Estimated: {mod.duration}</span>
+              {/* Micro-learning credentials */}
+              <div className="glass border border-border rounded-2xl p-6 bg-void/25 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Zap size={16} className="text-amber" />
+                  <h3 className="text-sm font-bold text-text uppercase tracking-wider">Recommended Career Modules</h3>
+                </div>
+
+                <div className="grid sm:grid-cols-2 gap-3 text-xs text-muted">
+                  {recommendedModules.map((mod, idx) => (
+                    <div key={idx} className="p-3 bg-surface-muted/30 border border-border rounded-xl flex justify-between items-center group cursor-pointer hover:border-accent/40 transition-colors">
+                      <div>
+                        <span className="font-semibold text-text block">{mod.title}</span>
+                        <span className="text-[9px] text-muted block mt-0.5">Estimated: {mod.duration}</span>
+                      </div>
+                      <ArrowUpRight size={14} className="text-muted group-hover:text-accent transition-colors" />
                     </div>
-                    <ArrowUpRight size={14} className="text-muted group-hover:text-accent transition-colors" />
-                  </div>
-                ))}
-                {recommendedModules.length === 0 && (
-                  <p className="text-xs text-muted py-2 col-span-2 text-center">No cohort-specific learning modules assigned.</p>
-                )}
+                  ))}
+                  {(!recommendedModules || recommendedModules.length === 0) && (
+                    <p className="text-xs text-muted py-2 col-span-2 text-center">No cohort-specific learning modules assigned.</p>
+                  )}
+                </div>
               </div>
+
             </div>
 
           </div>
-
-        </div>
+        )}
 
       </div>
     </div>

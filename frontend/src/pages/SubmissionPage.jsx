@@ -23,6 +23,7 @@ export default function SubmissionPage() {
   const [hasFailed, setHasFailed] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [currentSubmission, setCurrentSubmission] = useState(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const activeTask = tasks.find(t => t.id === selectedTaskId) || tasks[0]
 
@@ -101,6 +102,9 @@ export default function SubmissionPage() {
   }
 
   const startPolling = (submissionId) => {
+    if (pollingIntervalRef.current) {
+      clearInterval(pollingIntervalRef.current)
+    }
     setPolling(true)
     setHasFailed(false)
     setSubmitted(false)
@@ -148,6 +152,7 @@ export default function SubmissionPage() {
             await fetchStudentInternshipAndTasks() // refresh dashboard tasks list
             setPolling(false)
             setSubmitted(true)
+            setIsSubmitting(false)
             addToast('Deliverable audited and evaluated successfully!', 'success')
           } else if (backendStatus === 'Failed') {
             clearInterval(pollingIntervalRef.current)
@@ -172,6 +177,7 @@ export default function SubmissionPage() {
             setErrorDetails(reason)
             setPolling(false)
             setHasFailed(true)
+            setIsSubmitting(false)
             addToast('Evaluation Failed: ' + reason, 'error')
           }
         }
@@ -183,7 +189,10 @@ export default function SubmissionPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    if (isSubmitting) return
     if (!validateInputs()) return
+
+    setIsSubmitting(true)
 
     const processApiSubmission = async (fileData = null) => {
       try {
@@ -211,6 +220,7 @@ export default function SubmissionPage() {
       } catch (err) {
         console.error(err)
         addToast(err.response?.data?.message || err.message || 'Submission initialization failed.', 'error')
+        setIsSubmitting(false)
       }
     }
 
@@ -256,6 +266,7 @@ export default function SubmissionPage() {
     setPolling(false)
     setSubmitted(false)
     setHasFailed(false)
+    setIsSubmitting(false)
   }
 
   // Generate terminal logs dynamically based on the current status & progress
@@ -669,10 +680,20 @@ export default function SubmissionPage() {
 
             <button
               type="submit"
-              className="w-full py-3 bg-gradient-to-r from-accent to-violet text-white text-xs font-semibold rounded-xl hover:shadow-lg hover:shadow-accent/20 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              disabled={isSubmitting}
+              className={`w-full py-3 bg-gradient-to-r from-accent to-violet text-white text-xs font-semibold rounded-xl hover:shadow-lg hover:shadow-accent/20 transition-all flex items-center justify-center gap-2 ${isSubmitting ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
             >
-              <span>{githubUrl ? 'Submit From GitHub' : 'Transmit Deliverable'}</span>
-              <ArrowRight size={14} />
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span>Submitting Deliverable...</span>
+                </>
+              ) : (
+                <>
+                  <span>{githubUrl ? 'Submit From GitHub' : 'Transmit Deliverable'}</span>
+                  <ArrowRight size={14} />
+                </>
+              )}
             </button>
           </form>
         )}

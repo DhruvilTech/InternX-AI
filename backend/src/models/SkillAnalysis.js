@@ -13,18 +13,15 @@ const skillAnalysisSchema = new mongoose.Schema(
       default: 'Backend Developer',
     },
     currentSkills: {
-      type: Map,
-      of: Number,
+      type: mongoose.Schema.Types.Mixed,
       default: {},
     },
     benchmarkSkills: {
-      type: Map,
-      of: Number,
+      type: mongoose.Schema.Types.Mixed,
       default: {},
     },
     skillGaps: {
-      type: Map,
-      of: Number,
+      type: mongoose.Schema.Types.Mixed,
       default: {},
     },
     learningRecommendations: {

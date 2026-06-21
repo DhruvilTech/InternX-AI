@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import axiosInstance from '../api/axios.js';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
-import { ArrowLeft, User, Mail, GraduationCap, Calendar, GitCommit, GitPullRequest, Code, Award, FolderGit2, BookOpen } from 'lucide-react';
+import { ArrowLeft, User, Mail, GraduationCap, Calendar, GitCommit, GitPullRequest, Code, Award, FolderGit2, BookOpen, AlertCircle } from 'lucide-react';
 import { FaGithub } from 'react-icons/fa6';
 import { getStudentDetails } from '../store/slices/collegeSlice.js';
 import { useNavigation } from '../context/NavigationContext';
@@ -12,9 +13,33 @@ export default function StudentDetailsPage() {
   const { navigate, addToast } = useNavigation();
   const { selectedStudent, loading, error } = useSelector((state) => state.college);
 
+  const [evaluationReport, setEvaluationReport] = useState(null);
+  const [evalError, setEvalError] = useState('');
+  const [loadingEval, setLoadingEval] = useState(true);
+
   useEffect(() => {
     dispatch(getStudentDetails(id));
   }, [dispatch, id]);
+
+  useEffect(() => {
+    if (!selectedStudent) return;
+    const fetchEval = async () => {
+      try {
+        setLoadingEval(true);
+        const studentId = selectedStudent.studentProfile?.userId || id;
+        const res = await axiosInstance.get(`/api/evaluation/student/${studentId}`);
+        setEvaluationReport(res.data);
+        setEvalError('');
+      } catch (err) {
+        console.error('Failed to load student evaluation report:', err);
+        setEvaluationReport(null);
+        setEvalError(err.response?.data?.message || 'No evaluation available yet.\nStudent has not completed any evaluated submissions.');
+      } finally {
+        setLoadingEval(false);
+      }
+    };
+    fetchEval();
+  }, [selectedStudent, id]);
 
   if (loading && !selectedStudent) {
     return (
@@ -99,41 +124,53 @@ export default function StudentDetailsPage() {
 
         {/* Placement Readiness & GitHub Scores Scorecard */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-          <div className="glass border border-border rounded-2xl p-5 bg-void/25 flex flex-col justify-between relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-accent/5 rounded-full blur-lg pointer-events-none" />
-            <span className="text-[10px] text-muted uppercase font-bold block mb-1">Placement Readiness Index</span>
-            <div className="flex items-baseline gap-2 mt-2">
-              <span className="text-3xl font-bold text-accent font-display">{placementReadiness || 0}%</span>
-              <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-full ${
-                (placementReadiness || 0) >= 80 
-                  ? 'bg-emerald/10 border border-emerald/20 text-emerald'
-                  : (placementReadiness || 0) >= 60 
-                  ? 'bg-indigo/10 border border-indigo/20 text-indigo-400'
-                  : 'bg-amber/10 border border-amber/20 text-amber-400'
-              }`}>
-                {(placementReadiness || 0) >= 80 ? 'Industry Ready' : (placementReadiness || 0) >= 60 ? 'Job Ready' : 'In Practice'}
-              </span>
+          {evalError ? (
+            <div className="glass border border-border rounded-2xl p-5 bg-void/25 flex flex-col justify-center items-center text-center relative overflow-hidden sm:col-span-2 min-h-[140px]">
+              <AlertCircle className="text-amber h-6 w-6 mb-2" />
+              <span className="text-[10px] text-muted uppercase font-bold block mb-1">Evaluation Scorecard</span>
+              <p className="text-xs text-muted max-w-md">
+                No evaluation available yet. Student has not completed any evaluated submissions.
+              </p>
             </div>
-            <p className="text-[9px] text-muted mt-2">Aggregated candidate metrics baseline rating</p>
-          </div>
+          ) : (
+            <>
+              <div className="glass border border-border rounded-2xl p-5 bg-void/25 flex flex-col justify-between relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-accent/5 rounded-full blur-lg pointer-events-none" />
+                <span className="text-[10px] text-muted uppercase font-bold block mb-1">Placement Readiness Index</span>
+                <div className="flex items-baseline gap-2 mt-2">
+                  <span className="text-3xl font-bold text-accent font-display">{evaluationReport?.overallScore || 0}%</span>
+                  <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-full ${
+                    (evaluationReport?.overallScore || 0) >= 80 
+                      ? 'bg-emerald/10 border border-emerald/20 text-emerald'
+                      : (evaluationReport?.overallScore || 0) >= 60 
+                      ? 'bg-indigo/10 border border-indigo/20 text-indigo-400'
+                      : 'bg-amber/10 border border-amber/20 text-amber-400'
+                  }`}>
+                    {evaluationReport?.readinessLevel || 'In Practice'}
+                  </span>
+                </div>
+                <p className="text-[9px] text-muted mt-2">Aggregated candidate metrics baseline rating</p>
+              </div>
 
-          <div className="glass border border-border rounded-2xl p-5 bg-void/25 flex flex-col justify-between relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-violet/5 rounded-full blur-lg pointer-events-none" />
-            <span className="text-[10px] text-muted uppercase font-bold block mb-1">AI GitHub Score</span>
-            <div className="flex items-baseline gap-2 mt-2">
-              <span className="text-3xl font-bold text-violet font-display">{githubScore || 0}/100</span>
-              <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-full ${
-                (githubScore || 0) >= 80 
-                  ? 'bg-emerald/10 border border-emerald/20 text-emerald'
-                  : (githubScore || 0) >= 60 
-                  ? 'bg-indigo/10 border border-indigo/20 text-indigo-400'
-                  : 'bg-amber/10 border border-amber/20 text-amber-400'
-              }`}>
-                {(githubScore || 0) >= 80 ? 'Exceptional' : (githubScore || 0) >= 60 ? 'Consistent' : 'Developing'}
-              </span>
-            </div>
-            <p className="text-[9px] text-muted mt-2">Code standards, repository health, and activity</p>
-          </div>
+              <div className="glass border border-border rounded-2xl p-5 bg-void/25 flex flex-col justify-between relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-24 h-24 bg-violet/5 rounded-full blur-lg pointer-events-none" />
+                <span className="text-[10px] text-muted uppercase font-bold block mb-1">AI GitHub Score</span>
+                <div className="flex items-baseline gap-2 mt-2">
+                  <span className="text-3xl font-bold text-violet font-display">{evaluationReport?.githubScore || 0}/100</span>
+                  <span className={`text-[9px] font-semibold px-2 py-0.5 rounded-full ${
+                    (evaluationReport?.githubScore || 0) >= 80 
+                      ? 'bg-emerald/10 border border-emerald/20 text-emerald'
+                      : (evaluationReport?.githubScore || 0) >= 60 
+                      ? 'bg-indigo/10 border border-indigo/20 text-indigo-400'
+                      : 'bg-amber/10 border border-amber/20 text-amber-400'
+                  }`}>
+                    {(evaluationReport?.githubScore || 0) >= 80 ? 'Exceptional' : (evaluationReport?.githubScore || 0) >= 60 ? 'Consistent' : 'Developing'}
+                  </span>
+                </div>
+                <p className="text-[9px] text-muted mt-2">Code standards, repository health, and activity</p>
+              </div>
+            </>
+          )}
 
           <div className="glass border border-border rounded-2xl p-5 bg-void/25 flex flex-col justify-between relative overflow-hidden sm:col-span-2 md:col-span-1">
             <div className="absolute top-0 right-0 w-24 h-24 bg-emerald/5 rounded-full blur-lg pointer-events-none" />

@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, memo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import axiosInstance from '../api/axios.js';
 import {
   RadarChart,
   PolarGrid,
@@ -101,9 +102,31 @@ export default function StudentDetailPage() {
   const [pipelineNotes, setPipelineNotes] = useState('');
   const [activeTab, setActiveTab] = useState('scorecard');
 
+  const [evaluationReport, setEvaluationReport] = useState(null);
+  const [evalError, setEvalError] = useState('');
+  const [loadingEval, setLoadingEval] = useState(true);
+
   useEffect(() => {
     dispatch(getRecruiterStudentDetails(id));
   }, [dispatch, id]);
+
+  useEffect(() => {
+    const fetchEval = async () => {
+      try {
+        setLoadingEval(true);
+        const res = await axiosInstance.get(`/api/evaluation/student/${id}`);
+        setEvaluationReport(res.data);
+        setEvalError('');
+      } catch (err) {
+        console.error('Failed to load student evaluation report:', err);
+        setEvaluationReport(null);
+        setEvalError(err.response?.data?.message || 'No evaluation available yet.\nStudent has not completed any evaluated submissions.');
+      } finally {
+        setLoadingEval(false);
+      }
+    };
+    fetchEval();
+  }, [id]);
 
   useEffect(() => {
     if (studentDetails?.studentProfile?.pipelineNotes) {
@@ -373,84 +396,110 @@ export default function StudentDetailPage() {
 
           {/* TAB 1: Internship Scorecard */}
           {activeTab === 'scorecard' && (
-            <div className="space-y-6">
-              {/* Scorecard KPI Cards */}
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-                <div className="glass border border-border rounded-xl p-4 bg-void/25">
-                  <span className="text-[10px] text-muted uppercase font-bold block mb-1">Placement Readiness</span>
-                  <span className="text-xl font-bold text-accent font-display">
-                    {careerReport?.readinessScore || 0}%
-                  </span>
-                  <span className="text-[9px] text-muted block mt-1">Weighted Candidate Rating</span>
-                </div>
-
-                <div className="glass border border-border rounded-xl p-4 bg-void/25">
-                  <span className="text-[10px] text-muted uppercase font-bold block mb-1">GitHub Score</span>
-                  <span className="text-xl font-bold text-violet font-display">
-                    {careerReport?.githubScore || 0}/100
-                  </span>
-                  <span className="text-[9px] text-muted block mt-1">AI Repository Audit</span>
-                </div>
-
-                <div className="glass border border-border rounded-xl p-4 bg-void/25">
-                  <span className="text-[10px] text-muted uppercase font-bold block mb-1">Overall Progress</span>
-                  <span className="text-xl font-bold text-indigo-400 font-display">
-                    {internshipProgress?.completionPercentage || 0}%
-                  </span>
-                  <span className="text-[9px] text-muted block mt-1">Internship Sprints Completed</span>
-                </div>
-
-                <div className="glass border border-border rounded-xl p-4 bg-void/25">
-                  <span className="text-[10px] text-muted uppercase font-bold block mb-1">Average Task Score</span>
-                  <span className="text-xl font-bold text-emerald font-display">
-                    {tasks && tasks.filter(t => t.status === 'completed').length > 0
-                      ? Math.round(tasks.filter(t => t.status === 'completed').reduce((sum, t) => sum + (t.score || 0), 0) / tasks.filter(t => t.status === 'completed').length)
-                      : 0}
-                  </span>
-                  <span className="text-[9px] text-muted block mt-1">Milestone Evaluator Avg</span>
-                </div>
-
-                <div className="glass border border-border rounded-xl p-4 bg-void/25 col-span-2 sm:col-span-1">
-                  <span className="text-[10px] text-muted uppercase font-bold block mb-1">Salary Estimate</span>
-                  <span className="text-xl font-bold text-amber font-display">
-                    {careerReport?.salaryRange || 'N/A'}
-                  </span>
-                  <span className="text-[9px] text-muted block mt-1">Based on Role Track Demand</span>
-                </div>
+            evalError ? (
+              <div className="glass border border-border rounded-2xl p-8 text-center flex flex-col items-center justify-center space-y-3 py-16">
+                <AlertCircle className="text-amber h-8 w-8" />
+                <h3 className="text-sm font-bold text-text">No evaluation available yet</h3>
+                <p className="text-xs text-muted whitespace-pre-line leading-relaxed">
+                  No evaluation available yet.
+                  Student has not completed any evaluated submissions.
+                </p>
               </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Scorecard KPI Cards */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+                  <div className="glass border border-border rounded-xl p-4 bg-void/25">
+                    <span className="text-[10px] text-muted uppercase font-bold block mb-1">Placement Readiness</span>
+                    <span className="text-xl font-bold text-accent font-display">
+                      {evaluationReport?.overallScore || 0}%
+                    </span>
+                    <span className="text-[9px] text-muted block mt-1">Weighted Candidate Rating</span>
+                  </div>
 
-              {/* Advice and Feedback section */}
-              <div className="grid md:grid-cols-2 gap-6">
-                {/* Career Coach Insight */}
-                <div className="glass border border-border rounded-2xl p-6 bg-void/25 space-y-3">
-                  <h4 className="text-xs font-bold text-text uppercase tracking-wider flex items-center gap-1.5 border-b border-border/40 pb-2">
-                    <Sparkles size={13} className="text-accent" />
-                    <span>Career Coach Insight</span>
-                  </h4>
-                  <p className="text-xs text-muted leading-relaxed">
-                    {careerReport?.careerAdvice || "No placement coach advice generated yet."}
-                  </p>
-                  <div className="pt-2 text-[10px] text-muted flex gap-2">
-                    <span>Target Roles:</span>
-                    <strong className="text-text">{careerReport?.recommendedRoles?.join(', ') || 'N/A'}</strong>
+                  <div className="glass border border-border rounded-xl p-4 bg-void/25">
+                    <span className="text-[10px] text-muted uppercase font-bold block mb-1">GitHub Score</span>
+                    <span className="text-xl font-bold text-violet font-display">
+                      {evaluationReport?.githubScore || 0}/100
+                    </span>
+                    <span className="text-[9px] text-muted block mt-1">AI Repository Audit</span>
+                  </div>
+
+                  <div className="glass border border-border rounded-xl p-4 bg-void/25">
+                    <span className="text-[10px] text-muted uppercase font-bold block mb-1">Overall Progress</span>
+                    <span className="text-xl font-bold text-indigo-400 font-display">
+                      {internshipProgress?.completionPercentage || 0}%
+                    </span>
+                    <span className="text-[9px] text-muted block mt-1">Internship Sprints Completed</span>
+                  </div>
+
+                  <div className="glass border border-border rounded-xl p-4 bg-void/25">
+                    <span className="text-[10px] text-muted uppercase font-bold block mb-1">Average Task Score</span>
+                    <span className="text-xl font-bold text-emerald font-display">
+                      {evaluationReport?.technicalScore || 0}
+                    </span>
+                    <span className="text-[9px] text-muted block mt-1">Milestone Evaluator Avg</span>
+                  </div>
+
+                  <div className="glass border border-border rounded-xl p-4 bg-void/25 col-span-2 sm:col-span-1">
+                    <span className="text-[10px] text-muted uppercase font-bold block mb-1">Salary Estimate</span>
+                    <span className="text-xl font-bold text-amber font-display">
+                      {careerReport?.salaryRange || 'N/A'}
+                    </span>
+                    <span className="text-[9px] text-muted block mt-1">Based on Role Track Demand</span>
                   </div>
                 </div>
 
-                {/* Manager Feedback */}
-                <div className="glass border border-border rounded-2xl p-6 bg-void/25 space-y-3">
-                  <h4 className="text-xs font-bold text-text uppercase tracking-wider flex items-center gap-1.5 border-b border-border/40 pb-2">
-                    <BookOpen size={13} className="text-violet" />
-                    <span>Executive Manager Audit</span>
-                  </h4>
-                  <p className="text-xs text-muted leading-relaxed italic">
-                    {feedbackReport?.managerFeedback ? `"${feedbackReport.managerFeedback}"` : '"No executive manager feedback compiled yet."'}
-                  </p>
-                  <div className="pt-2 text-[10px] text-muted">
-                    <span>Audit Lead:</span>
-                    <strong className="text-text"> Sarah Johnson (Director of Engineering)</strong>
+                {/* Advice and Feedback section */}
+                <div className="grid md:grid-cols-2 gap-6">
+                  {/* Career Coach Insight */}
+                  <div className="glass border border-border rounded-2xl p-6 bg-void/25 space-y-3">
+                    <h4 className="text-xs font-bold text-text uppercase tracking-wider flex items-center gap-1.5 border-b border-border/40 pb-2">
+                      <Sparkles size={13} className="text-accent" />
+                      <span>Career Coach Insight</span>
+                    </h4>
+                    <div className="text-xs text-muted leading-relaxed space-y-1.5">
+                      {evaluationReport?.recommendations && evaluationReport.recommendations.map((rec, i) => (
+                        <div key={i} className="flex items-start gap-1.5">
+                          <span className="text-accent font-bold">•</span>
+                          <span>{rec}</span>
+                        </div>
+                      ))}
+                      {(!evaluationReport?.recommendations || evaluationReport.recommendations.length === 0) && (
+                        <p>No placement coach advice generated yet.</p>
+                      )}
+                    </div>
+                    <div className="pt-2 text-[10px] text-muted flex gap-2">
+                      <span>Target Roles:</span>
+                      <strong className="text-text">{evaluationReport?.careerRecommendations?.join(', ') || 'N/A'}</strong>
+                    </div>
+                  </div>
+
+                  {/* Manager Feedback */}
+                  <div className="glass border border-border rounded-2xl p-6 bg-void/25 space-y-3">
+                    <h4 className="text-xs font-bold text-text uppercase tracking-wider flex items-center gap-1.5 border-b border-border/40 pb-2">
+                      <BookOpen size={13} className="text-violet" />
+                      <span>Executive Manager Audit</span>
+                    </h4>
+                    <div className="text-xs text-muted leading-relaxed space-y-2">
+                      <div>
+                        <span className="text-[10px] font-bold text-emerald uppercase block mb-0.5">Strengths</span>
+                        <p>{evaluationReport?.strengths?.join(', ') || 'None compiled'}</p>
+                      </div>
+                      <div>
+                        <span className="text-[10px] font-bold text-rose uppercase block mb-0.5">Weaknesses</span>
+                        <p>{evaluationReport?.weaknesses?.join(', ') || 'None compiled'}</p>
+                      </div>
+                    </div>
+                    <div className="pt-2 text-[10px] text-muted">
+                      <span>Audit Lead:</span>
+                      <strong className="text-text"> Sarah Johnson (Director of Engineering)</strong>
+                    </div>
                   </div>
                 </div>
               </div>
+            )
+          )}
 
               {/* Tasks List Table */}
               <div className="glass border border-border rounded-2xl p-6 bg-void/25 space-y-4">
@@ -485,69 +534,94 @@ export default function StudentDetailPage() {
 
           {/* TAB 2: Skills & Gaps */}
           {activeTab === 'skills' && (
-            <div className="grid md:grid-cols-12 gap-6 items-start">
-              {/* Radar Chart */}
-              <div className="md:col-span-5 glass border border-border rounded-2xl p-6 bg-void/25 flex flex-col items-center justify-center">
-                <span className="text-[10px] font-bold text-text uppercase tracking-wider block mb-4">Capability Comparison Radar</span>
-                {skillGapReport && (skillGapReport.detectedSkills?.length > 0 || skillGapReport.missingSkills?.length > 0) ? (
-                  <RadarChart width={280} height={200} data={[
-                    ...skillGapReport.detectedSkills.map(s => ({ subject: s, score: 85, benchmark: 80 })),
-                    ...skillGapReport.missingSkills.map(s => ({ subject: s, score: 45, benchmark: 80 }))
-                  ].slice(0, 8).map(item => ({
-                    ...item,
-                    subject: item.subject.length > 18 ? item.subject.substring(0, 15) + '...' : item.subject
-                  }))} cx="50%" cy="50%" outerRadius="70%">
-                    <PolarGrid stroke={isDark ? '#1E293B' : '#E2E8F0'} />
-                    <PolarAngleAxis dataKey="subject" tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 8 }} />
-                    <Radar name="Student" dataKey="score" stroke="#8B5CF6" fill="#8B5CF6" fillOpacity={0.15} strokeWidth={2} />
-                    <Radar name="Benchmark" dataKey="benchmark" stroke="#38BDF8" fill="#38BDF8" fillOpacity={0.05} strokeWidth={1} strokeDasharray="3 3" />
-                  </RadarChart>
-                ) : (
-                  <div className="text-center py-12 text-xs text-muted">No skill metrics generated.</div>
-                )}
+            evalError ? (
+              <div className="glass border border-border rounded-2xl p-8 text-center flex flex-col items-center justify-center space-y-3 py-16">
+                <AlertCircle className="text-amber h-8 w-8" />
+                <h3 className="text-sm font-bold text-text">No evaluation available yet</h3>
+                <p className="text-xs text-muted whitespace-pre-line leading-relaxed">
+                  No evaluation available yet.
+                  Student has not completed any evaluated submissions.
+                </p>
               </div>
-
-              {/* Skills and Gaps breakdown */}
-              <div className="md:col-span-7 space-y-6">
-                {/* Detected Skills */}
-                <div className="glass border border-border rounded-2xl p-5 bg-void/25 space-y-3">
-                  <span className="text-[10px] font-bold text-emerald uppercase tracking-wider block">Demonstrated Skill Strengths</span>
-                  <div className="flex flex-wrap gap-2">
-                    {skillGapReport?.detectedSkills?.map((skill, idx) => (
-                      <span key={idx} className="px-2.5 py-1 bg-emerald/10 border border-emerald/20 text-emerald rounded-lg text-xs font-semibold">
-                        {skill}
-                      </span>
-                    )) || <span className="text-xs text-muted">None trace detected</span>}
-                  </div>
+            ) : (
+              <div className="grid md:grid-cols-12 gap-6 items-start">
+                {/* Radar Chart */}
+                <div className="md:col-span-5 glass border border-border rounded-2xl p-6 bg-void/25 flex flex-col items-center justify-center">
+                  <span className="text-[10px] font-bold text-text uppercase tracking-wider block mb-4">Capability Comparison Radar</span>
+                  {evaluationReport ? (
+                    <RadarChart width={280} height={200} data={[
+                      { subject: 'Technical Score', score: evaluationReport.technicalScore || 0, benchmark: 80 },
+                      { subject: 'GitHub Score', score: evaluationReport.githubScore || 0, benchmark: 80 },
+                      { subject: 'Code Quality', score: evaluationReport.codeQuality || 0, benchmark: 80 },
+                      { subject: 'Documentation', score: evaluationReport.documentationScore || 0, benchmark: 80 },
+                      { subject: 'Project Structure', score: evaluationReport.projectStructure || 0, benchmark: 80 }
+                    ]} cx="50%" cy="50%" outerRadius="70%">
+                      <PolarGrid stroke={isDark ? '#1E293B' : '#E2E8F0'} />
+                      <PolarAngleAxis dataKey="subject" tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 8 }} />
+                      <Radar name="Student" dataKey="score" stroke="#8B5CF6" fill="#8B5CF6" fillOpacity={0.15} strokeWidth={2} />
+                      <Radar name="Benchmark" dataKey="benchmark" stroke="#38BDF8" fill="#38BDF8" fillOpacity={0.05} strokeWidth={1} strokeDasharray="3 3" />
+                    </RadarChart>
+                  ) : (
+                    <div className="text-center py-12 text-xs text-muted">No skill metrics generated.</div>
+                  )}
                 </div>
 
-                {/* Missing Skills */}
-                <div className="glass border border-border rounded-2xl p-5 bg-void/25 space-y-3">
-                  <span className="text-[10px] font-bold text-rose uppercase tracking-wider block">Identified Capability Gaps</span>
-                  <div className="flex flex-wrap gap-2">
-                    {skillGapReport?.missingSkills?.map((skill, idx) => (
-                      <span key={idx} className="px-2.5 py-1 bg-rose/10 border border-rose/20 text-rose rounded-lg text-xs font-semibold">
-                        {skill}
-                      </span>
-                    )) || <span className="text-xs text-emerald font-semibold">All requirement skills verified! (No Gaps)</span>}
+                {/* Skills and Gaps breakdown */}
+                <div className="md:col-span-7 space-y-6">
+                  {/* Detected Skills */}
+                  <div className="glass border border-border rounded-2xl p-5 bg-void/25 space-y-3">
+                    <span className="text-[10px] font-bold text-emerald uppercase tracking-wider block">Demonstrated Skill Strengths</span>
+                    <div className="flex flex-wrap gap-2">
+                      {evaluationReport?.identifiedSkills?.map((skill, idx) => (
+                        <span key={idx} className="px-2.5 py-1 bg-emerald/10 border border-emerald/20 text-emerald rounded-lg text-xs font-semibold">
+                          {skill}
+                        </span>
+                      )) || <span className="text-xs text-muted">None trace detected</span>}
+                    </div>
                   </div>
-                </div>
 
-                {/* Improvement Recommendations */}
-                <div className="glass border border-border rounded-2xl p-5 bg-void/25 space-y-3">
-                  <span className="text-[10px] font-bold text-accent uppercase tracking-wider block">Personalized Roadmaps</span>
-                  <div className="space-y-1.5 text-xs text-muted">
-                    {feedbackReport?.recommendations?.map((rec, idx) => (
-                      <div key={idx} className="p-2.5 bg-void/40 border border-border rounded-lg flex items-start gap-2">
-                        <span className="text-accent font-bold">•</span>
-                        <span>{rec}</span>
-                      </div>
-                    )) || <p>No recommendations generated.</p>}
+                  {/* Missing Skills */}
+                  <div className="glass border border-border rounded-2xl p-5 bg-void/25 space-y-3">
+                    <span className="text-[10px] font-bold text-rose uppercase tracking-wider block">Identified Capability Gaps</span>
+                    <div className="flex flex-wrap gap-2">
+                      {evaluationReport?.identifiedSkillGaps?.map((skill, idx) => (
+                        <span key={idx} className="px-2.5 py-1 bg-rose/10 border border-rose/20 text-rose rounded-lg text-xs font-semibold">
+                          {skill}
+                        </span>
+                      )) || <span className="text-xs text-emerald font-semibold">All requirement skills verified! (No Gaps)</span>}
+                    </div>
+                  </div>
+
+                  {/* Improvement Recommendations */}
+                  <div className="glass border border-border rounded-2xl p-5 bg-void/25 space-y-3">
+                    <span className="text-[10px] font-bold text-accent uppercase tracking-wider block">Personalized Roadmaps & Recommendations</span>
+                    <div className="space-y-1.5 text-xs text-muted">
+                      {evaluationReport?.recommendations?.map((rec, idx) => (
+                        <div key={idx} className="p-2.5 bg-void/40 border border-border rounded-lg flex items-start gap-2">
+                          <span className="text-accent font-bold">•</span>
+                          <span>{rec}</span>
+                        </div>
+                      )) || <p>No recommendations generated.</p>}
+                    </div>
+                  </div>
+
+                  {/* Career Suggestions */}
+                  <div className="glass border border-border rounded-2xl p-5 bg-void/25 space-y-3">
+                    <span className="text-[10px] font-bold text-violet uppercase tracking-wider block">Career Suggestions / Certifications</span>
+                    <div className="space-y-1.5 text-xs text-muted">
+                      {evaluationReport?.careerRecommendations?.map((cert, idx) => (
+                        <div key={idx} className="p-2.5 bg-void/40 border border-border rounded-lg flex items-start gap-2">
+                          <span className="text-violet font-bold">•</span>
+                          <span>{cert}</span>
+                        </div>
+                      )) || <p>No career certifications recommended yet.</p>}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )
           )}
+
 
           {/* TAB 3: Mock Interview */}
           {activeTab === 'interview' && (

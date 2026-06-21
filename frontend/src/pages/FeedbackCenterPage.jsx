@@ -12,6 +12,7 @@ export default function FeedbackCenterPage() {
   const [activeChannel, setActiveChannel] = useState('technical') // technical, manager, career
   const [feedbacks, setFeedbacks] = useState([])
   const [loadingFeedbacks, setLoadingFeedbacks] = useState(true)
+  const [evalError, setEvalError] = useState('')
 
   useEffect(() => {
     if (!user?._id && !user?.id) return;
@@ -19,12 +20,27 @@ export default function FeedbackCenterPage() {
       try {
         setLoadingFeedbacks(true)
         const studentId = user._id || user.id
-        const res = await axiosInstance.get(`/api/feedback/student/${studentId}`)
-        if (res.data?.success && res.data?.data?.feedbacks) {
-          setFeedbacks(res.data.data.feedbacks)
+        const res = await axiosInstance.get(`/api/evaluation/student/${studentId}`)
+        const data = res.data
+        if (data) {
+          const fb = {
+            _id: data.submissionId || 'latest',
+            taskId: {
+              title: 'Unified Milestone Evaluation',
+              score: data.overallScore
+            },
+            mentorFeedback: 'Evaluation score dynamically calculated by the AI compliance engine.',
+            strengths: data.strengths || [],
+            weaknesses: data.weaknesses || [],
+            recommendations: data.recommendations || []
+          }
+          setFeedbacks([fb])
+          setEvalError('')
         }
       } catch (err) {
         console.error('Failed to load student feedbacks:', err)
+        setFeedbacks([])
+        setEvalError('No evaluation available yet.\nStudent has not completed any evaluated submissions.')
       } finally {
         setLoadingFeedbacks(false)
       }
@@ -264,6 +280,14 @@ export default function FeedbackCenterPage() {
           {loadingFeedbacks ? (
             <div className="glass border border-border rounded-2xl p-8 text-center text-xs text-muted">
               Loading evaluation reports...
+            </div>
+          ) : evalError ? (
+            <div className="glass border border-border rounded-2xl p-8 text-center text-xs text-muted bg-void/20">
+              <AlertCircle className="mx-auto text-amber h-6 w-6 mb-2" />
+              <p className="whitespace-pre-line leading-relaxed">
+                No evaluation available yet.
+                Student has not completed any evaluated submissions.
+              </p>
             </div>
           ) : feedbacks.length === 0 ? (
             <div className="glass border border-border rounded-2xl p-8 text-center text-xs text-muted bg-void/20">

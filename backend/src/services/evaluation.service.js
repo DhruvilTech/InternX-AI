@@ -13,6 +13,10 @@ import { analyzeGithubRepository } from './githubAnalyzer.service.js';
 import { extractZipMetadata } from './zipExtractor.service.js';
 import { generateFeedbackRecord, analyzeStudentSkills, generateCareerIntelligence } from './feedback.service.js';
 import { generateCareerReports } from './careerReport.service.js';
+import FeedbackReport from '../models/FeedbackReport.js';
+import SkillGapReport from '../models/SkillGapReport.js';
+import CareerReport from '../models/CareerReport.js';
+import EvaluationReport from '../models/EvaluationReport.js';
 
 
 /**
@@ -162,6 +166,39 @@ export const runEvaluationEngine = async (submissionId, type, githubUrl, fileDat
       await generateCareerReports(submission.studentId);
     } catch (reportErr) {
       console.error('[Evaluation service] Failed to generate career reports:', reportErr.message);
+    }
+
+    // Compile and save/update unified EvaluationReport
+    try {
+      const feedbackReport = await FeedbackReport.findOne({ studentId: submission.studentId });
+      const skillGapReport = await SkillGapReport.findOne({ studentId: submission.studentId });
+      const careerReport = await CareerReport.findOne({ studentId: submission.studentId });
+
+      await EvaluationReport.deleteMany({ studentId: submission.studentId });
+
+      const evaluationReport = new EvaluationReport({
+        studentId: submission.studentId,
+        internshipId: submission.internshipId || task.internshipId,
+        submissionId: submission._id,
+        overallScore: evaluation.overallScore,
+        technicalScore: evaluation.technicalScore,
+        codeQuality: evaluation.codeQualityScore,
+        projectStructure: evaluation.architectureScore,
+        documentationScore: evaluation.documentationScore,
+        githubScore: evaluation.githubScore,
+        strengths: evaluation.strengths || [],
+        weaknesses: evaluation.weaknesses || [],
+        identifiedSkills: skillGapReport ? skillGapReport.detectedSkills : [],
+        identifiedSkillGaps: skillGapReport ? skillGapReport.missingSkills : [],
+        recommendations: evaluation.recommendations || [],
+        careerRecommendations: careerReport ? careerReport.recommendedCertifications : [],
+        readinessLevel: careerReport ? careerReport.careerLevel : 'Beginner',
+        generatedAt: new Date()
+      });
+      await evaluationReport.save();
+      console.log(`[Evaluation Service] Saved unified EvaluationReport for student ${submission.studentId}`);
+    } catch (reportErr) {
+      console.error('[Evaluation service] Failed to save EvaluationReport:', reportErr.message);
     }
 
     // Stage 7: Completed

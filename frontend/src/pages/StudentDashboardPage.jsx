@@ -57,6 +57,7 @@ export default function StudentDashboardPage() {
   const [careerIntel, setCareerIntel] = useState(null)
   const [managerFeedback, setManagerFeedback] = useState('')
   const [connectedRepo, setConnectedRepo] = useState(null)
+  const [evalError, setEvalError] = useState('')
 
   useEffect(() => {
     const fetchConnectedRepo = async () => {
@@ -94,23 +95,28 @@ export default function StudentDashboardPage() {
   }, [tasks])
 
   useEffect(() => {
+    if (!user) return
     const fetchIntel = async () => {
       try {
-        const res = await axiosInstance.get('/api/careers/career-intelligence')
-        if (res.data?.success && res.data?.data) {
-          setPortfolioScore(res.data.data.portfolioScore || 0)
-          setPlacementScore(res.data.data.placementReadiness || 0)
-          setCareerIntel(res.data.data)
-          if (res.data.data.feedbackReport?.managerFeedback) {
-            setManagerFeedback(res.data.data.feedbackReport.managerFeedback)
-          }
+        const studentId = user._id || user.id
+        const res = await axiosInstance.get(`/api/evaluation/student/${studentId}`)
+        const data = res.data
+        if (data) {
+          setPortfolioScore(data.technicalScore || 0)
+          setPlacementScore(data.overallScore || 0)
+          setCareerIntel(data)
+          setEvalError('')
         }
       } catch (err) {
         console.error('Failed to load career intelligence for dashboard:', err)
+        setPortfolioScore(0)
+        setPlacementScore(0)
+        setCareerIntel(null)
+        setEvalError('No evaluation available yet.\nStudent has not completed any evaluated submissions.')
       }
     }
     fetchIntel()
-  }, [tasks])
+  }, [user, tasks])
 
 
   useEffect(() => {
@@ -204,100 +210,116 @@ export default function StudentDashboardPage() {
           {/* LEFT COLUMN: Progress & Tasks & Skill Growth */}
           <div className="col-span-12 lg:col-span-8 space-y-6">
 
-            {/* Career Intelligence & Diagnostics */}
-            <div className="glass rounded-2xl p-6 border border-border bg-void/30 space-y-6">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="text-sm font-bold text-text">Career Intelligence & Diagnostics</h3>
-                  <p className="text-[10px] text-muted">Placement readiness metrics, advice, and paths</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <button onClick={() => navigate('skill_gap')} className="text-xs text-accent hover:underline flex items-center gap-1 font-semibold">
-                    Skill Gap Analysis <ArrowRight size={12} />
-                  </button>
-                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${careerIntel?.careerReadiness === 'Industry Ready'
-                      ? 'bg-emerald/10 border-emerald/20 text-emerald'
-                      : careerIntel?.careerReadiness === 'Job Ready'
-                        ? 'bg-sky/10 border-sky/20 text-sky'
-                        : careerIntel?.careerReadiness === 'Intermediate'
-                          ? 'bg-violet/10 border-violet/20 text-violet'
-                          : 'bg-amber/10 border-amber/20 text-amber'
-                    }`}>
-                    {careerIntel?.careerReadiness || 'Beginner'}
-                  </span>
-                </div>
+            {evalError ? (
+              <div className="glass rounded-2xl p-8 border border-border bg-void/30 text-center flex flex-col items-center justify-center space-y-3 py-16">
+                <AlertCircle className="text-amber h-8 w-8" />
+                <h3 className="text-sm font-bold text-text">No evaluation available yet</h3>
+                <p className="text-xs text-muted whitespace-pre-line leading-relaxed">
+                  No evaluation available yet.
+                  Student has not completed any evaluated submissions.
+                </p>
               </div>
-
-              {/* Advice */}
-              {careerIntel?.careerAdvice && (
-                <div className="p-4 rounded-xl border border-border bg-accent/5 flex items-start gap-3">
-                  <Sparkles size={16} className="text-accent mt-0.5 shrink-0" />
-                  <div className="w-full">
-                    <h4 className="text-xs font-bold text-text mb-1">Career Coach Insight</h4>
-                    <p className="text-xs text-muted leading-relaxed">
-                      {careerIntel.careerAdvice}
-                    </p>
-                    {careerIntel?.salaryRange && (
-                      <div className="mt-2.5 pt-2 border-t border-border/30 flex justify-between items-center text-[10px] text-muted">
-                        <span>Salary Estimate:</span>
-                        <strong className="text-accent font-semibold">{careerIntel.salaryRange}</strong>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Roles & Certs Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block">Recommended Roles</span>
-                  <div className="flex flex-wrap gap-2">
-                    {careerIntel?.recommendedRoles?.map((role, idx) => (
-                      <span key={idx} className="px-2.5 py-1 bg-surface-muted/30 border border-border rounded-lg text-xs text-text">
-                        {role}
+            ) : (
+              <>
+                {/* Career Intelligence & Diagnostics */}
+                <div className="glass rounded-2xl p-6 border border-border bg-void/30 space-y-6">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="text-sm font-bold text-text">Career Intelligence & Diagnostics</h3>
+                      <p className="text-[10px] text-muted">Placement readiness metrics, advice, and paths</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <button onClick={() => navigate('skill_gap')} className="text-xs text-accent hover:underline flex items-center gap-1 font-semibold">
+                        Skill Gap Analysis <ArrowRight size={12} />
+                      </button>
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${careerIntel?.readinessLevel === 'Industry Ready'
+                          ? 'bg-emerald/10 border-emerald/20 text-emerald'
+                          : careerIntel?.readinessLevel === 'Job Ready'
+                            ? 'bg-sky/10 border-sky/20 text-sky'
+                            : careerIntel?.readinessLevel === 'Intermediate'
+                              ? 'bg-violet/10 border-violet/20 text-violet'
+                              : 'bg-amber/10 border-amber/20 text-amber'
+                        }`}>
+                        {careerIntel?.readinessLevel || 'Beginner'}
                       </span>
-                    )) || <span className="text-xs text-dim">None recommended</span>}
+                    </div>
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block">Recommended Certifications</span>
-                  <div className="space-y-1.5">
-                    {careerIntel?.recommendedCertifications?.map((cert, idx) => (
-                      <div key={idx} className="flex items-center gap-2 text-xs text-muted">
-                        <Award size={12} className="text-violet shrink-0" />
-                        <span className="truncate">{cert}</span>
+                  {/* Career Suggestions / Recommendations */}
+                  <div className="p-4 rounded-xl border border-border bg-accent/5 flex items-start gap-3">
+                    <Sparkles size={16} className="text-accent mt-0.5 shrink-0" />
+                    <div className="w-full">
+                      <h4 className="text-xs font-bold text-text mb-1">Feedback & Recommendations</h4>
+                      <div className="space-y-1 text-xs text-muted leading-relaxed">
+                        {careerIntel?.recommendations && careerIntel.recommendations.map((rec, idx) => (
+                          <div key={idx} className="flex items-start gap-2">
+                            <span className="text-accent font-bold">•</span>
+                            <span>{rec}</span>
+                          </div>
+                        ))}
+                        {(!careerIntel?.recommendations || careerIntel.recommendations.length === 0) && (
+                          <p>No recommendations generated yet.</p>
+                        )}
                       </div>
-                    )) || <span className="text-xs text-dim">None recommended</span>}
+                    </div>
+                  </div>
+
+                  {/* Roles & Certs Grid */}
+                  <div className="grid grid-cols-1 gap-4">
+                    <div className="space-y-2">
+                      <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block">Career Suggestions / Certifications</span>
+                      <div className="space-y-1.5">
+                        {careerIntel?.careerRecommendations?.map((cert, idx) => (
+                          <div key={idx} className="flex items-center gap-2 text-xs text-muted">
+                            <Award size={12} className="text-violet shrink-0" />
+                            <span className="truncate">{cert}</span>
+                          </div>
+                        )) || <span className="text-xs text-dim">None recommended</span>}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </div>
 
-            {/* Recent Feedback Widget */}
-            <div className="glass rounded-2xl p-6 border border-border bg-void/30 space-y-4">
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="text-sm font-bold text-text">Recent Manager Audits</h3>
-                  <p className="text-[10px] text-muted">Evaluation highlights from Sarah Johnson</p>
-                </div>
-                <button onClick={() => navigate('feedback_center')} className="text-xs text-accent hover:underline flex items-center gap-1">
-                  Feedback Center <ArrowRight size={12} />
-                </button>
-              </div>
-
-              <div className="space-y-3">
-                <div className="p-4 rounded-xl border border-border bg-surface-muted/10 space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-text">Sarah Johnson (AI Lead Manager)</span>
-                    <span className="text-[9px] text-dim font-mono">Recent</span>
+                {/* Recent Feedback Widget */}
+                <div className="glass rounded-2xl p-6 border border-border bg-void/30 space-y-4">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="text-sm font-bold text-text">Feedback Engine Audits</h3>
+                      <p className="text-[10px] text-muted">Evaluation strengths and weaknesses</p>
+                    </div>
+                    <button onClick={() => navigate('feedback_center')} className="text-xs text-accent hover:underline flex items-center gap-1">
+                      Feedback Center <ArrowRight size={12} />
+                    </button>
                   </div>
-                  <p className="text-xs text-muted leading-relaxed">
-                    {managerFeedback ? `"${managerFeedback}"` : `"${firstName}'s work is being evaluated. Complete deliverables to see manager audits."`}
-                  </p>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="p-4 rounded-xl border border-border bg-emerald/5 space-y-2">
+                      <span className="text-[10px] font-bold text-emerald uppercase block">Demonstrated Strengths</span>
+                      <ul className="text-xs text-muted space-y-1 list-disc pl-4">
+                        {careerIntel?.strengths && careerIntel.strengths.map((str, idx) => (
+                          <li key={idx}>{str}</li>
+                        ))}
+                        {(!careerIntel?.strengths || careerIntel.strengths.length === 0) && (
+                          <li className="list-none pl-0 italic text-[10px]">No strengths compiled yet</li>
+                        )}
+                      </ul>
+                    </div>
+
+                    <div className="p-4 rounded-xl border border-border bg-rose/5 space-y-2">
+                      <span className="text-[10px] font-bold text-rose uppercase block">Identified Weaknesses</span>
+                      <ul className="text-xs text-muted space-y-1 list-disc pl-4">
+                        {careerIntel?.weaknesses && careerIntel.weaknesses.map((weak, idx) => (
+                          <li key={idx}>{weak}</li>
+                        ))}
+                        {(!careerIntel?.weaknesses || careerIntel.weaknesses.length === 0) && (
+                          <li className="list-none pl-0 italic text-[10px]">No weaknesses compiled yet</li>
+                        )}
+                      </ul>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </div>
+              </>
+            )}
 
             {/* Current Tasks Widget */}
             <div className="glass rounded-2xl p-6 border border-border bg-void/30 space-y-4">
