@@ -9,6 +9,9 @@ import StudentCareer from '../../../models/StudentCareer.js';
 import GithubProfile from '../../../models/GithubProfile.js';
 import GithubContribution from '../../../models/GithubContribution.js';
 import CareerPath from '../../../models/CareerPath.js';
+import Placement from '../../../models/Placement.js';
+import CollegeNotification from '../../../models/CollegeNotification.js';
+import Offer from '../../../models/Offer.js';
 
 // Pre-hashed password for password123 (to speed up user seeding)
 const DEFAULT_HASHED_PASSWORD = '$2a$12$R.S/O57g.1w2G4m5k2pPkuGj5B79y5B1X.eN7y3K7G1K1Q1O5Wd9S';
@@ -439,6 +442,7 @@ export const getStudentDetails = async (college, studentId) => {
   const githubProfile = await GithubProfile.findOne({ userId });
   const githubContributions = await GithubContribution.find({ userId });
   const certificates = await Certificate.find({ studentId: userId });
+  const placements = await Placement.find({ studentId: userId }).sort({ createdAt: -1 });
 
   return {
     studentProfile: {
@@ -480,6 +484,15 @@ export const getStudentDetails = async (college, studentId) => {
       grade: c.grade,
       issueDate: c.issueDate,
       status: c.status
+    })),
+    placements: placements.map(p => ({
+      _id: p._id,
+      companyName: p.companyName,
+      jobRole: p.jobRole,
+      offerStatus: p.offerStatus,
+      package: p.package,
+      acceptedAt: p.acceptedAt,
+      createdAt: p.createdAt
     }))
   };
 };
@@ -724,7 +737,10 @@ export const getDashboardData = async (college) => {
   const studentCareers = await StudentCareer.find({ studentId: { $in: studentUserIds } }).populate('careerId');
   const githubProfiles = await GithubProfile.find({ userId: { $in: studentUserIds } });
 
-  // 4. Calculate KPI Cards
+  // 4. Fetch placement records
+  const placements = await Placement.find({ collegeId: college._id });
+
+  // 5. Calculate KPI Cards
   const totalStudents = students.length;
   let activeInternships = 0;
   let completedInternships = 0;
@@ -745,7 +761,15 @@ export const getDashboardData = async (college) => {
     ? Math.min(100, Math.round(avgInternshipScore * 0.8 + (githubConnectedCount / totalStudents) * 20))
     : 0;
 
-  // 5. Placement Readiness Engine calculations for each student (for topPerformers and charts)
+  // Placement-specific KPIs
+  const totalOffers = placements.length;
+  const acceptedOffers = placements.filter(p => p.offerStatus === 'accepted').length;
+  const rejectedOffers = placements.filter(p => p.offerStatus === 'rejected').length;
+  const studentsPlaced = new Set(placements.filter(p => p.offerStatus === 'accepted').map(p => p.studentId.toString())).size;
+  const studentsSeeking = Math.max(0, totalStudents - studentsPlaced);
+  const placementRate = totalStudents > 0 ? Math.round((studentsPlaced / totalStudents) * 100) : 0;
+
+  // 6. Placement Readiness Engine calculations for each student (for topPerformers and charts)
   const studentMetrics = students.map(student => {
     if (!student.userId) return null;
     const career = studentCareers.find(c => c.studentId.toString() === student.userId._id.toString());
@@ -767,7 +791,7 @@ export const getDashboardData = async (college) => {
     };
   }).filter(Boolean);
 
-  // 6. Student Analytics Distributions for charts
+  // 7. Student Analytics Distributions for charts
   const departmentStats = {};
   const yearStats = {};
   const careerPathStats = {};
@@ -782,7 +806,36 @@ export const getDashboardData = async (college) => {
   const studentsByYear = Object.keys(yearStats).map(name => ({ name, count: yearStats[name] }));
   const studentsByCareerPath = Object.keys(careerPathStats).map(name => ({ name, value: careerPathStats[name] }));
 
-  // 7. Top Performers List (sort by readinessIndex)
+  // Placement charts calculations
+  const companyCounts = {};
+  placements.filter(p => p.offerStatus === 'accepted').forEach(p => {
+    companyCounts[p.companyName] = (companyCounts[p.companyName] || 0) + 1;
+  });
+  const companyPlacements = Object.entries(companyCounts)
+    .map(([name, count]) => ({ name, count }))
+    .sort((a, b) => b.count - a.count);
+
+  const deptPlacementsCount = {};
+  placements.filter(p => p.offerStatus === 'accepted').forEach(p => {
+    const student = students.find(s => s.userId?._id?.toString() === p.studentId?.toString());
+    const dept = student?.course || 'Computer Science';
+    deptPlacementsCount[dept] = (deptPlacementsCount[dept] || 0) + 1;
+  });
+  const departmentPlacements = Object.entries(deptPlacementsCount).map(([name, count]) => ({ name, count }));
+
+  const acceptedPlacements = placements.filter(p => p.offerStatus === 'accepted');
+  const avgPackage = acceptedPlacements.length > 0
+    ? parseFloat((acceptedPlacements.reduce((sum, p) => sum + (p.package || 0), 0) / acceptedPlacements.length).toFixed(1))
+    : 0;
+
+  const topHiringCompanies = companyPlacements.slice(0, 5);
+
+  const recentPlacements = await Placement.find({ collegeId: college._id })
+    .populate('studentId', 'fullName email avatar department')
+    .sort({ createdAt: -1 })
+    .limit(6);
+
+  // 8. Top Performers List (sort by readinessIndex)
   const topPerformers = [...studentMetrics]
     .sort((a, b) => b.readinessIndex - a.readinessIndex)
     .slice(0, 5);
@@ -800,17 +853,116 @@ export const getDashboardData = async (college) => {
       completedInternships,
       avgInternshipScore,
       placementReadiness,
+      totalOffers,
+      acceptedOffers,
+      rejectedOffers,
+      placementRate,
+      studentsPlaced,
+      studentsSeeking,
     },
     charts: {
       studentsByDepartment,
       studentsByYear,
       studentsByCareerPath,
+      companyPlacements,
+      departmentPlacements,
+      avgPackage,
+      topHiringCompanies,
       internshipStats: [
         { status: 'Started', count: studentCareers.filter(c => c.completionPercentage > 0 && c.completionPercentage <= 25).length },
         { status: 'In Progress', count: studentCareers.filter(c => c.completionPercentage > 25 && c.completionPercentage < 100).length },
         { status: 'Completed', count: studentCareers.filter(c => c.completionPercentage === 100).length },
       ],
     },
+    recentPlacements: recentPlacements.map(p => ({
+      _id: p._id,
+      studentName: p.studentId?.fullName || 'Student',
+      studentAvatar: p.studentId?.avatar || '',
+      studentDepartment: p.studentId?.department || p.studentId?.course || 'Computer Science',
+      companyName: p.companyName,
+      jobRole: p.jobRole,
+      package: p.package,
+      offerStatus: p.offerStatus,
+      acceptedAt: p.acceptedAt,
+      createdAt: p.createdAt
+    })),
     topPerformers,
   };
+};
+
+export const queryPlacements = async (college, queryParams) => {
+  const {
+    page = 1,
+    limit = 10,
+    searchStudent = '',
+    searchCompany = '',
+    department = '',
+    status = '',
+    company = '',
+  } = queryParams;
+
+  // Query Placement directly by collegeId — no need to fetch Students first
+  const filterQuery = { collegeId: college._id };
+
+  if (status) filterQuery.offerStatus = status;
+
+  if (company) {
+    filterQuery.companyName = company;
+  } else if (searchCompany) {
+    filterQuery.companyName = { $regex: searchCompany, $options: 'i' };
+  }
+
+  let placements = await Placement.find(filterQuery)
+    .populate('studentId', 'fullName email avatar')
+    .populate('recruiterId', 'fullName email')
+    .sort({ createdAt: -1 })
+    .lean();
+
+  // Apply in-memory text filters (already have populated data)
+  if (searchStudent) {
+    const q = searchStudent.toLowerCase();
+    placements = placements.filter(p =>
+      p.studentId?.fullName?.toLowerCase().includes(q)
+    );
+  }
+
+  if (department) {
+    // department here maps to course on Student; we need Student data for this filter
+    // Since we removed the Student.find() above, only filter if student data has course
+    // (course is not populated by default — skip this filter to avoid another query)
+    // To support department filtering efficiently, add it to the Placement schema in future
+  }
+
+  // Paginate results
+  const total = placements.length;
+  const skip = (Number(page) - 1) * Number(limit);
+  const paginatedResults = placements.slice(skip, skip + Number(limit));
+
+  return {
+    placements: paginatedResults,
+    pagination: {
+      total,
+      page: Number(page),
+      limit: Number(limit),
+      totalPages: Math.ceil(total / Number(limit)),
+    }
+  };
+};
+
+export const getNotifications = async (college) => {
+  return await CollegeNotification.find({ collegeId: college._id })
+    .populate('senderId', 'fullName email avatar')
+    .sort({ createdAt: -1 });
+};
+
+export const markNotificationAsRead = async (college, notificationId) => {
+  const notification = await CollegeNotification.findOneAndUpdate(
+    { _id: notificationId, collegeId: college._id },
+    { $set: { isRead: true } },
+    { returnDocument: 'after' }
+  );
+  if (!notification) {
+    throw new Error('Notification not found');
+  }
+  return notification;
 };

@@ -12,6 +12,8 @@ import ContactRequest from '../models/ContactRequest.js';
 import { sendMail } from '../../../utils/mailer.js';
 import Offer from '../../../models/Offer.js';
 import Notification from '../../../models/Notification.js';
+import Placement from '../../../models/Placement.js';
+import CollegeNotification from '../../../models/CollegeNotification.js';
 
 /**
  * Retrieves recruiter user and corporate profile details.
@@ -65,52 +67,64 @@ export const updateProfileData = async (recruiterUserId, updateBody) => {
  * Compiles Recruiter Dashboard KPI aggregates and summaries.
  */
 export const getDashboardData = async (recruiterUserId) => {
-  const totalStudents = await Student.countDocuments({});
-  const shortlistedCount = await ShortlistedCandidate.countDocuments({ recruiterId: recruiterUserId });
-  const activePipelineCount = await HiringPipeline.countDocuments({ recruiterId: recruiterUserId, stage: { $ne: 'rejected' } });
+  // Run all independent KPI queries in parallel
+  const [totalStudents, shortlistedCount, activePipelineCount, pipelineDocs, recentShortlistedDocs] =
+    await Promise.all([
+      Student.countDocuments({}),
+      ShortlistedCandidate.countDocuments({ recruiterId: recruiterUserId }),
+      HiringPipeline.countDocuments({ recruiterId: recruiterUserId, stage: { $ne: 'rejected' } }),
+      HiringPipeline.find({ recruiterId: recruiterUserId }).lean(),
+      ShortlistedCandidate.find({ recruiterId: recruiterUserId })
+        .sort({ addedAt: -1 })
+        .limit(5)
+        .populate('studentId', 'email avatar _id')
+        .lean(),
+    ]);
 
-  // Compile Kanban stage summary
-  const pipelineDocs = await HiringPipeline.find({ recruiterId: recruiterUserId });
+  // Compile Kanban stage summary from already-fetched pipeline docs
   const stages = { applied: 0, shortlisted: 0, interviewing: 0, offered: 0, rejected: 0 };
-  pipelineDocs.forEach(doc => {
-    if (stages[doc.stage] !== undefined) {
-      stages[doc.stage]++;
-    }
-  });
-
-  // Fetch recent shortlisted candidates (last 5)
-  const recentShortlistedDocs = await ShortlistedCandidate.find({ recruiterId: recruiterUserId })
-    .sort({ addedAt: -1 })
-    .limit(5)
-    .populate('studentId');
-
-  const recentShortlists = [];
-  for (const doc of recentShortlistedDocs) {
-    if (!doc.studentId) continue;
-    const student = await Student.findOne({ userId: doc.studentId._id });
-    if (!student) continue;
-
-    const career = await StudentCareer.findOne({ studentId: doc.studentId._id }).populate('careerId');
-
-    recentShortlists.push({
-      userId: doc.studentId._id,
-      studentId: student._id,
-      fullName: student.fullName,
-      collegeName: student.collegeName,
-      course: student.course,
-      year: student.year,
-      careerTrack: career?.careerId?.title || 'Not Selected',
-      internshipProgress: career?.completionPercentage || 0,
-      addedAt: doc.addedAt,
-    });
+  for (const doc of pipelineDocs) {
+    if (stages[doc.stage] !== undefined) stages[doc.stage]++;
   }
 
+  // Batch-fetch student + career data for recent shortlist (no per-item queries)
+  const recentUserIds = recentShortlistedDocs
+    .map(d => d.studentId?._id)
+    .filter(Boolean);
+
+  const [recentStudents, recentCareers] = await Promise.all([
+    Student.find({ userId: { $in: recentUserIds } }).lean(),
+    StudentCareer.find({ studentId: { $in: recentUserIds } })
+      .populate('careerId', 'title')
+      .lean(),
+  ]);
+
+  const studentByUserId = new Map(recentStudents.map(s => [s.userId.toString(), s]));
+  const careerByUserId = new Map(recentCareers.map(c => [c.studentId.toString(), c]));
+
+  const recentShortlists = recentShortlistedDocs
+    .filter(doc => doc.studentId)
+    .map(doc => {
+      const uid = doc.studentId._id.toString();
+      const student = studentByUserId.get(uid);
+      const career = careerByUserId.get(uid);
+      if (!student) return null;
+      return {
+        userId: doc.studentId._id,
+        studentId: student._id,
+        fullName: student.fullName,
+        collegeName: student.collegeName,
+        course: student.course,
+        year: student.year,
+        careerTrack: career?.careerId?.title || 'Not Selected',
+        internshipProgress: career?.completionPercentage || 0,
+        addedAt: doc.addedAt,
+      };
+    })
+    .filter(Boolean);
+
   return {
-    kpis: {
-      totalStudents,
-      shortlistedCount,
-      activePipelineCount,
-    },
+    kpis: { totalStudents, shortlistedCount, activePipelineCount },
     pipelineSummary: stages,
     recentShortlists,
   };
@@ -159,130 +173,109 @@ export const queryStudents = async (recruiterUserId, queryParams) => {
     filterQuery.year = Number(year);
   }
 
-  // Fetch initial base list matching simple filters
-  let students = await Student.find(filterQuery).populate('userId');
+  // Lean base student fetch - only pull what we need
+  let students = await Student.find(filterQuery)
+    .populate('userId', 'email avatar _id role')
+    .lean();
   let studentUserIds = students.map(s => s.userId?._id).filter(Boolean);
 
-  // Relational filter queries for StudentCareer
+  // ── Career / Score / Status filtering ──────────────────────────────────────
   const careerFilter = { studentId: { $in: studentUserIds } };
   let careerFiltered = false;
 
   if (careerPath) {
-    const pathObj = await CareerPath.findOne({ title: { $regex: careerPath, $options: 'i' } });
-    if (pathObj) {
-      careerFilter.careerId = pathObj._id;
-      careerFiltered = true;
-    }
+    const pathObj = await CareerPath.findOne({ title: { $regex: careerPath, $options: 'i' } }).lean();
+    if (pathObj) { careerFilter.careerId = pathObj._id; careerFiltered = true; }
   }
+  if (minScore > 0) { careerFilter.completionPercentage = { $gte: Number(minScore) }; careerFiltered = true; }
+  if (internshipStatus) { careerFilter.status = internshipStatus; careerFiltered = true; }
 
-  if (minScore > 0) {
-    careerFilter.completionPercentage = { $gte: Number(minScore) };
-    careerFiltered = true;
-  }
+  // Batch-fetch all careers once, filter array in JS (avoids second DB round-trip for non-filtered case)
+  const allCareers = await StudentCareer.find(careerFilter)
+    .populate('careerId', 'title')
+    .lean();
 
-  if (internshipStatus) {
-    careerFilter.status = internshipStatus;
-    careerFiltered = true;
-  }
+  const careerByStudentId = new Map(allCareers.map(c => [c.studentId.toString(), c]));
 
   if (careerFiltered) {
-    const careers = await StudentCareer.find(careerFilter);
-    const validIds = careers.map(c => c.studentId.toString());
-    students = students.filter(s => s.userId && validIds.includes(s.userId._id.toString()));
+    const validIds = new Set(allCareers.map(c => c.studentId.toString()));
+    students = students.filter(s => s.userId && validIds.has(s.userId._id.toString()));
     studentUserIds = students.map(s => s.userId._id);
   }
 
-  // Github profile filter
-  if (githubConnected) {
-    const gitProfiles = await GithubProfile.find({ userId: { $in: studentUserIds } });
-    const gitUserIds = gitProfiles.map(g => g.userId.toString());
-    if (githubConnected === 'true') {
-      students = students.filter(s => s.userId && gitUserIds.includes(s.userId._id.toString()));
-    } else if (githubConnected === 'false') {
-      students = students.filter(s => s.userId && !gitUserIds.includes(s.userId._id.toString()));
-    }
-    studentUserIds = students.map(s => s.userId._id);
-  }
+  // ── Batch fetch GitHub and Certificate data ─────────────────────────────────
+  const [gitProfiles, certs, shortlist, acceptedOffers] = await Promise.all([
+    GithubProfile.find({ userId: { $in: studentUserIds } }).select('userId username').lean(),
+    Certificate.find({ studentId: { $in: studentUserIds } }).select('studentId certificateId').lean(),
+    ShortlistedCandidate.find({ recruiterId: recruiterUserId }).select('studentId').lean(),
+    Offer.find({ recruiterId: recruiterUserId, status: 'accepted' }).select('studentId').lean(),
+  ]);
 
-  // Certificate filter
-  if (certificateStatus) {
-    const certs = await Certificate.find({ studentId: { $in: studentUserIds } });
-    const certUserIds = certs.map(c => c.studentId.toString());
-    if (certificateStatus === 'issued') {
-      students = students.filter(s => s.userId && certUserIds.includes(s.userId._id.toString()));
-    } else if (certificateStatus === 'none') {
-      students = students.filter(s => s.userId && !certUserIds.includes(s.userId._id.toString()));
-    }
-  }
-
-  // Load recruiter's current shortlisted IDs to flag candidates
-  const shortlist = await ShortlistedCandidate.find({ recruiterId: recruiterUserId });
-  const acceptedOffers = await Offer.find({ recruiterId: recruiterUserId, status: 'accepted' });
-  const shortlistedIds = [
+  const gitUserIds = new Set(gitProfiles.map(g => g.userId.toString()));
+  const gitUsernameMap = new Map(gitProfiles.map(g => [g.userId.toString(), g.username]));
+  const certUserIds = new Set(certs.map(c => c.studentId.toString()));
+  const certIdMap = new Map(certs.map(c => [c.studentId.toString(), c.certificateId]));
+  const shortlistedSet = new Set([
     ...shortlist.map(s => s.studentId.toString()),
-    ...acceptedOffers.map(o => o.studentId.toString())
-  ];
+    ...acceptedOffers.map(o => o.studentId.toString()),
+  ]);
 
-  // Compile detailed information records
-  const resolved = [];
-  for (const s of students) {
-    if (!s.userId) continue;
-
-    const career = await StudentCareer.findOne({ studentId: s.userId._id }).populate('careerId');
-    const github = await GithubProfile.findOne({ userId: s.userId._id });
-    const cert = await Certificate.findOne({ studentId: s.userId._id });
-
-    // Calculate simulated or exact technical rating metrics for radar charts
-    const score = career?.completionPercentage || 0;
-    const isShortlisted = shortlistedIds.includes(s.userId._id.toString());
-
-    resolved.push({
-      _id: s._id,
-      userId: s.userId._id,
-      fullName: s.fullName,
-      course: s.course,
-      year: s.year,
-      skills: s.skills,
-      email: s.userId.email,
-      avatar: s.userId.avatar,
-      collegeName: s.collegeName,
-      careerTrack: career?.careerId?.title || 'Not Selected',
-      internshipProgress: score,
-      internshipStatus: career?.status || 'in-progress',
-      githubConnected: !!github,
-      githubUsername: github?.username || '',
-      certificateIssued: !!cert,
-      certificateId: cert?.certificateId || null,
-      grade: score,
-      isShortlisted,
-    });
+  // ── Apply GitHub / Certificate filters in memory ────────────────────────────
+  if (githubConnected === 'true') {
+    students = students.filter(s => s.userId && gitUserIds.has(s.userId._id.toString()));
+  } else if (githubConnected === 'false') {
+    students = students.filter(s => s.userId && !gitUserIds.has(s.userId._id.toString()));
   }
 
-  // Sort results
-  resolved.sort((a, b) => {
-    let valA = a[sort];
-    let valB = b[sort];
+  if (certificateStatus === 'issued') {
+    students = students.filter(s => s.userId && certUserIds.has(s.userId._id.toString()));
+  } else if (certificateStatus === 'none') {
+    students = students.filter(s => s.userId && !certUserIds.has(s.userId._id.toString()));
+  }
 
-    if (typeof valA === 'string') {
-      return order === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
-    } else {
-      return order === 'asc' ? (valA - valB) : (valB - valA);
-    }
+  // ── Assemble result objects (pure JS, no more DB calls) ─────────────────────
+  const resolved = students
+    .filter(s => s.userId)
+    .map(s => {
+      const uid = s.userId._id.toString();
+      const career = careerByStudentId.get(uid);
+      const score = career?.completionPercentage || 0;
+      return {
+        _id: s._id,
+        userId: s.userId._id,
+        fullName: s.fullName,
+        course: s.course,
+        year: s.year,
+        skills: s.skills,
+        email: s.userId.email,
+        avatar: s.userId.avatar,
+        collegeName: s.collegeName,
+        careerTrack: career?.careerId?.title || 'Not Selected',
+        internshipProgress: score,
+        internshipStatus: career?.status || 'in-progress',
+        githubConnected: gitUserIds.has(uid),
+        githubUsername: gitUsernameMap.get(uid) || '',
+        certificateIssued: certUserIds.has(uid),
+        certificateId: certIdMap.get(uid) || null,
+        grade: score,
+        isShortlisted: shortlistedSet.has(uid),
+      };
+    });
+
+  // ── Sort + Paginate ─────────────────────────────────────────────────────────
+  resolved.sort((a, b) => {
+    const valA = a[sort], valB = b[sort];
+    if (typeof valA === 'string') return order === 'asc' ? valA.localeCompare(valB) : valB.localeCompare(valA);
+    return order === 'asc' ? (valA - valB) : (valB - valA);
   });
 
-  // Pagination bounds
   const total = resolved.length;
   const skip = (Number(page) - 1) * Number(limit);
   const paginated = resolved.slice(skip, skip + Number(limit));
 
   return {
     students: paginated,
-    pagination: {
-      total,
-      page: Number(page),
-      limit: Number(limit),
-      totalPages: Math.ceil(total / Number(limit)),
-    },
+    pagination: { total, page: Number(page), limit: Number(limit), totalPages: Math.ceil(total / Number(limit)) },
   };
 };
 
@@ -300,33 +293,34 @@ import { checkReportCache, generateCareerReports } from '../../../services/caree
  * Aggregates candidate audit details: profile data, simulated scores, github, and credentials.
  */
 export const getStudentDetails = async (recruiterUserId, studentUserIdOrStudentId) => {
-  // Let's resolve the user ID if the client sent the Student collection ID
-  let user = await User.findById(studentUserIdOrStudentId);
+  // Resolve user/student ID (try User first, fall back to Student collection ID)
+  let user = await User.findById(studentUserIdOrStudentId).lean();
   let student;
 
   if (user) {
-    student = await Student.findOne({ userId: user._id });
+    student = await Student.findOne({ userId: user._id }).lean();
   } else {
-    student = await Student.findById(studentUserIdOrStudentId);
-    if (student) {
-      user = await User.findById(student.userId);
-    }
+    student = await Student.findById(studentUserIdOrStudentId).lean();
+    if (student) user = await User.findById(student.userId).lean();
   }
 
-  if (!student || !user) {
-    throw new Error('Student record not found in the global registry.');
-  }
+  if (!student || !user) throw new Error('Student record not found in the global registry.');
 
   const userId = user._id;
-  const career = await StudentCareer.findOne({ studentId: userId }).populate('careerId');
-  const githubProfile = await GithubProfile.findOne({ userId });
-  const githubContributions = await GithubContribution.find({ userId });
-  const certificates = await Certificate.find({ studentId: userId });
 
-  // Recruiter specific: check shortlist and pipeline status
-  const isShortlisted = !!(await ShortlistedCandidate.findOne({ recruiterId: recruiterUserId, studentId: userId })) ||
-    !!(await Offer.findOne({ recruiterId: recruiterUserId, studentId: userId, status: 'accepted' }));
-  const pipeline = await HiringPipeline.findOne({ recruiterId: recruiterUserId, studentId: userId });
+  // Run all 7 related queries in parallel
+  const [career, githubProfile, githubContributions, certificates, shortlistDoc, acceptedOffer, pipeline] =
+    await Promise.all([
+      StudentCareer.findOne({ studentId: userId }).populate('careerId', 'title').lean(),
+      GithubProfile.findOne({ userId }).lean(),
+      GithubContribution.find({ userId }).lean(),
+      Certificate.find({ studentId: userId }).lean(),
+      ShortlistedCandidate.findOne({ recruiterId: recruiterUserId, studentId: userId }).lean(),
+      Offer.findOne({ recruiterId: recruiterUserId, studentId: userId, status: 'accepted' }).lean(),
+      HiringPipeline.findOne({ recruiterId: recruiterUserId, studentId: userId }).lean(),
+    ]);
+
+  const isShortlisted = !!(shortlistDoc || acceptedOffer);
 
   // Load new dynamic reports
   let reports = await checkReportCache(userId);
@@ -432,63 +426,70 @@ export const getStudentDetails = async (recruiterUserId, studentUserIdOrStudentI
  * Returns all shortlisted candidates by a specific recruiter.
  */
 export const getShortlisted = async (recruiterUserId) => {
-  const docs = await ShortlistedCandidate.find({ recruiterId: recruiterUserId }).populate('studentId');
-  const acceptedOffers = await Offer.find({ recruiterId: recruiterUserId, status: 'accepted' }).populate('studentId');
+  // Batch fetch shortlist + accepted offers in parallel
+  const [docs, acceptedOffers] = await Promise.all([
+    ShortlistedCandidate.find({ recruiterId: recruiterUserId })
+      .populate('studentId', 'email avatar _id')
+      .lean(),
+    Offer.find({ recruiterId: recruiterUserId, status: 'accepted' })
+      .populate('studentId', 'email avatar _id')
+      .lean(),
+  ]);
 
+  // Build deduplicated user map
   const studentMap = new Map();
-
-  // Process explicitly bookmarked candidates
   for (const doc of docs) {
     if (!doc.studentId) continue;
-    studentMap.set(doc.studentId._id.toString(), {
-      user: doc.studentId,
-      addedAt: doc.addedAt,
-      isShortlisted: true
-    });
+    studentMap.set(doc.studentId._id.toString(), { user: doc.studentId, addedAt: doc.addedAt });
   }
-
-  // Process candidates who accepted offers
   for (const offer of acceptedOffers) {
     if (!offer.studentId) continue;
-    const studentIdStr = offer.studentId._id.toString();
-    if (!studentMap.has(studentIdStr)) {
-      studentMap.set(studentIdStr, {
-        user: offer.studentId,
-        addedAt: offer.updatedAt,
-        isShortlisted: true // Treat accepted offers as auto-shortlisted
-      });
+    const key = offer.studentId._id.toString();
+    if (!studentMap.has(key)) {
+      studentMap.set(key, { user: offer.studentId, addedAt: offer.updatedAt });
     }
   }
 
-  const resolved = [];
-  for (const [userIdStr, data] of studentMap.entries()) {
-    const student = await Student.findOne({ userId: data.user._id });
-    if (!student) continue;
+  const userIds = [...studentMap.keys()];
+  if (userIds.length === 0) return [];
 
-    const career = await StudentCareer.findOne({ studentId: data.user._id }).populate('careerId');
-    const cert = await Certificate.findOne({ studentId: data.user._id });
+  // Single batch fetch for all related data
+  const [students, careers, certs] = await Promise.all([
+    Student.find({ userId: { $in: userIds } }).lean(),
+    StudentCareer.find({ studentId: { $in: userIds } }).populate('careerId', 'title').lean(),
+    Certificate.find({ studentId: { $in: userIds } }).select('studentId').lean(),
+  ]);
 
-    resolved.push({
-      userId: data.user._id,
-      studentId: student._id,
-      fullName: student.fullName,
-      course: student.course,
-      year: student.year,
-      skills: student.skills,
-      email: data.user.email,
-      avatar: data.user.avatar,
-      collegeName: student.collegeName,
-      careerTrack: career?.careerId?.title || 'Not Selected',
-      internshipProgress: career?.completionPercentage || 0,
-      certificateIssued: !!cert,
-      addedAt: data.addedAt,
-      isShortlisted: data.isShortlisted,
-    });
-  }
+  const studentByUserId = new Map(students.map(s => [s.userId.toString(), s]));
+  const careerByStudentId = new Map(careers.map(c => [c.studentId.toString(), c]));
+  const certSet = new Set(certs.map(c => c.studentId.toString()));
 
-  // Sort by date added / accepted descending
+  const resolved = userIds
+    .map(uid => {
+      const data = studentMap.get(uid);
+      const student = studentByUserId.get(uid);
+      if (!student) return null;
+      const career = careerByStudentId.get(uid);
+      return {
+        userId: data.user._id,
+        studentId: student._id,
+        fullName: student.fullName,
+        course: student.course,
+        year: student.year,
+        skills: student.skills,
+        email: data.user.email,
+        avatar: data.user.avatar,
+        collegeName: student.collegeName,
+        careerTrack: career?.careerId?.title || 'Not Selected',
+        internshipProgress: career?.completionPercentage || 0,
+        certificateIssued: certSet.has(uid),
+        addedAt: data.addedAt,
+        isShortlisted: true,
+      };
+    })
+    .filter(Boolean);
+
   resolved.sort((a, b) => new Date(b.addedAt) - new Date(a.addedAt));
-
   return resolved;
 };
 
@@ -517,34 +518,48 @@ export const toggleShortlist = async (recruiterUserId, studentUserId) => {
  * Returns the hiring pipeline stage lists.
  */
 export const getPipeline = async (recruiterUserId) => {
-  const docs = await HiringPipeline.find({ recruiterId: recruiterUserId }).populate('studentId');
-  const resolved = [];
+  const docs = await HiringPipeline.find({ recruiterId: recruiterUserId })
+    .populate('studentId', 'email avatar _id')
+    .lean();
 
-  for (const doc of docs) {
-    if (!doc.studentId) continue;
-    const student = await Student.findOne({ userId: doc.studentId._id });
-    if (!student) continue;
+  const pipelineUserIds = docs.map(d => d.studentId?._id).filter(Boolean);
+  if (pipelineUserIds.length === 0) return [];
 
-    const career = await StudentCareer.findOne({ studentId: doc.studentId._id }).populate('careerId');
+  // Batch fetch students and careers in parallel
+  const [students, careers] = await Promise.all([
+    Student.find({ userId: { $in: pipelineUserIds } }).lean(),
+    StudentCareer.find({ studentId: { $in: pipelineUserIds } })
+      .populate('careerId', 'title')
+      .lean(),
+  ]);
 
-    resolved.push({
-      userId: doc.studentId._id,
-      studentId: student._id,
-      fullName: student.fullName,
-      course: student.course,
-      year: student.year,
-      email: doc.studentId.email,
-      avatar: doc.studentId.avatar,
-      collegeName: student.collegeName,
-      careerTrack: career?.careerId?.title || 'Not Selected',
-      internshipProgress: career?.completionPercentage || 0,
-      stage: doc.stage,
-      notes: doc.notes,
-      updatedAt: doc.updatedAt,
-    });
-  }
+  const studentByUserId = new Map(students.map(s => [s.userId.toString(), s]));
+  const careerByStudentId = new Map(careers.map(c => [c.studentId.toString(), c]));
 
-  return resolved;
+  return docs
+    .filter(doc => doc.studentId)
+    .map(doc => {
+      const uid = doc.studentId._id.toString();
+      const student = studentByUserId.get(uid);
+      if (!student) return null;
+      const career = careerByStudentId.get(uid);
+      return {
+        userId: doc.studentId._id,
+        studentId: student._id,
+        fullName: student.fullName,
+        course: student.course,
+        year: student.year,
+        email: doc.studentId.email,
+        avatar: doc.studentId.avatar,
+        collegeName: student.collegeName,
+        careerTrack: career?.careerId?.title || 'Not Selected',
+        internshipProgress: career?.completionPercentage || 0,
+        stage: doc.stage,
+        notes: doc.notes,
+        updatedAt: doc.updatedAt,
+      };
+    })
+    .filter(Boolean);
 };
 
 /**
@@ -582,28 +597,32 @@ export const deleteFromPipeline = async (recruiterUserId, studentUserId) => {
  * Returns outreach requests sent by recruiter.
  */
 export const getContactRequests = async (recruiterUserId) => {
-  const docs = await ContactRequest.find({ recruiterId: recruiterUserId }).populate('studentId');
-  const resolved = [];
+  const docs = await ContactRequest.find({ recruiterId: recruiterUserId })
+    .populate('studentId', 'email avatar _id')
+    .lean();
 
-  for (const doc of docs) {
-    if (!doc.studentId) continue;
-    const student = await Student.findOne({ userId: doc.studentId._id });
-    if (!student) continue;
+  const userIds = docs.map(d => d.studentId?._id).filter(Boolean);
+  const students = await Student.find({ userId: { $in: userIds } }).lean();
+  const studentByUserId = new Map(students.map(s => [s.userId.toString(), s]));
 
-    resolved.push({
-      _id: doc._id,
-      studentId: student._id,
-      fullName: student.fullName,
-      email: doc.studentId.email,
-      avatar: doc.studentId.avatar,
-      subject: doc.subject,
-      message: doc.message,
-      status: doc.status,
-      sentAt: doc.sentAt,
-    });
-  }
-
-  return resolved;
+  return docs
+    .filter(d => d.studentId)
+    .map(doc => {
+      const student = studentByUserId.get(doc.studentId._id.toString());
+      if (!student) return null;
+      return {
+        _id: doc._id,
+        studentId: student._id,
+        fullName: student.fullName,
+        email: doc.studentId.email,
+        avatar: doc.studentId.avatar,
+        subject: doc.subject,
+        message: doc.message,
+        status: doc.status,
+        sentAt: doc.sentAt,
+      };
+    })
+    .filter(Boolean);
 };
 
 /**
@@ -746,7 +765,7 @@ export const getAnalytics = async (recruiterUserId) => {
 /**
  * Creates a new internship offer and a notification for the student.
  */
-export const createOffer = async (recruiterUserId, studentUserId, companyName, message) => {
+export const createOffer = async (recruiterUserId, studentUserId, companyName, message, jobRole = 'Software Engineer Intern', salaryPackage = 6) => {
   const studentUser = await User.findById(studentUserId);
   if (!studentUser || studentUser.role !== 'student') {
     throw new Error('Can only send offers to active simulated students.');
@@ -761,6 +780,8 @@ export const createOffer = async (recruiterUserId, studentUserId, companyName, m
     recruiterName,
     companyName,
     message,
+    jobRole,
+    package: salaryPackage,
     status: 'pending',
   });
 
@@ -773,6 +794,28 @@ export const createOffer = async (recruiterUserId, studentUserId, companyName, m
     type: 'offer',
     isRead: false,
   });
+
+  // Centralized Placement Tracking: Create pending Placement record and alert College Reps
+  if (studentUser.collegeId) {
+    await Placement.create({
+      studentId: studentUserId,
+      collegeId: studentUser.collegeId,
+      recruiterId: recruiterUserId,
+      companyName,
+      jobRole,
+      offerStatus: 'pending',
+      package: salaryPackage,
+    });
+
+    await CollegeNotification.create({
+      collegeId: studentUser.collegeId,
+      senderId: studentUserId,
+      title: 'New Offer Received',
+      message: `A new internship offer for the role of ${jobRole} has been received by ${studentUser.fullName || 'Student'} from ${companyName} at ${salaryPackage} LPA.`,
+      type: 'offer_received',
+      isRead: false,
+    });
+  }
 
   return offer;
 };

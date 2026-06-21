@@ -1,6 +1,7 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import compression from 'compression';
 import rateLimit from 'express-rate-limit';
 import cookieParser from 'cookie-parser';
 import session from 'express-session';
@@ -28,6 +29,17 @@ import { errorHandler } from './middlewares/error.middleware.js';
 
 const app = express();
 
+// Enable gzip/deflate compression for all responses (60-80% smaller JSON payloads)
+app.use(compression({
+  level: 6, // Balanced between speed and compression ratio
+  threshold: 1024, // Only compress responses larger than 1KB
+  filter: (req, res) => {
+    // Don't compress responses with this request header
+    if (req.headers['x-no-compression']) return false;
+    return compression.filter(req, res);
+  },
+}));
+
 // Set security HTTP headers
 app.use(helmet());
 
@@ -54,8 +66,8 @@ const limiter = rateLimit({
 app.use('/api', limiter);
 
 // Express body parsers
-app.use(express.json({ limit: '200mb' }));
-app.use(express.urlencoded({ limit: '200mb', extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 
 // Cookie Parser to parse tokens inside request cookies

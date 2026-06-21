@@ -84,12 +84,16 @@ export default function StudentDetailPage() {
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [companyName, setCompanyName] = useState('');
   const [offerMessage, setOfferMessage] = useState('');
+  const [jobRole, setJobRole] = useState('');
+  const [salaryPackage, setSalaryPackage] = useState('');
   const [offerLoading, setOfferLoading] = useState(false);
 
   useEffect(() => {
-    if (currentUser?.companyName) {
-      setCompanyName(currentUser.companyName);
-    }
+    const name =
+      currentUser?.recruiterProfile?.companyName ||
+      currentUser?.companyName ||
+      '';
+    if (name) setCompanyName(name);
   }, [currentUser]);
 
   // Notes state for pipeline stage change
@@ -196,11 +200,15 @@ export default function StudentDetailPage() {
           studentId: studentProfile.userId,
           companyName,
           message: offerMessage,
+          jobRole: jobRole || 'Software Engineer Intern',
+          package: salaryPackage ? Number(salaryPackage) : 6,
         })
       ).unwrap();
       addToast(`Internship offer sent to ${studentProfile.fullName}!`, 'success');
       setShowOfferModal(false);
       setOfferMessage('');
+      setJobRole('');
+      setSalaryPackage('');
     } catch (err) {
       addToast(err || 'Failed to send internship offer', 'error');
     } finally {
@@ -794,19 +802,42 @@ export default function StudentDetailPage() {
                 <label className="text-[10px] font-bold text-muted uppercase tracking-wider block">Company Name</label>
                 <input
                   type="text"
-                  required
-                  placeholder="e.g. NeuralMind Technologies"
+                  readOnly
                   value={companyName}
-                  onChange={(e) => setCompanyName(e.target.value)}
-                  className="w-full bg-[#0a0f1d] border border-border rounded-xl px-3.5 py-2 text-xs text-text outline-none focus:border-accent"
+                  className="w-full bg-[#0a0f1d] border border-border/50 rounded-xl px-3.5 py-2 text-xs text-muted outline-none cursor-not-allowed opacity-70"
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-muted uppercase tracking-wider block">Job Role</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. AI Research Intern"
+                    value={jobRole}
+                    onChange={(e) => setJobRole(e.target.value)}
+                    className="w-full bg-[#0a0f1d] border border-border rounded-xl px-3.5 py-2 text-xs text-text outline-none focus:border-accent"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-muted uppercase tracking-wider block">Package (LPA)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="100"
+                    placeholder="e.g. 6"
+                    value={salaryPackage}
+                    onChange={(e) => setSalaryPackage(e.target.value)}
+                    className="w-full bg-[#0a0f1d] border border-border rounded-xl px-3.5 py-2 text-xs text-text outline-none focus:border-accent"
+                  />
+                </div>
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-muted uppercase tracking-wider block">Offer Message / Terms</label>
                 <textarea
                   required
-                  rows={6}
+                  rows={5}
                   placeholder={`Dear ${studentProfile.fullName.split(' ')[0] || 'Student'},\n\nFollowing our review of your developer metrics, we are excited to offer you a simulated AI Research Intern role at our company. The internship will cover Vector Databases, semantic search architectures, and RAG pipelines...`}
                   value={offerMessage}
                   onChange={(e) => setOfferMessage(e.target.value)}

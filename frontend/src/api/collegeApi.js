@@ -95,3 +95,27 @@ export const createDepartment = async (deptData) => {
   const response = await axiosInstance.post('/api/college/departments', deptData);
   return response.data;
 };
+
+/**
+ * Retrieve placements listings.
+ */
+export const getPlacements = async (params = {}) => {
+  const response = await axiosInstance.get('/api/college/placements', { params });
+  return response.data;
+};
+
+/**
+ * Retrieve college notifications.
+ */
+export const getCollegeNotifications = async () => {
+  const response = await axiosInstance.get('/api/college/notifications');
+  return response.data;
+};
+
+/**
+ * Mark a college notification as read.
+ */
+export const markCollegeNotificationRead = async (id) => {
+  const response = await axiosInstance.patch(`/api/college/notifications/${id}/read`);
+  return response.data;
+};

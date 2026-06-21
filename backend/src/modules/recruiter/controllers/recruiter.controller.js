@@ -123,11 +123,22 @@ export const getAnalytics = async (req, res, next) => {
 
 export const createOffer = async (req, res, next) => {
   try {
-    const { studentId, companyName, message } = req.body;
+    const { studentId, message, jobRole, package: salaryPackage } = req.body;
+    
+    // Automatically fetch company name from recruiter profile
+    const companyName = req.user.recruiterProfile?.companyName || req.body.companyName || 'Corporate Partner';
+
     if (!studentId || !companyName || !message) {
       return sendResponse(res, 400, false, 'Missing required offer parameters');
     }
-    const offer = await recruiterService.createOffer(req.user._id, studentId, companyName, message);
+    const offer = await recruiterService.createOffer(
+      req.user._id,
+      studentId,
+      companyName,
+      message,
+      jobRole || 'Software Engineer Intern',
+      Number(salaryPackage) || 6
+    );
     return sendResponse(res, 201, true, 'Internship offer sent successfully', offer);
   } catch (error) {
     next(error);

@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { motion } from 'framer-motion';
 import { Search, Star, Briefcase, GraduationCap, ArrowRight, ClipboardCheck, Users, Activity, BarChart2, ShieldAlert, Eye, X } from 'lucide-react';
 import { useNavigation } from '../context/NavigationContext';
 import { getRecruiterDashboard, toggleRecruiterShortlist } from '../store/slices/recruiterSlice.js';
 import { getSentOffers } from '../store/slices/offersSlice.js';
+import { SkeletonKPIRow, SkeletonCardList } from '../components/ui/PageSkeleton.jsx';
 
 export default function RecruiterDashboardPage() {
   const { navigate, addToast } = useNavigation();
@@ -33,12 +34,26 @@ export default function RecruiterDashboardPage() {
     }
   };
 
+  // Memoize derived offer counts to avoid recomputing on every render
+  const pendingOffersCount = useMemo(() => sentOffers.filter(o => o.status === 'pending').length, [sentOffers]);
+  const acceptedOffersCount = useMemo(() => sentOffers.filter(o => o.status === 'accepted').length, [sentOffers]);
+  const rejectedOffersCount = useMemo(() => sentOffers.filter(o => o.status === 'rejected').length, [sentOffers]);
+
   if (loading && !dashboard) {
     return (
-      <div className="min-h-screen bg-void flex items-center justify-center text-text">
-        <div className="space-y-4 text-center">
-          <div className="h-10 w-10 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="text-xs text-muted font-semibold tracking-widest uppercase">Loading Partner Dashboard...</p>
+      <div className="min-h-screen pt-24 pb-16 bg-void relative overflow-hidden">
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-violet/5 rounded-full blur-[100px] pointer-events-none" />
+        <div className="max-w-6xl mx-auto px-4 space-y-8">
+          <div className="flex items-center justify-between border-b border-border pb-5">
+            <div className="space-y-2">
+              <div className="h-3 w-24 bg-white/5 rounded-lg animate-pulse" />
+              <div className="h-7 w-56 bg-white/5 rounded-xl animate-pulse" />
+              <div className="h-2 w-40 bg-white/5 rounded-lg animate-pulse" />
+            </div>
+            <div className="h-9 w-36 bg-white/5 rounded-xl animate-pulse" />
+          </div>
+          <SkeletonKPIRow />
+          <SkeletonCardList count={4} />
         </div>
       </div>
     );
@@ -47,10 +62,6 @@ export default function RecruiterDashboardPage() {
   const kpis = dashboard?.kpis || { totalStudents: 0, shortlistedCount: 0, activePipelineCount: 0 };
   const pipelineSummary = dashboard?.pipelineSummary || { applied: 0, shortlisted: 0, interviewing: 0, offered: 0, rejected: 0 };
   const recentShortlists = dashboard?.recentShortlists || [];
-
-  const pendingOffersCount = sentOffers.filter(o => o.status === 'pending').length;
-  const acceptedOffersCount = sentOffers.filter(o => o.status === 'accepted').length;
-  const rejectedOffersCount = sentOffers.filter(o => o.status === 'rejected').length;
 
   return (
     <div className="min-h-screen pt-24 pb-16 bg-void relative overflow-hidden text-text">

@@ -44,7 +44,7 @@ export default function StudentDetailsPage() {
     );
   }
 
-  const { studentProfile, internshipProgress, githubAnalytics, certificates } = selectedStudent;
+  const { studentProfile, internshipProgress, githubAnalytics, certificates, placements } = selectedStudent;
 
   return (
     <div className="min-h-screen pt-24 pb-16 bg-void relative overflow-hidden text-text">
@@ -244,6 +244,45 @@ export default function StudentDetailsPage() {
             {certificates.length === 0 && (
               <div className="col-span-2 text-center py-8 text-xs text-muted">
                 No internship completion certificates issued to this student yet.
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Placement Section */}
+        <div className="glass border border-border rounded-2xl p-6 bg-void/20 space-y-4">
+          <div className="flex items-center gap-2 border-b border-border/40 pb-2.5">
+            <Award size={15} className="text-accent" />
+            <h3 className="text-xs font-bold text-text uppercase tracking-wider">Placement Registry & Offers</h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {(placements || []).map((placement) => (
+              <div key={placement._id} className="p-4 bg-white/5 border border-border/60 rounded-xl flex items-center justify-between">
+                <div className="space-y-1">
+                  <span className="text-[10px] text-muted font-bold block uppercase tracking-wider">{placement.companyName}</span>
+                  <h4 className="text-xs font-bold text-text">{placement.jobRole}</h4>
+                  <p className="text-[10px] text-muted">
+                    Package: {placement.package} LPA 
+                    {placement.acceptedAt && ` · Accepted: ${new Date(placement.acceptedAt).toLocaleDateString()}`}
+                  </p>
+                </div>
+                <div>
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[9px] uppercase font-bold ${
+                    placement.offerStatus === 'accepted'
+                      ? 'bg-emerald/10 border border-emerald/20 text-emerald'
+                      : placement.offerStatus === 'rejected'
+                      ? 'bg-rose/10 border border-rose/20 text-rose'
+                      : 'bg-amber/10 border border-amber/20 text-amber-400'
+                  }`}>
+                    {placement.offerStatus}
+                  </span>
+                </div>
+              </div>
+            ))}
+            {(!placements || placements.length === 0) && (
+              <div className="col-span-2 text-center py-8 text-xs text-muted">
+                No active simulated recruiter offers or placement outcomes registered.
               </div>
             )}
           </div>

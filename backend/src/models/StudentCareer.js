@@ -38,5 +38,10 @@ const studentCareerSchema = new mongoose.Schema(
   }
 );
 
+studentCareerSchema.index({ studentId: 1 });
+studentCareerSchema.index({ careerId: 1 });
+studentCareerSchema.index({ status: 1 });
+studentCareerSchema.index({ completionPercentage: -1 });
+
 const StudentCareer = mongoose.model('StudentCareer', studentCareerSchema);
 export default StudentCareer;

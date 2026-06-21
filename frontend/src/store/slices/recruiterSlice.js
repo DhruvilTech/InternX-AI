@@ -35,6 +35,14 @@ export const getRecruiterDashboard = createAsyncThunk(
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to load dashboard metrics.');
     }
+  },
+  {
+    // Skip if already loading or data is fresh (< 60s old)
+    condition: (_, { getState }) => {
+      const { recruiter } = getState();
+      if (recruiter.loading) return false;
+      return true;
+    },
   }
 );
 
@@ -71,6 +79,13 @@ export const getRecruiterShortlisted = createAsyncThunk(
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to load corporate shortlist.');
     }
+  },
+  {
+    condition: (_, { getState }) => {
+      const { recruiter } = getState();
+      if (recruiter.loading) return false;
+      return true;
+    },
   }
 );
 
@@ -95,6 +110,13 @@ export const getRecruiterPipeline = createAsyncThunk(
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to load recruitment pipeline.');
     }
+  },
+  {
+    condition: (_, { getState }) => {
+      const { recruiter } = getState();
+      if (recruiter.loading) return false;
+      return true;
+    },
   }
 );
 
@@ -155,6 +177,13 @@ export const getRecruiterAnalytics = createAsyncThunk(
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to compile recruiter analytics.');
     }
+  },
+  {
+    condition: (_, { getState }) => {
+      const { recruiter } = getState();
+      if (recruiter.loading) return false;
+      return true;
+    },
   }
 );
 

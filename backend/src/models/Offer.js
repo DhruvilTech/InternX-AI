@@ -24,6 +24,14 @@ const offerSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
+    jobRole: {
+      type: String,
+      default: 'Software Engineer Intern',
+    },
+    package: {
+      type: Number,
+      default: 6,
+    },
     status: {
       type: String,
       enum: ['pending', 'accepted', 'rejected'],
@@ -34,6 +42,11 @@ const offerSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+// Compound indexes for the most common query patterns
+offerSchema.index({ recruiterId: 1, status: 1 });
+offerSchema.index({ studentId: 1, status: 1 });
+offerSchema.index({ createdAt: -1 });
 
 const Offer = mongoose.model('Offer', offerSchema);
 export default Offer;

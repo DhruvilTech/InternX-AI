@@ -1,6 +1,11 @@
 import Offer from '../models/Offer.js';
 import Notification from '../models/Notification.js';
+import Placement from '../models/Placement.js';
+import CollegeNotification from '../models/CollegeNotification.js';
+import { refreshAnalytics } from '../modules/college/services/college.service.js';
 import { sendResponse } from '../utils/sendResponse.js';
+import Student from '../models/Student.js';
+import College from '../models/College.js';
 
 export const getReceivedOffers = async (req, res, next) => {
   try {
@@ -41,6 +46,68 @@ export const respondToOffer = async (req, res, next) => {
       type: 'offer_response',
       isRead: false,
     });
+
+    // Centralized Placement Tracking & College Analytics Automation
+    let collegeId = req.user.collegeId;
+    if (!collegeId) {
+      const studentProfile = await Student.findOne({ userId: req.user._id });
+      if (studentProfile) {
+        const col = await College.findOne({
+          $or: [
+            { name: studentProfile.collegeName },
+            { collegeName: studentProfile.collegeName }
+          ]
+        });
+        if (col) {
+          collegeId = col._id;
+        }
+      }
+    }
+
+    if (collegeId) {
+      // Find existing pending placement or create a new one
+      let placement = await Placement.findOne({
+        studentId: req.user._id,
+        recruiterId: offer.recruiterId,
+        offerStatus: 'pending'
+      });
+
+      if (placement) {
+        placement.offerStatus = status;
+        if (status === 'accepted') {
+          placement.acceptedAt = new Date();
+        }
+        await placement.save();
+      } else {
+        placement = await Placement.create({
+          studentId: req.user._id,
+          collegeId,
+          recruiterId: offer.recruiterId,
+          companyName: offer.companyName,
+          jobRole: offer.jobRole || 'Software Engineer Intern',
+          offerStatus: status,
+          package: offer.package || 6,
+          acceptedAt: status === 'accepted' ? new Date() : null
+        });
+      }
+
+      // Create College Notification
+      await CollegeNotification.create({
+        collegeId,
+        senderId: req.user._id,
+        title: status === 'accepted' ? 'New Placement Accepted' : 'Placement Status Updates',
+        message: `${req.user.fullName || 'Student'} has ${status} the internship offer from ${offer.companyName} as ${offer.jobRole || 'Software Engineer Intern'} at ${offer.package || 6} LPA.`,
+        type: status === 'accepted' ? 'placement_accepted' : 'placement_updated',
+        isRead: false,
+      });
+
+      // Update College Analytics
+      try {
+        await refreshAnalytics(collegeId);
+      } catch (analyticsError) {
+        console.error('Failed to auto-update college analytics:', analyticsError);
+      }
+    }
 
     return sendResponse(res, 200, true, `Offer successfully ${status}`, offer);
   } catch (error) {
