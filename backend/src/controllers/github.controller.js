@@ -7,6 +7,7 @@ import GithubRepository from '../models/GithubRepository.js';
 import GithubContribution from '../models/GithubContribution.js';
 import SubmissionRepository from '../models/SubmissionRepository.js';
 import User from '../models/User.js';
+import { generateCareerReports } from '../services/careerReport.service.js';
 import { sendResponse } from '../utils/sendResponse.js';
 
 /**
@@ -22,7 +23,7 @@ export const connectGithub = (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, jwtConfig.accessSecret);
-    
+
     // Enforce role protection (Student-only connection)
     if (decoded.role !== 'student') {
       return res.status(403).json({
@@ -32,7 +33,7 @@ export const connectGithub = (req, res, next) => {
     }
 
     req.session.userId = decoded.id;
-    
+
     // Pass JWT token inside OAuth state parameter to ensure callback verification fallback
     passport.authenticate('github', {
       state: token,
@@ -49,7 +50,7 @@ export const connectGithub = (req, res, next) => {
  */
 export const oauthCallback = (req, res, next) => {
   const clientUrl = process.env.CLIENT_URL || 'http://localhost:5173';
-  
+
   passport.authenticate('github', {
     session: true,
     failureRedirect: `${clientUrl}/#/dashboard/github?error=OAuthFailed`,
@@ -58,7 +59,7 @@ export const oauthCallback = (req, res, next) => {
       console.error('[GitHub Controller] OAuth callback strategy failed:', err);
       return res.redirect(`${clientUrl}/#/dashboard/github?error=OAuthFailed`);
     }
-    
+
     // Successful connection redirect
     return res.redirect(`${clientUrl}/#/dashboard/github?success=true`);
   })(req, res, next);
@@ -72,7 +73,7 @@ export const getProfile = async (req, res, next) => {
     const profile = req.githubProfile.toObject();
     // Delete access token so it is never exposed to the client
     delete profile.accessToken;
-    
+
     return sendResponse(res, 200, true, 'GitHub profile retrieved successfully', profile);
   } catch (error) {
     next(error);
@@ -117,6 +118,13 @@ export const getRepos = async (req, res, next) => {
       syncedRepos.push(savedRepo);
     }
 
+    // Regenerate career report since github repositories synced
+    try {
+      await generateCareerReports(req.user._id);
+    } catch (reportErr) {
+      console.error('[GitHub sync] Failed to regenerate career reports:', reportErr.message);
+    }
+
     return sendResponse(res, 200, true, 'Repositories synchronized and retrieved successfully', syncedRepos);
   } catch (error) {
     next(error);
@@ -130,7 +138,7 @@ export const getRepoDetails = async (req, res, next) => {
   try {
     const { repoId } = req.params;
     const repo = await GithubRepository.findOne({ userId: req.user._id, repoId });
-    
+
     if (!repo) {
       return res.status(404).json({
         success: false,
@@ -204,7 +212,7 @@ export const getCommits = async (req, res, next) => {
     // Calculate commit metrics
     const totalCommits = commits.length;
     const githubUsername = req.githubProfile.username;
-    
+
     // Filter commits belonging to this user
     const userCommits = commits.filter(
       (c) => c.author?.login === githubUsername || c.commit?.author?.name === githubUsername
@@ -356,7 +364,7 @@ export const getFiles = async (req, res, next) => {
   try {
     const { repoId } = req.params;
     const { path } = req.query;
-    
+
     const repo = await GithubRepository.findOne({ userId: req.user._id, repoId });
     if (!repo) {
       return res.status(404).json({ success: false, message: 'Repository not found.' });
@@ -387,7 +395,7 @@ export const getFileContent = async (req, res, next) => {
   try {
     const { repoId } = req.params;
     const { path } = req.query;
-    
+
     if (!path) {
       return res.status(400).json({ success: false, message: 'File path parameter is required.' });
     }

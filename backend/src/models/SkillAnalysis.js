@@ -8,21 +8,29 @@ const skillAnalysisSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
-    skills: [
-      {
-        name: {
-          type: String,
-          required: true,
-        },
-        level: {
-          type: Number,
-          required: true,
-          default: 0,
-          min: 0,
-          max: 100,
-        },
-      },
-    ],
+    careerPath: {
+      type: String,
+      default: 'Backend Developer',
+    },
+    currentSkills: {
+      type: Map,
+      of: Number,
+      default: {},
+    },
+    benchmarkSkills: {
+      type: Map,
+      of: Number,
+      default: {},
+    },
+    skillGaps: {
+      type: Map,
+      of: Number,
+      default: {},
+    },
+    learningRecommendations: {
+      type: [String],
+      default: [],
+    },
   },
   {
     timestamps: true,

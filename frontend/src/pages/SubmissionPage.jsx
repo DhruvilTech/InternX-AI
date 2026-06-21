@@ -322,7 +322,29 @@ export default function SubmissionPage() {
               <span>Return to Task Details</span>
             </button>
           </div>
+        ) : (activeTask.status === 'todo' || !activeTask.status) && !polling && !submitted ? (
+          <div className="glass-bright rounded-2xl border border-border p-6 sm:p-10 text-center space-y-6 glow-accent bg-void/50">
+            <div className="mx-auto w-16 h-16 bg-violet/10 border border-violet/20 text-violet flex items-center justify-center rounded-full animate-pulse">
+              <Loader2 size={32} className="text-accent" />
+            </div>
+            
+            <div className="space-y-2">
+              <h3 className="font-display text-2xl font-bold text-text">Task Milestone Not Started</h3>
+              <p className="text-xs text-muted">
+                Please click "Start Task" on the task details page before submitting your codebase deliverable.
+              </p>
+            </div>
+
+            <button
+              onClick={() => navigate('task_details')}
+              className="w-full max-w-sm py-3 bg-gradient-to-r from-accent to-violet text-white text-xs font-semibold rounded-xl hover:shadow-lg hover:shadow-accent/20 transition-all flex items-center justify-center gap-2 mx-auto cursor-pointer"
+            >
+              <ArrowLeft size={14} />
+              <span>Go to Task Details</span>
+            </button>
+          </div>
         ) : submitted ? (
+
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}

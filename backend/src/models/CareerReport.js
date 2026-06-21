@@ -1,35 +1,28 @@
 import mongoose from 'mongoose';
 
-const careerIntelligenceSchema = new mongoose.Schema(
+const careerReportSchema = new mongoose.Schema(
   {
     studentId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-      unique: true,
     },
-    internshipId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'Internship',
-      default: null,
+    readinessScore: {
+      type: Number,
+      required: true,
+      min: 0,
+      max: 100,
+      default: 0,
     },
     portfolioScore: {
       type: Number,
-      required: true,
       default: 0,
       min: 0,
       max: 100,
     },
-    placementReadiness: {
-      type: Number,
-      required: true,
-      default: 0,
-      min: 0,
-      max: 100,
-    },
-    careerReadiness: {
+    careerLevel: {
       type: String,
-      enum: ['Beginner', 'Intermediate', 'Job Ready', 'Industry Ready'],
+      required: true,
       default: 'Beginner',
     },
     recommendedRoles: {
@@ -48,6 +41,10 @@ const careerIntelligenceSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    salaryRange: {
+      type: String,
+      default: '',
+    },
     careerAdvice: {
       type: String,
       default: '',
@@ -55,8 +52,9 @@ const careerIntelligenceSchema = new mongoose.Schema(
   },
   {
     timestamps: true,
+    collection: 'career_reports',
   }
 );
 
-const CareerIntelligence = mongoose.model('CareerIntelligence', careerIntelligenceSchema);
-export default CareerIntelligence;
+const CareerReport = mongoose.model('CareerReport', careerReportSchema);
+export default CareerReport;

@@ -53,6 +53,8 @@ export default function StudentDashboardPage() {
   const [portfolioScore, setPortfolioScore] = useState(0)
   const [placementScore, setPlacementScore] = useState(0)
   const [careerData, setCareerData] = useState(null)
+  const [careerIntel, setCareerIntel] = useState(null)
+  const [managerFeedback, setManagerFeedback] = useState('')
 
   useEffect(() => {
     if (tasks && tasks.length > 0) {
@@ -82,6 +84,10 @@ export default function StudentDashboardPage() {
         if (res.data?.success && res.data?.data) {
           setPortfolioScore(res.data.data.portfolioScore || 0)
           setPlacementScore(res.data.data.placementReadiness || 0)
+          setCareerIntel(res.data.data)
+          if (res.data.data.feedbackReport?.managerFeedback) {
+            setManagerFeedback(res.data.data.feedbackReport.managerFeedback)
+          }
         }
       } catch (err) {
         console.error('Failed to load career intelligence for dashboard:', err)
@@ -90,6 +96,7 @@ export default function StudentDashboardPage() {
     fetchIntel()
   }, [tasks])
 
+
   useEffect(() => {
     const checkStateAndFetchCareer = async () => {
       try {
@@ -97,7 +104,7 @@ export default function StudentDashboardPage() {
         if (res.success && res.data) {
           setCareerData(res.data.career);
           setProgress(res.data.progress);
-          
+
           try {
             const internRes = await axiosInstance.get('/api/internships/my-internship');
             if (!internRes.data?.success || !internRes.data?.data?.internship) {
@@ -137,7 +144,7 @@ export default function StudentDashboardPage() {
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/5 rounded-full blur-[120px]" />
 
       <div className="max-w-7xl mx-auto space-y-8 relative z-10">
-        
+
         {/* Company Header Widget */}
         <div className="glass-bright rounded-2xl p-6 border border-border flex flex-col md:flex-row items-start md:items-center justify-between gap-6 glow-accent bg-void/50">
           <div className="flex items-center gap-4">
@@ -177,46 +184,101 @@ export default function StudentDashboardPage() {
 
         {/* Dashboard Grid */}
         <div className="grid grid-cols-12 gap-6">
-          
+
           {/* LEFT COLUMN: Progress & Tasks & Skill Growth */}
           <div className="col-span-12 lg:col-span-8 space-y-6">
-            
-            {/* Internship Progress Widget */}
-            <div className="glass rounded-2xl p-6 border border-border bg-void/30">
-              <div className="flex justify-between items-center mb-4">
+
+            {/* Career Intelligence & Diagnostics */}
+            <div className="glass rounded-2xl p-6 border border-border bg-void/30 space-y-6">
+              <div className="flex justify-between items-center">
                 <div>
-                  <h3 className="text-sm font-bold text-text">Internship Progress</h3>
-                  <p className="text-[10px] text-muted">Weekly deliverables timeline</p>
+                  <h3 className="text-sm font-bold text-text">Career Intelligence & Diagnostics</h3>
+                  <p className="text-[10px] text-muted">Placement readiness metrics, advice, and paths</p>
                 </div>
-                <span className="text-sm font-semibold text-accent">{Math.round(progress)}% Complete</span>
-              </div>
-              
-              {/* Progress bar */}
-              <div className="h-2 w-full bg-surface-muted rounded-full overflow-hidden border border-border mb-6">
-                <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progress}%` }}
-                  transition={{ duration: 1 }}
-                  className="h-full bg-gradient-to-r from-accent to-violet"
-                />
+                <div className="flex items-center gap-3">
+                  <button onClick={() => navigate('skill_gap')} className="text-xs text-accent hover:underline flex items-center gap-1 font-semibold">
+                    Skill Gap Analysis <ArrowRight size={12} />
+                  </button>
+                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${careerIntel?.careerReadiness === 'Industry Ready'
+                      ? 'bg-emerald/10 border-emerald/20 text-emerald'
+                      : careerIntel?.careerReadiness === 'Job Ready'
+                        ? 'bg-sky/10 border-sky/20 text-sky'
+                        : careerIntel?.careerReadiness === 'Intermediate'
+                          ? 'bg-violet/10 border-violet/20 text-violet'
+                          : 'bg-amber/10 border-amber/20 text-amber'
+                    }`}>
+                    {careerIntel?.careerReadiness || 'Beginner'}
+                  </span>
+                </div>
               </div>
 
-              {/* Progress Steps */}
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div className="p-3 bg-surface-muted/20 border border-border/60 rounded-xl">
-                  <span className="text-[9px] uppercase tracking-wider text-muted block mb-1">Week 1-2</span>
-                  <span className="text-xs font-semibold text-text">Onboarding & Setup</span>
-                  <span className="text-[9px] font-semibold text-emerald bg-emerald/10 border border-emerald/20 px-2 py-0.5 rounded-full mt-2 inline-block">Complete</span>
+              {/* Advice */}
+              {careerIntel?.careerAdvice && (
+                <div className="p-4 rounded-xl border border-border bg-accent/5 flex items-start gap-3">
+                  <Sparkles size={16} className="text-accent mt-0.5 shrink-0" />
+                  <div className="w-full">
+                    <h4 className="text-xs font-bold text-text mb-1">Career Coach Insight</h4>
+                    <p className="text-xs text-muted leading-relaxed">
+                      {careerIntel.careerAdvice}
+                    </p>
+                    {careerIntel?.salaryRange && (
+                      <div className="mt-2.5 pt-2 border-t border-border/30 flex justify-between items-center text-[10px] text-muted">
+                        <span>Salary Estimate:</span>
+                        <strong className="text-accent font-semibold">{careerIntel.salaryRange}</strong>
+                      </div>
+                    )}
+                  </div>
                 </div>
-                <div className="p-3 bg-surface-muted/20 border border-border/60 rounded-xl">
-                  <span className="text-[9px] uppercase tracking-wider text-muted block mb-1">Week 3-4</span>
-                  <span className="text-xs font-semibold text-text">Core Tasks Sprint</span>
-                  <span className="text-[9px] font-semibold text-amber bg-amber/10 border border-amber/20 px-2 py-0.5 rounded-full mt-2 inline-block">Active Sprint</span>
+              )}
+
+              {/* Roles & Certs Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block">Recommended Roles</span>
+                  <div className="flex flex-wrap gap-2">
+                    {careerIntel?.recommendedRoles?.map((role, idx) => (
+                      <span key={idx} className="px-2.5 py-1 bg-surface-muted/30 border border-border rounded-lg text-xs text-text">
+                        {role}
+                      </span>
+                    )) || <span className="text-xs text-dim">None recommended</span>}
+                  </div>
                 </div>
-                <div className="p-3 bg-surface-muted/20 border border-border/60 rounded-xl opacity-50">
-                  <span className="text-[9px] uppercase tracking-wider text-muted block mb-1">Week 5-6</span>
-                  <span className="text-xs font-semibold text-text">Final Review & Cert</span>
-                  <span className="text-[9px] font-semibold text-dim bg-void border border-border px-2 py-0.5 rounded-full mt-2 inline-block">Locked</span>
+
+                <div className="space-y-2">
+                  <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block">Recommended Certifications</span>
+                  <div className="space-y-1.5">
+                    {careerIntel?.recommendedCertifications?.map((cert, idx) => (
+                      <div key={idx} className="flex items-center gap-2 text-xs text-muted">
+                        <Award size={12} className="text-violet shrink-0" />
+                        <span className="truncate">{cert}</span>
+                      </div>
+                    )) || <span className="text-xs text-dim">None recommended</span>}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Recent Feedback Widget */}
+            <div className="glass rounded-2xl p-6 border border-border bg-void/30 space-y-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-sm font-bold text-text">Recent Manager Audits</h3>
+                  <p className="text-[10px] text-muted">Evaluation highlights from Sarah Johnson</p>
+                </div>
+                <button onClick={() => navigate('feedback_center')} className="text-xs text-accent hover:underline flex items-center gap-1">
+                  Feedback Center <ArrowRight size={12} />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div className="p-4 rounded-xl border border-border bg-surface-muted/10 space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-text">Sarah Johnson (AI Lead Manager)</span>
+                    <span className="text-[9px] text-dim font-mono">Recent</span>
+                  </div>
+                  <p className="text-xs text-muted leading-relaxed">
+                    {managerFeedback ? `"${managerFeedback}"` : `"${firstName}'s work is being evaluated. Complete deliverables to see manager audits."`}
+                  </p>
                 </div>
               </div>
             </div>
@@ -266,36 +328,50 @@ export default function StudentDashboardPage() {
               </div>
             </div>
 
-            {/* Recent Feedback Widget */}
-            <div className="glass rounded-2xl p-6 border border-border bg-void/30 space-y-4">
-              <div className="flex justify-between items-center">
+            {/* Internship Progress Widget */}
+            <div className="glass rounded-2xl p-6 border border-border bg-void/30">
+              <div className="flex justify-between items-center mb-4">
                 <div>
-                  <h3 className="text-sm font-bold text-text">Recent Manager Audits</h3>
-                  <p className="text-[10px] text-muted">Evaluation highlights from Sarah Johnson</p>
+                  <h3 className="text-sm font-bold text-text">Internship Progress</h3>
+                  <p className="text-[10px] text-muted">Weekly deliverables timeline</p>
                 </div>
-                <button onClick={() => navigate('feedback_center')} className="text-xs text-accent hover:underline flex items-center gap-1">
-                  Feedback Center <ArrowRight size={12} />
-                </button>
+                <span className="text-sm font-semibold text-accent">{Math.round(progress)}% Complete</span>
               </div>
 
-              <div className="space-y-3">
-                <div className="p-4 rounded-xl border border-border bg-surface-muted/10 space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-semibold text-text">Sarah Johnson (AI Lead Manager)</span>
-                    <span className="text-[9px] text-dim font-mono">2 days ago</span>
-                  </div>
-                  <p className="text-xs text-muted leading-relaxed">
-                    "{firstName}'s vector schema optimization details are superb. The search route streaming tokens will be the next major milestone. Let's make sure the prompt template fallback code is well audited."
-                  </p>
+              {/* Progress bar */}
+              <div className="h-2 w-full bg-surface-muted rounded-full overflow-hidden border border-border mb-6">
+                <motion.div
+                  initial={{ width: 0 }}
+                  animate={{ width: `${progress}%` }}
+                  transition={{ duration: 1 }}
+                  className="h-full bg-gradient-to-r from-accent to-violet"
+                />
+              </div>
+
+              {/* Progress Steps */}
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div className="p-3 bg-surface-muted/20 border border-border/60 rounded-xl">
+                  <span className="text-[9px] uppercase tracking-wider text-muted block mb-1">Week 1-2</span>
+                  <span className="text-xs font-semibold text-text">Onboarding & Setup</span>
+                  <span className="text-[9px] font-semibold text-emerald bg-emerald/10 border border-emerald/20 px-2 py-0.5 rounded-full mt-2 inline-block">Complete</span>
+                </div>
+                <div className="p-3 bg-surface-muted/20 border border-border/60 rounded-xl">
+                  <span className="text-[9px] uppercase tracking-wider text-muted block mb-1">Week 3-4</span>
+                  <span className="text-xs font-semibold text-text">Core Tasks Sprint</span>
+                  <span className="text-[9px] font-semibold text-amber bg-amber/10 border border-amber/20 px-2 py-0.5 rounded-full mt-2 inline-block">Active Sprint</span>
+                </div>
+                <div className="p-3 bg-surface-muted/20 border border-border/60 rounded-xl opacity-50">
+                  <span className="text-[9px] uppercase tracking-wider text-muted block mb-1">Week 5-6</span>
+                  <span className="text-xs font-semibold text-text">Final Review & Cert</span>
+                  <span className="text-[9px] font-semibold text-dim bg-void border border-border px-2 py-0.5 rounded-full mt-2 inline-block">Locked</span>
                 </div>
               </div>
             </div>
-
           </div>
 
           {/* RIGHT COLUMN: Scores & Analytics Charts */}
           <div className="col-span-12 lg:col-span-4 space-y-6">
-            
+
             {/* Circular Scores Row */}
             <div className="grid grid-cols-2 gap-4">
               <div className="glass rounded-2xl p-4 border border-border bg-void/30 text-center flex flex-col items-center">
@@ -305,7 +381,7 @@ export default function StudentDashboardPage() {
                   {portfolioScore >= 80 ? 'Top 10% Cohort' : 'Building Track'}
                 </span>
               </div>
-              
+
               <div className="glass rounded-2xl p-4 border border-border bg-void/30 text-center flex flex-col items-center">
                 <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block mb-3">Placement Ready</span>
                 <ScoreRing score={placementScore} size={85} strokeWidth={5} />
@@ -368,7 +444,7 @@ export default function StudentDashboardPage() {
             {/* Upcoming Deadlines Widget */}
             <div className="glass rounded-2xl p-5 border border-border bg-void/30 space-y-3">
               <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block">Upcoming Sprints</span>
-              
+
               <div className="space-y-2">
                 <div className="p-3 bg-rose/5 border border-rose/15 rounded-xl flex items-center gap-3">
                   <AlertCircle size={14} className="text-rose shrink-0" />

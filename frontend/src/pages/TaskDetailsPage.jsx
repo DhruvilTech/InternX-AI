@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import axiosInstance from '../api/axios.js'
 
 export default function TaskDetailsPage() {
-  const { navigate, selectedTaskId, tasks, setSelectedTaskId, setEvaluationReport, addToast } = useNavigation()
+  const { navigate, selectedTaskId, tasks, setSelectedTaskId, setTasks, setEvaluationReport, addToast } = useNavigation()
   const [submissionHistory, setSubmissionHistory] = useState([])
   const [loadingHistory, setLoadingHistory] = useState(true)
 
@@ -30,7 +30,29 @@ export default function TaskDetailsPage() {
     }
   }, [activeTask, tasks])
 
+  const handleStartTask = async () => {
+    try {
+      addToast('Starting task milestone...', 'info')
+      const response = await axiosInstance.patch(`/api/tasks/${activeTask.id}/status`, { status: 'in-progress' })
+      if (response.data?.success) {
+        addToast('Task milestone started! Deliverable is now active.', 'success')
+        
+        // Refresh tasks state in context
+        const tasksRes = await axiosInstance.get('/api/tasks')
+        if (tasksRes.data?.success && tasksRes.data?.data?.tasks) {
+          setTasks(tasksRes.data.data.tasks)
+        }
+      } else {
+        addToast('Failed to update task status.', 'error')
+      }
+    } catch (err) {
+      console.error('Start task error:', err)
+      addToast(err.response?.data?.message || 'Failed to start task.', 'error')
+    }
+  }
+
   const handleViewEvaluation = async (submissionId) => {
+
     try {
       addToast('Retrieving AI audit logs...', 'info')
       const response = await axiosInstance.get(`/api/submissions/${submissionId}/evaluation`)
@@ -237,6 +259,14 @@ export default function TaskDetailsPage() {
               <CheckCircle2 size={14} className="shrink-0" />
               <span>Task Completed</span>
             </div>
+          ) : activeTask.status === 'todo' || !activeTask.status ? (
+            <button
+              onClick={handleStartTask}
+              className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-accent to-violet text-white text-xs font-semibold rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer animate-pulse"
+            >
+              <span>Start Task</span>
+              <ArrowRight size={13} />
+            </button>
           ) : (
             <button
               onClick={() => navigate('submit_task')}
@@ -246,6 +276,7 @@ export default function TaskDetailsPage() {
               <ArrowRight size={13} />
             </button>
           )}
+
         </div>
 
         {/* Content Split */}

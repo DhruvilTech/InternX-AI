@@ -9,6 +9,9 @@ import Interview from '../models/Interview.js';
 import InterviewReport from '../models/InterviewReport.js';
 import { analyzeGithubRepository } from './githubAnalyzer.service.js';
 import { extractZipMetadata } from './zipExtractor.service.js';
+import { generateFeedbackRecord, analyzeStudentSkills, generateCareerIntelligence } from './feedback.service.js';
+import { generateCareerReports } from './careerReport.service.js';
+
 
 /**
  * Main service to evaluate a submission asynchronously.
@@ -121,6 +124,9 @@ export const runEvaluationEngine = async (submissionId, type, githubUrl, fileDat
 
     await evaluation.save();
 
+    // Generate Feedback document
+    await generateFeedbackRecord(submission._id, task._id, submission.studentId, submission.internshipId || task.internshipId, evaluationData);
+
     // Update Task status to completed and populate scores/feedback
     task.status = 'completed';
     task.progress = 100;
@@ -139,18 +145,26 @@ export const runEvaluationEngine = async (submissionId, type, githubUrl, fileDat
     submission.status = 'Skill Analysis';
     submission.progress = 85;
     await submission.save();
-    await updateStudentSkills(submission.studentId, task, overallScore);
+    await analyzeStudentSkills(submission.studentId);
 
     // Stage 6: Career Analysis
     submission.status = 'Career Analysis';
     submission.progress = 95;
     await submission.save();
-    await updateStudentCareerIntelligence(submission.studentId);
+    await generateCareerIntelligence(submission.studentId, submission.internshipId || task.internshipId);
+    
+    // Regenerate new database collections reports
+    try {
+      await generateCareerReports(submission.studentId);
+    } catch (reportErr) {
+      console.error('[Evaluation service] Failed to generate career reports:', reportErr.message);
+    }
 
     // Stage 7: Completed
     submission.status = 'Completed';
     submission.progress = 100;
     await submission.save();
+
 
     console.log(`[Evaluation Service] Pipeline completed successfully for submission ${submission._id}.`);
     return evaluation;
@@ -164,7 +178,7 @@ export const runEvaluationEngine = async (submissionId, type, githubUrl, fileDat
     task.status = 'todo';
     task.feedback = 'Evaluation failed: ' + error.message;
     await task.save();
-    
+
     throw error;
   }
 };
@@ -262,7 +276,7 @@ ${detailsText}
 Grade this work objectively.`;
 
   const modelName = 'qwen-2.5-coder-32b';
-  
+
   const response = await axios.post(
     'https://api.groq.com/openai/v1/chat/completions',
     {
@@ -329,18 +343,18 @@ const generateHeuristicEvaluation = (task, submission) => {
       const lines = s.content.split('\n');
       lines.forEach(line => {
         const trimmed = line.trim();
-        if (trimmed && 
-            !trimmed.startsWith('//') && 
-            !trimmed.startsWith('/*') && 
-            !trimmed.startsWith('*') && 
-            !trimmed.startsWith('#') && 
-            !trimmed.startsWith('import ') && 
-            !trimmed.startsWith('require(') &&
-            trimmed !== '{' && 
-            trimmed !== '}' &&
-            trimmed !== '};' &&
-            trimmed !== '[]' &&
-            trimmed !== '();') {
+        if (trimmed &&
+          !trimmed.startsWith('//') &&
+          !trimmed.startsWith('/*') &&
+          !trimmed.startsWith('*') &&
+          !trimmed.startsWith('#') &&
+          !trimmed.startsWith('import ') &&
+          !trimmed.startsWith('require(') &&
+          trimmed !== '{' &&
+          trimmed !== '}' &&
+          trimmed !== '};' &&
+          trimmed !== '[]' &&
+          trimmed !== '();') {
           codeLinesCount++;
         }
       });
@@ -448,7 +462,7 @@ export const updateStudentSkills = async (studentId, task, overallScore) => {
   // Get recent submission to pull detected technology skills
   const submission = await Submission.findOne({ studentId, taskId: task._id }).sort({ createdAt: -1 });
   const detectedSkills = [];
-  
+
   if (submission?.extractedMetadata?.technologies) {
     submission.extractedMetadata.technologies.forEach(tech => {
       if (!detectedSkills.includes(tech)) detectedSkills.push(tech);
@@ -465,7 +479,7 @@ export const updateStudentSkills = async (studentId, task, overallScore) => {
 
   detectedSkills.forEach(skillName => {
     const skillIdx = skillAnalysis.skills.findIndex(s => s.name.toLowerCase() === skillName.toLowerCase());
-    
+
     if (skillIdx !== -1) {
       const currentLevel = skillAnalysis.skills[skillIdx].level;
       // Exponential smoothing: student moves 40% closer to task performance score
@@ -492,7 +506,7 @@ export const updateStudentCareerIntelligence = async (studentId) => {
   const completedTasksDocs = await Task.find({ studentId, status: 'completed' });
 
   const completionPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-  
+
   const sumScores = completedTasksDocs.reduce((acc, t) => acc + (t.score || 0), 0);
   const avgScore = completedTasks > 0 ? Math.round(sumScores / completedTasks) : 0;
 
@@ -500,7 +514,7 @@ export const updateStudentCareerIntelligence = async (studentId) => {
   const interviews = await Interview.find({ studentId, status: 'completed' });
   const interviewIds = interviews.map(i => i._id);
   const reports = await InterviewReport.find({ interviewId: { $in: interviewIds } });
-  
+
   let avgInterviewScore = 0;
   if (reports.length > 0) {
     const sumInterviews = reports.reduce((acc, r) => acc + r.overallScore, 0);
@@ -513,8 +527,8 @@ export const updateStudentCareerIntelligence = async (studentId) => {
   // 4. Compute Placement Readiness
   // Factors: average task scores (50%), task completion progress (20%), interview scores (30%)
   const placementReadiness = Math.round(
-    (avgScore * 0.50) + 
-    (completionPercentage * 0.20) + 
+    (avgScore * 0.50) +
+    (completionPercentage * 0.20) +
     ((avgInterviewScore || avgScore || 70) * 0.30) // Use avg task score or 70 if no interviews conducted
   );
 

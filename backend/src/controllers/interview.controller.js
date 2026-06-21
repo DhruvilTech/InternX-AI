@@ -3,6 +3,7 @@ import InterviewQuestion from '../models/InterviewQuestion.js';
 import InterviewAnswer from '../models/InterviewAnswer.js';
 import InterviewReport from '../models/InterviewReport.js';
 import Internship from '../models/Internship.js';
+import { generateCareerReports } from '../services/careerReport.service.js';
 import { sendResponse } from '../utils/sendResponse.js';
 
 // Fallback mock questions by career path
@@ -408,7 +409,7 @@ export const completeInterview = async (req, res, next) => {
       console.log('[INTERVIEW] Using fallback evaluation logic.');
       const answeredCount = answers.filter(a => a.answer && a.answer.trim().length > 10).length;
       const baseScore = Math.min(Math.round((answeredCount / 10) * 75 + 15 + Math.random() * 10), 100);
-      
+
       reportPayload = {
         technicalScore: Math.max(baseScore - 2, 20),
         communicationScore: Math.min(baseScore + 4, 100),
@@ -449,6 +450,13 @@ export const completeInterview = async (req, res, next) => {
     interview.status = 'completed';
     interview.completedAt = new Date();
     await interview.save();
+
+    // Regenerate career reports
+    try {
+      await generateCareerReports(studentId);
+    } catch (reportErr) {
+      console.error('[Interview complete] Failed to regenerate career reports:', reportErr.message);
+    }
 
     return sendResponse(res, 200, true, 'Interview session completed successfully', {
       report

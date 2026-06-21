@@ -78,6 +78,7 @@ export default function Navbar() {
         { label: 'GitHub', id: 'dashboard/github' },
         { label: 'Tasks', id: 'kanban' },
         { label: 'AI Mock Interview', id: 'dashboard/interview' },
+        { label: 'Skill Gap', id: 'skill_gap' },
         { label: 'Certificates', id: 'certificates' },
         { label: 'Profile', id: 'profile' },
       ]

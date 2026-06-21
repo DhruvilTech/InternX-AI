@@ -22,7 +22,8 @@ import {
   Star,
   Send,
   Loader2,
-  FileCheck
+  FileCheck,
+  Sparkles
 } from 'lucide-react';
 import { FaGithub } from 'react-icons/fa6';
 import { useNavigation } from '../context/NavigationContext';
@@ -93,6 +94,7 @@ export default function StudentDetailPage() {
 
   // Notes state for pipeline stage change
   const [pipelineNotes, setPipelineNotes] = useState('');
+  const [activeTab, setActiveTab] = useState('scorecard');
 
   useEffect(() => {
     dispatch(getRecruiterStudentDetails(id));
@@ -134,7 +136,7 @@ export default function StudentDetailPage() {
     );
   }
 
-  const { studentProfile, internshipProgress, githubAnalytics, certificates } = studentDetails;
+  const { studentProfile, internshipProgress, githubAnalytics, certificates, careerReport, skillGapReport, feedbackReport, tasks, submissions, interviews } = studentDetails;
 
   // Compile Radar chart technical scores
   const score = internshipProgress?.completionPercentage || 0;
@@ -213,7 +215,7 @@ export default function StudentDetailPage() {
       <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-accent/5 rounded-full blur-[100px] pointer-events-none" />
 
       <div className="max-w-5xl mx-auto px-4 space-y-6 relative z-10">
-        
+
         {/* Navigation Bar */}
         <div className="flex items-center justify-between border-b border-border pb-4">
           <button
@@ -231,22 +233,21 @@ export default function StudentDetailPage() {
         {/* Profile Banner */}
         <div className="glass border border-border rounded-3xl p-6 sm:p-8 bg-void/35 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-accent via-indigo-500 to-violet" />
-          
+
           <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left w-full">
             <div className="h-20 w-20 rounded-2xl overflow-hidden border-2 border-accent/20 shrink-0 shadow-lg shadow-accent/5 overflow-hidden">
               <img src={studentProfile.avatar || 'https://via.placeholder.com/150'} alt="" className="h-full w-full object-cover" />
             </div>
-            
+
             <div className="space-y-2 flex-1">
               <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
                 <h2 className="font-display font-bold text-xl sm:text-2xl text-text">{studentProfile.fullName}</h2>
                 <button
                   onClick={handleToggleShortlist}
-                  className={`p-1.5 border rounded-lg transition-all cursor-pointer ${
-                    studentProfile.isShortlisted
+                  className={`p-1.5 border rounded-lg transition-all cursor-pointer ${studentProfile.isShortlisted
                       ? 'bg-amber-500/10 border-amber-500 text-amber-500'
                       : 'border-border bg-white/5 text-muted hover:text-text'
-                  }`}
+                    }`}
                   title={studentProfile.isShortlisted ? 'Remove from Shortlist' : 'Add to Shortlist'}
                 >
                   <Star size={13} fill={studentProfile.isShortlisted ? 'currentColor' : 'none'} />
@@ -260,7 +261,7 @@ export default function StudentDetailPage() {
               <p className="text-xs text-muted justify-center sm:justify-start flex gap-1">
                 Institution: <strong className="text-text/90">{studentProfile.collegeName}</strong>
               </p>
-              
+
               {/* Skills Tags */}
               <div className="flex flex-wrap gap-1.5 justify-center sm:justify-start pt-1">
                 {studentProfile.skills.map((skill, index) => (
@@ -322,131 +323,423 @@ export default function StudentDetailPage() {
           )}
         </div>
 
-        {/* Analytics Breakdown Grid */}
-        <div className="grid md:grid-cols-2 gap-6">
-          
-          {/* Internship Performance Radar & Scorecard */}
-          <div className="glass border border-border rounded-2xl p-6 bg-void/25 flex flex-col justify-between min-h-[350px]">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 border-b border-border/40 pb-2.5">
-                <BookOpen size={15} className="text-violet" />
-                <h3 className="text-xs font-bold text-text uppercase tracking-wider">Milestones Audit Ratings</h3>
+        {/* Tab Navigator */}
+        <div className="flex border-b border-border gap-1 overflow-x-auto pb-px">
+          {[
+            { id: 'scorecard', label: 'Internship Scorecard' },
+            { id: 'skills', label: 'Skills & Gaps' },
+            { id: 'interview', label: 'Mock Interview' },
+            { id: 'github', label: 'GitHub Audit' },
+            { id: 'submissions', label: 'Milestone Submissions' }
+          ].map(tab => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 text-xs font-semibold border-b-2 transition-all shrink-0 cursor-pointer ${activeTab === tab.id
+                ? 'border-accent text-accent font-bold bg-white/5'
+                : 'border-transparent text-muted hover:text-text'
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab Content Panels */}
+        <div className="space-y-6">
+
+          {/* TAB 1: Internship Scorecard */}
+          {activeTab === 'scorecard' && (
+            <div className="space-y-6">
+              {/* Scorecard KPI Cards */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="glass border border-border rounded-xl p-4 bg-void/25">
+                  <span className="text-[10px] text-muted uppercase font-bold block mb-1">Placement Readiness</span>
+                  <span className="text-xl font-bold text-accent font-display">
+                    {careerReport?.readinessScore || 0}%
+                  </span>
+                  <span className="text-[9px] text-muted block mt-1">Weighted Candidate Rating</span>
+                </div>
+
+                <div className="glass border border-border rounded-xl p-4 bg-void/25">
+                  <span className="text-[10px] text-muted uppercase font-bold block mb-1">Overall Progress</span>
+                  <span className="text-xl font-bold text-indigo-400 font-display">
+                    {internshipProgress?.completionPercentage || 0}%
+                  </span>
+                  <span className="text-[9px] text-muted block mt-1">Internship Sprints Completed</span>
+                </div>
+
+                <div className="glass border border-border rounded-xl p-4 bg-void/25">
+                  <span className="text-[10px] text-muted uppercase font-bold block mb-1">Average Task Score</span>
+                  <span className="text-xl font-bold text-emerald font-display">
+                    {tasks && tasks.filter(t => t.status === 'completed').length > 0
+                      ? Math.round(tasks.filter(t => t.status === 'completed').reduce((sum, t) => sum + (t.score || 0), 0) / tasks.filter(t => t.status === 'completed').length)
+                      : 0}
+                  </span>
+                  <span className="text-[9px] text-muted block mt-1">Milestone Evaluator Avg</span>
+                </div>
+
+                <div className="glass border border-border rounded-xl p-4 bg-void/25">
+                  <span className="text-[10px] text-muted uppercase font-bold block mb-1">Salary Estimate</span>
+                  <span className="text-xl font-bold text-amber font-display">
+                    {careerReport?.salaryRange || 'N/A'}
+                  </span>
+                  <span className="text-[9px] text-muted block mt-1">Based on Role Track Demand</span>
+                </div>
               </div>
 
-              {internshipProgress ? (
-                <div className="grid grid-cols-1 sm:grid-cols-12 gap-6 items-center">
-                  <div className="sm:col-span-5 space-y-4 text-xs text-muted">
-                    <div>
-                      <span className="text-[9px] uppercase tracking-wider text-dim block mb-0.5">Simulated Role Track</span>
-                      <strong className="text-text text-sm font-display block">{internshipProgress.careerTrack}</strong>
-                    </div>
-
-                    <div className="space-y-1.5">
-                      <div className="flex justify-between font-bold text-[10px]">
-                        <span>Milestones Score</span>
-                        <span className="text-accent">{internshipProgress.completionPercentage}%</span>
-                      </div>
-                      <div className="h-1.5 w-full bg-white/5 border border-border rounded-full overflow-hidden">
-                        <div className="h-full bg-gradient-to-r from-accent to-violet rounded-full" style={{ width: `${internshipProgress.completionPercentage}%` }} />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-[10px]">
-                      <div>
-                        <span className="block text-dim uppercase">Current Level</span>
-                        <strong className="text-text">{internshipProgress.currentLevel}</strong>
-                      </div>
-                      <div>
-                        <span className="block text-dim uppercase">Active Status</span>
-                        <strong className={`uppercase ${internshipProgress.status === 'completed' ? 'text-emerald' : 'text-accent'}`}>{internshipProgress.status}</strong>
-                      </div>
-                    </div>
+              {/* Advice and Feedback section */}
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Career Coach Insight */}
+                <div className="glass border border-border rounded-2xl p-6 bg-void/25 space-y-3">
+                  <h4 className="text-xs font-bold text-text uppercase tracking-wider flex items-center gap-1.5 border-b border-border/40 pb-2">
+                    <Sparkles size={13} className="text-accent" />
+                    <span>Career Coach Insight</span>
+                  </h4>
+                  <p className="text-xs text-muted leading-relaxed">
+                    {careerReport?.careerAdvice || "No placement coach advice generated yet."}
+                  </p>
+                  <div className="pt-2 text-[10px] text-muted flex gap-2">
+                    <span>Target Roles:</span>
+                    <strong className="text-text">{careerReport?.recommendedRoles?.join(', ') || 'N/A'}</strong>
                   </div>
-
-                  <MilestonesChart
-                    completionPercentage={internshipProgress.completionPercentage || 0}
-                    isDark={isDark}
-                  />
                 </div>
-              ) : (
-                <div className="text-center py-10 text-xs text-muted">
-                  Student has not initialized any career pathway or simulated internship track.
-                </div>
-              )}
-            </div>
-          </div>
 
-          {/* GitHub Integration Logs */}
-          <div className="glass border border-border rounded-2xl p-6 bg-void/25 flex flex-col justify-between min-h-[350px]">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2 border-b border-border/40 pb-2.5">
-                <FaGithub size={15} className="text-accent" />
-                <h3 className="text-xs font-bold text-text uppercase tracking-wider">GitHub Integration Analytics</h3>
+                {/* Manager Feedback */}
+                <div className="glass border border-border rounded-2xl p-6 bg-void/25 space-y-3">
+                  <h4 className="text-xs font-bold text-text uppercase tracking-wider flex items-center gap-1.5 border-b border-border/40 pb-2">
+                    <BookOpen size={13} className="text-violet" />
+                    <span>Executive Manager Audit</span>
+                  </h4>
+                  <p className="text-xs text-muted leading-relaxed italic">
+                    {feedbackReport?.managerFeedback ? `"${feedbackReport.managerFeedback}"` : '"No executive manager feedback compiled yet."'}
+                  </p>
+                  <div className="pt-2 text-[10px] text-muted">
+                    <span>Audit Lead:</span>
+                    <strong className="text-text"> Sarah Johnson (Director of Engineering)</strong>
+                  </div>
+                </div>
               </div>
 
-              {githubAnalytics ? (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <span className="px-3 py-1 rounded-full bg-emerald/10 border border-emerald/20 text-[9px] text-emerald font-semibold uppercase tracking-wider">
-                      Connected
-                    </span>
-                    <a
-                      href={githubAnalytics.profileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-accent hover:underline font-mono"
-                    >
-                      @{githubAnalytics.username}
-                    </a>
-                  </div>
-
-                  {githubAnalytics.contributions.length > 0 ? (
-                    <div className="grid grid-cols-3 gap-3 text-center py-3 border-t border-b border-border/30">
+              {/* Tasks List Table */}
+              <div className="glass border border-border rounded-2xl p-6 bg-void/25 space-y-4">
+                <div className="flex justify-between items-center border-b border-border/40 pb-3">
+                  <h3 className="text-xs font-bold text-text uppercase tracking-wider">Milestone Deliverables History</h3>
+                  <span className="text-[10px] text-muted">Total Assigned: {tasks?.length || 0}</span>
+                </div>
+                <div className="space-y-3">
+                  {tasks?.map(task => (
+                    <div key={task._id} className="p-3 bg-void/40 border border-border rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 text-xs">
                       <div>
-                        <span className="text-[9px] text-muted uppercase font-bold block">Commits</span>
-                        <span className="text-lg font-bold text-text font-mono flex items-center justify-center gap-1">
-                          <GitCommit size={12} className="text-accent" />
-                          {githubAnalytics.contributions[0].commitCount}
-                        </span>
+                        <h4 className="font-bold text-text">{task.title}</h4>
+                        <p className="text-[10px] text-muted mt-0.5">Difficulty: {task.difficulty} · Status: <span className={task.status === 'completed' ? 'text-emerald' : 'text-accent'}>{task.status.toUpperCase()}</span></p>
                       </div>
-                      <div>
-                        <span className="text-[9px] text-muted uppercase font-bold block">PRs</span>
-                        <span className="text-lg font-bold text-text font-mono flex items-center justify-center gap-1">
-                          <GitPullRequest size={12} className="text-indigo-400" />
-                          {githubAnalytics.contributions[0].pullRequestCount}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-[9px] text-muted uppercase font-bold block">Git Score</span>
-                        <span className="text-lg font-bold text-emerald font-mono flex items-center justify-center gap-1">
-                          <Code size={12} className="text-emerald" />
-                          {githubAnalytics.contributions[0].contributionScore}
-                        </span>
+                      <div className="flex items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+                        {task.score && (
+                          <span className="px-2 py-0.5 rounded bg-emerald/10 border border-emerald/20 text-emerald text-[10px] font-bold">
+                            Score: {task.score}
+                          </span>
+                        )}
+                        <span className="text-[9px] text-dim">{new Date(task.updatedAt).toLocaleDateString()}</span>
                       </div>
                     </div>
-                  ) : (
-                    <p className="text-xs text-muted">No contribution metrics recorded for this student.</p>
+                  ))}
+                  {(!tasks || tasks.length === 0) && (
+                    <p className="text-center py-6 text-xs text-muted">No assigned deliverables traced for this student.</p>
                   )}
+                </div>
+              </div>
+            </div>
+          )}
 
-                  <div>
-                    <span className="text-[9px] text-muted uppercase font-bold block mb-1.5">Top Languages</span>
-                    <div className="flex gap-2 flex-wrap">
-                      {githubAnalytics.contributions[0]?.languages && Object.entries(githubAnalytics.contributions[0].languages).map(([lang, pct]) => (
-                        <span key={lang} className="text-[9px] px-2.5 py-0.5 border border-border bg-white/5 rounded-full font-mono text-muted">
-                          {lang}: {pct}%
+          {/* TAB 2: Skills & Gaps */}
+          {activeTab === 'skills' && (
+            <div className="grid md:grid-cols-12 gap-6 items-start">
+              {/* Radar Chart */}
+              <div className="md:col-span-5 glass border border-border rounded-2xl p-6 bg-void/25 flex flex-col items-center justify-center">
+                <span className="text-[10px] font-bold text-text uppercase tracking-wider block mb-4">Capability Comparison Radar</span>
+                {skillGapReport && (skillGapReport.detectedSkills?.length > 0 || skillGapReport.missingSkills?.length > 0) ? (
+                  <RadarChart width={280} height={200} data={[
+                    ...skillGapReport.detectedSkills.map(s => ({ subject: s, score: 85, benchmark: 80 })),
+                    ...skillGapReport.missingSkills.map(s => ({ subject: s, score: 45, benchmark: 80 }))
+                  ].slice(0, 8).map(item => ({
+                    ...item,
+                    subject: item.subject.length > 18 ? item.subject.substring(0, 15) + '...' : item.subject
+                  }))} cx="50%" cy="50%" outerRadius="70%">
+                    <PolarGrid stroke={isDark ? '#1E293B' : '#E2E8F0'} />
+                    <PolarAngleAxis dataKey="subject" tick={{ fill: isDark ? '#94A3B8' : '#64748B', fontSize: 8 }} />
+                    <Radar name="Student" dataKey="score" stroke="#8B5CF6" fill="#8B5CF6" fillOpacity={0.15} strokeWidth={2} />
+                    <Radar name="Benchmark" dataKey="benchmark" stroke="#38BDF8" fill="#38BDF8" fillOpacity={0.05} strokeWidth={1} strokeDasharray="3 3" />
+                  </RadarChart>
+                ) : (
+                  <div className="text-center py-12 text-xs text-muted">No skill metrics generated.</div>
+                )}
+              </div>
+
+              {/* Skills and Gaps breakdown */}
+              <div className="md:col-span-7 space-y-6">
+                {/* Detected Skills */}
+                <div className="glass border border-border rounded-2xl p-5 bg-void/25 space-y-3">
+                  <span className="text-[10px] font-bold text-emerald uppercase tracking-wider block">Demonstrated Skill Strengths</span>
+                  <div className="flex flex-wrap gap-2">
+                    {skillGapReport?.detectedSkills?.map((skill, idx) => (
+                      <span key={idx} className="px-2.5 py-1 bg-emerald/10 border border-emerald/20 text-emerald rounded-lg text-xs font-semibold">
+                        {skill}
+                      </span>
+                    )) || <span className="text-xs text-muted">None trace detected</span>}
+                  </div>
+                </div>
+
+                {/* Missing Skills */}
+                <div className="glass border border-border rounded-2xl p-5 bg-void/25 space-y-3">
+                  <span className="text-[10px] font-bold text-rose uppercase tracking-wider block">Identified Capability Gaps</span>
+                  <div className="flex flex-wrap gap-2">
+                    {skillGapReport?.missingSkills?.map((skill, idx) => (
+                      <span key={idx} className="px-2.5 py-1 bg-rose/10 border border-rose/20 text-rose rounded-lg text-xs font-semibold">
+                        {skill}
+                      </span>
+                    )) || <span className="text-xs text-emerald font-semibold">All requirement skills verified! (No Gaps)</span>}
+                  </div>
+                </div>
+
+                {/* Improvement Recommendations */}
+                <div className="glass border border-border rounded-2xl p-5 bg-void/25 space-y-3">
+                  <span className="text-[10px] font-bold text-accent uppercase tracking-wider block">Personalized Roadmaps</span>
+                  <div className="space-y-1.5 text-xs text-muted">
+                    {feedbackReport?.recommendations?.map((rec, idx) => (
+                      <div key={idx} className="p-2.5 bg-void/40 border border-border rounded-lg flex items-start gap-2">
+                        <span className="text-accent font-bold">•</span>
+                        <span>{rec}</span>
+                      </div>
+                    )) || <p>No recommendations generated.</p>}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: Mock Interview */}
+          {activeTab === 'interview' && (
+            <div className="space-y-6">
+              {/* Interview scores card */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="glass border border-border rounded-xl p-4 bg-void/25 text-center">
+                  <span className="text-[9px] text-muted uppercase font-bold block mb-1">Average Interview Score</span>
+                  <span className="text-2xl font-bold text-accent font-display">
+                    {interviews && interviews.length > 0
+                      ? Math.round(interviews.reduce((sum, int) => sum + (int.overallScore || 0), 0) / interviews.length)
+                      : 'N/A'}
+                  </span>
+                </div>
+                <div className="glass border border-border rounded-xl p-4 bg-void/25 text-center">
+                  <span className="text-[9px] text-muted uppercase font-bold block mb-1">Technical Skills</span>
+                  <span className="text-2xl font-bold text-text font-display">
+                    {interviews && interviews.length > 0
+                      ? Math.round(interviews.reduce((sum, int) => sum + (int.technicalScore || 0), 0) / interviews.length)
+                      : 'N/A'}
+                  </span>
+                </div>
+                <div className="glass border border-border rounded-xl p-4 bg-void/25 text-center">
+                  <span className="text-[9px] text-muted uppercase font-bold block mb-1">Communication Score</span>
+                  <span className="text-2xl font-bold text-indigo-400 font-display">
+                    {interviews && interviews.length > 0
+                      ? Math.round(interviews.reduce((sum, int) => sum + (int.communicationScore || 0), 0) / interviews.length)
+                      : 'N/A'}
+                  </span>
+                </div>
+                <div className="glass border border-border rounded-xl p-4 bg-void/25 text-center">
+                  <span className="text-[9px] text-muted uppercase font-bold block mb-1">Problem Solving</span>
+                  <span className="text-2xl font-bold text-emerald font-display">
+                    {interviews && interviews.length > 0
+                      ? Math.round(interviews.reduce((sum, int) => sum + (int.problemSolvingScore || 0), 0) / interviews.length)
+                      : 'N/A'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Interview Sessions list */}
+              <div className="glass border border-border rounded-2xl p-6 bg-void/25 space-y-4">
+                <span className="text-xs font-bold text-text uppercase tracking-wider block border-b border-border/40 pb-2.5">Simulated Interview Reports</span>
+                <div className="space-y-4">
+                  {interviews?.map((report, idx) => (
+                    <div key={idx} className="p-4 bg-void/40 border border-border rounded-xl space-y-3">
+                      <div className="flex justify-between items-start flex-wrap gap-2 text-xs">
+                        <div>
+                          <strong className="text-text block">Mock Interview Session {idx + 1}</strong>
+                          <span className="text-[10px] text-muted">Readiness Level: {report.readinessLevel}</span>
+                        </div>
+                        <span className="px-2.5 py-0.5 rounded bg-accent/15 border border-accent/30 text-accent font-bold">
+                          Overall: {report.overallScore}/100
                         </span>
+                      </div>
+                      <p className="text-xs text-muted leading-relaxed italic bg-surface-muted/10 p-3 rounded-lg border border-border">
+                        "{report.careerAdvice}"
+                      </p>
+                      <div className="grid sm:grid-cols-2 gap-4 text-[11px] text-muted">
+                        <div>
+                          <strong className="text-emerald block mb-1">Strengths</strong>
+                          {report.strengths?.map((str, i) => <p key={i}>• {str}</p>)}
+                        </div>
+                        <div>
+                          <strong className="text-rose block mb-1">Weaknesses</strong>
+                          {report.weaknesses?.map((wk, i) => <p key={i}>• {wk}</p>)}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {(!interviews || interviews.length === 0) && (
+                    <p className="text-center py-6 text-xs text-muted">No completed voice/text mock interview sessions recorded for this student.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: GitHub Audit */}
+          {activeTab === 'github' && (
+            <div className="space-y-6">
+              {githubAnalytics ? (
+                <div className="space-y-6">
+                  {/* KPI card grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="glass border border-border rounded-xl p-4 bg-void/25 text-center">
+                      <span className="text-[9px] text-muted uppercase font-bold block mb-1">Username</span>
+                      <a href={githubAnalytics.profileUrl} target="_blank" rel="noopener noreferrer" className="text-xs font-mono text-accent hover:underline block truncate">
+                        @{githubAnalytics.username}
+                      </a>
+                    </div>
+                    <div className="glass border border-border rounded-xl p-4 bg-void/25 text-center">
+                      <span className="text-[9px] text-muted uppercase font-bold block mb-1">Public Repositories</span>
+                      <span className="text-xl font-bold text-text font-mono">{githubAnalytics.publicRepos}</span>
+                    </div>
+                    <div className="glass border border-border rounded-xl p-4 bg-void/25 text-center">
+                      <span className="text-[9px] text-muted uppercase font-bold block mb-1">Followers</span>
+                      <span className="text-xl font-bold text-text font-mono">{githubAnalytics.followers || 0}</span>
+                    </div>
+                    <div className="glass border border-border rounded-xl p-4 bg-void/25 text-center">
+                      <span className="text-[9px] text-muted uppercase font-bold block mb-1">Integrated Commits</span>
+                      <span className="text-xl font-bold text-emerald font-mono">
+                        {githubAnalytics.contributions?.reduce((sum, c) => sum + (c.commitCount || 0), 0) || 0}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Git Contribution details */}
+                  <div className="glass border border-border rounded-2xl p-6 bg-void/25 space-y-4">
+                    <span className="text-xs font-bold text-text uppercase tracking-wider block border-b border-border/40 pb-2.5">Repository Contribution History</span>
+                    <div className="space-y-3">
+                      {githubAnalytics.contributions?.map((contrib, idx) => (
+                        <div key={idx} className="p-4 bg-void/40 border border-border rounded-xl text-xs space-y-2">
+                          <div className="flex justify-between items-center flex-wrap gap-2">
+                            <span className="font-mono font-bold text-text">Repository ID: {contrib.repoId}</span>
+                            <span className="px-2 py-0.5 rounded bg-emerald/10 border border-emerald/20 text-emerald text-[10px] font-bold font-mono">
+                              Contribution Score: {contrib.contributionScore}
+                            </span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 text-center text-[10px] text-muted py-1 bg-surface-muted/10 border border-border rounded-lg">
+                            <div>Commits: <strong>{contrib.commitCount}</strong></div>
+                            <div>PRs: <strong>{contrib.pullRequestCount}</strong></div>
+                            <div>Issues: <strong>{contrib.issueCount}</strong></div>
+                          </div>
+                          <div>
+                            <span className="text-[9px] font-bold text-muted uppercase tracking-wider block mb-1">Languages breakdown</span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {contrib.languages && Object.entries(contrib.languages).map(([lang, pct]) => (
+                                <span key={lang} className="px-2 py-0.5 border border-border bg-white/5 rounded text-[9px] font-mono text-muted">
+                                  {lang}: {pct}%
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   </div>
                 </div>
               ) : (
-                <div className="text-center py-10 text-xs text-muted flex flex-col items-center justify-center gap-2">
-                  <FolderGit2 size={24} className="text-muted/40" />
-                  <p>GitHub account has not been integrated or linked by this student.</p>
+                <div className="glass border border-border rounded-2xl p-8 text-center text-xs text-muted flex flex-col items-center justify-center gap-3">
+                  <FolderGit2 size={32} className="text-muted/30" />
+                  <p>GitHub account has not been integrated or connected by this student yet.</p>
                 </div>
               )}
             </div>
-          </div>
+          )}
+
+          {/* TAB 5: Milestone Submissions */}
+          {activeTab === 'submissions' && (
+            <div className="space-y-6">
+              {submissions && submissions.length > 0 ? (
+                <div className="space-y-4">
+                  {submissions.map((sub) => (
+                    <div key={sub._id} className="glass border border-border rounded-2xl p-5 bg-void/35 space-y-4 hover:border-accent/40 transition-colors">
+                      <div className="flex justify-between items-start flex-wrap gap-2">
+                        <div>
+                          <span className="text-[9px] text-accent uppercase font-bold tracking-wider block">Submission Traced</span>
+                          <h4 className="text-sm font-bold text-text">{sub.taskTitle}</h4>
+                        </div>
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${sub.status === 'Completed'
+                          ? 'bg-emerald/10 border-emerald/20 text-emerald'
+                          : sub.status === 'Failed'
+                            ? 'bg-rose/10 border-rose/20 text-rose'
+                            : 'bg-amber/10 border-amber/20 text-amber'
+                        }`}>
+                          {sub.status}
+                        </span>
+                      </div>
+
+                      {/* Code grader scorecard */}
+                      {sub.evaluation ? (
+                        <div className="space-y-4 pt-2 border-t border-border/40">
+                          {/* Code scores grid */}
+                          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 text-center text-xs">
+                            <div className="p-2.5 bg-void/50 border border-border rounded-xl">
+                              <span className="text-[9px] text-muted uppercase block">Technical Score</span>
+                              <strong className="text-text font-mono text-sm">{sub.evaluation.technicalScore}/100</strong>
+                            </div>
+                            <div className="p-2.5 bg-void/50 border border-border rounded-xl">
+                              <span className="text-[9px] text-muted uppercase block">Architecture</span>
+                              <strong className="text-text font-mono text-sm">{sub.evaluation.architectureScore}/100</strong>
+                            </div>
+                            <div className="p-2.5 bg-void/50 border border-border rounded-xl">
+                              <span className="text-[9px] text-muted uppercase block">Code Quality</span>
+                              <strong className="text-text font-mono text-sm">{sub.evaluation.codeQualityScore}/100</strong>
+                            </div>
+                            <div className="p-2.5 bg-void/50 border border-border rounded-xl">
+                              <span className="text-[9px] text-muted uppercase block">Documentation</span>
+                              <strong className="text-text font-mono text-sm">{sub.evaluation.documentationScore}/100</strong>
+                            </div>
+                            <div className="p-2.5 bg-void/50 border border-border rounded-xl col-span-2 sm:col-span-1">
+                              <span className="text-[9px] text-muted uppercase block">Problem Solving</span>
+                              <strong className="text-emerald font-mono text-sm">{sub.evaluation.overallScore}/100</strong>
+                            </div>
+                          </div>
+
+                          {/* Strengths and weaknesses block */}
+                          <div className="grid sm:grid-cols-2 gap-4 text-[11px] text-muted">
+                            <div className="space-y-1">
+                              <span className="text-[9px] text-emerald font-bold uppercase tracking-wider block">Strengths</span>
+                              {sub.evaluation.strengths?.map((st, i) => <p key={i}>✓ {st}</p>) || <p>None highlighted.</p>}
+                            </div>
+                            <div className="space-y-1">
+                              <span className="text-[9px] text-rose font-bold uppercase tracking-wider block">Weaknesses</span>
+                              {sub.evaluation.weaknesses?.map((wk, i) => <p key={i}>• {wk}</p>) || <p>None highlighted.</p>}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted italic">Audit grade not computed yet (in progress/failed).</p>
+                      )}
+                      <div className="text-[10px] text-dim text-right font-mono">
+                        Submitted: {new Date(sub.submittedAt).toLocaleString()} via {sub.submissionType.toUpperCase()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-center py-10 text-xs text-muted">No deliverables submitted by this candidate yet.</p>
+              )}
+            </div>
+          )}
 
         </div>
 
@@ -485,7 +778,7 @@ export default function StudentDetailPage() {
       {showOfferModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-void/85 backdrop-blur-md" onClick={() => setShowOfferModal(false)} />
-          
+
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}

@@ -286,6 +286,16 @@ export const queryStudents = async (recruiterUserId, queryParams) => {
   };
 };
 
+import Task from '../../../models/Task.js';
+import Submission from '../../../models/Submission.js';
+import Evaluation from '../../../models/Evaluation.js';
+import Interview from '../../../models/Interview.js';
+import InterviewReport from '../../../models/InterviewReport.js';
+import FeedbackReport from '../../../models/FeedbackReport.js';
+import SkillGapReport from '../../../models/SkillGapReport.js';
+import CareerReport from '../../../models/CareerReport.js';
+import { checkReportCache, generateCareerReports } from '../../../services/careerReport.service.js';
+
 /**
  * Aggregates candidate audit details: profile data, simulated scores, github, and credentials.
  */
@@ -315,8 +325,23 @@ export const getStudentDetails = async (recruiterUserId, studentUserIdOrStudentI
 
   // Recruiter specific: check shortlist and pipeline status
   const isShortlisted = !!(await ShortlistedCandidate.findOne({ recruiterId: recruiterUserId, studentId: userId })) ||
-                        !!(await Offer.findOne({ recruiterId: recruiterUserId, studentId: userId, status: 'accepted' }));
+    !!(await Offer.findOne({ recruiterId: recruiterUserId, studentId: userId, status: 'accepted' }));
   const pipeline = await HiringPipeline.findOne({ recruiterId: recruiterUserId, studentId: userId });
+
+  // Load new dynamic reports
+  let reports = await checkReportCache(userId);
+  if (!reports) {
+    reports = await generateCareerReports(userId);
+  }
+
+  // Load task and submission details
+  const tasks = await Task.find({ studentId: userId }).sort({ createdAt: 1 });
+  const submissions = await Submission.find({ studentId: userId }).populate('taskId', 'title').sort({ submittedAt: -1 });
+  const evaluations = await Evaluation.find({ submissionId: { $in: submissions.map(s => s._id) } });
+
+  // Load interviews
+  const studentInterviews = await Interview.find({ studentId: userId, status: 'completed' });
+  const interviewReports = await InterviewReport.find({ interviewId: { $in: studentInterviews.map(i => i._id) } });
 
   return {
     studentProfile: {
@@ -362,7 +387,44 @@ export const getStudentDetails = async (recruiterUserId, studentUserIdOrStudentI
       grade: c.grade,
       issueDate: c.issueDate,
       status: c.status
-    }))
+    })),
+    careerReport: reports.career,
+    skillGapReport: reports.skillGap,
+    feedbackReport: reports.feedback,
+    tasks: tasks.map(t => ({
+      _id: t._id,
+      title: t.title,
+      difficulty: t.difficulty,
+      status: t.status,
+      score: t.score,
+      feedback: t.feedback,
+      categoryScore: t.categoryScore,
+      updatedAt: t.updatedAt
+    })),
+    submissions: submissions.map(sub => {
+      const evalObj = evaluations.find(e => e.submissionId.toString() === sub._id.toString());
+      return {
+        _id: sub._id,
+        taskTitle: sub.taskId?.title || 'Task Deliverable',
+        submissionType: sub.submissionType,
+        githubUrl: sub.githubUrl,
+        status: sub.status,
+        progress: sub.progress,
+        submittedAt: sub.submittedAt,
+        evaluation: evalObj ? {
+          technicalScore: evalObj.technicalScore,
+          architectureScore: evalObj.architectureScore,
+          codeQualityScore: evalObj.codeQualityScore,
+          documentationScore: evalObj.documentationScore,
+          problemSolvingScore: evalObj.problemSolvingScore,
+          overallScore: evalObj.overallScore,
+          strengths: evalObj.strengths,
+          weaknesses: evalObj.weaknesses,
+          recommendations: evalObj.recommendations
+        } : null
+      };
+    }),
+    interviews: interviewReports
   };
 };
 
@@ -600,6 +662,7 @@ export const getAnalytics = async (recruiterUserId) => {
 
   const careers = await StudentCareer.find({ studentId: { $in: studentUserIds } }).populate('careerId');
   const githubProfiles = await GithubProfile.find({ userId: { $in: studentUserIds } });
+  const careerReports = await CareerReport.find({ studentId: { $in: studentUserIds } });
 
   // Calculate average progress and score distributions
   let scoreSum = 0;
@@ -630,7 +693,8 @@ export const getAnalytics = async (recruiterUserId) => {
 
     // Calculate individual placement readiness score
     const hasGithub = githubUserIds.includes(student.userId.toString());
-    const readinessIndex = Math.min(100, Math.round(progress * 0.8 + (hasGithub ? 20 : 0)));
+    const careerReport = careerReports.find(cr => cr.studentId.toString() === student.userId.toString());
+    const readinessIndex = careerReport ? (careerReport.readinessScore || 0) : Math.min(100, Math.round(progress * 0.8 + (hasGithub ? 20 : 0)));
 
     if (readinessIndex >= 85) {
       readinessCounts.High++;

@@ -19,7 +19,11 @@ import studentRoutes from './routes/student.routes.js';
 import collegesRoutes from './routes/colleges.routes.js';
 import representativeRoutes from './routes/representative.routes.js';
 import submissionRoutes from './routes/submission.routes.js';
+import feedbackRoutes from './routes/feedback.routes.js';
+import skillsRoutes from './routes/skills.routes.js';
+import careerIntelRoutes from './routes/careerIntel.routes.js';
 import { setupSwagger } from './config/swagger.js';
+
 import { errorHandler } from './middlewares/error.middleware.js';
 
 const app = express();
@@ -93,6 +97,10 @@ app.use('/api/colleges', collegesRoutes);
 app.use('/api/college-representative', representativeRoutes);
 app.use('/api/interview', interviewRoutes);
 app.use('/api/submissions', submissionRoutes);
+app.use('/api/feedback', feedbackRoutes);
+app.use('/api/skills', skillsRoutes);
+app.use('/api/career', careerIntelRoutes);
+
 
 // Base application health check
 app.get('/health', (req, res) => {

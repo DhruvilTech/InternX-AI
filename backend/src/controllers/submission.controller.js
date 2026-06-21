@@ -211,8 +211,20 @@ export const getSkillsBySubmissionId = async (req, res, next) => {
     }
 
     const skillAnalysis = await SkillAnalysis.findOne({ studentId: submission.studentId });
+    let skillsArray = [];
+    if (skillAnalysis) {
+      if (skillAnalysis.currentSkills instanceof Map) {
+        skillAnalysis.currentSkills.forEach((level, name) => {
+          skillsArray.push({ name, level });
+        });
+      } else if (skillAnalysis.currentSkills) {
+        Object.entries(skillAnalysis.currentSkills).forEach(([name, level]) => {
+          skillsArray.push({ name, level });
+        });
+      }
+    }
     return sendResponse(res, 200, true, 'Skills retrieved successfully', {
-      skills: skillAnalysis ? skillAnalysis.skills : []
+      skills: skillsArray
     });
   } catch (error) {
     next(error);

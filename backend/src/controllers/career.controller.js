@@ -6,8 +6,9 @@ import CareerIntelligence from '../models/CareerIntelligence.js';
 import Internship from '../models/Internship.js';
 import Interview from '../models/Interview.js';
 import InterviewReport from '../models/InterviewReport.js';
-import { updateStudentCareerIntelligence } from '../services/evaluation.service.js';
+import { checkReportCache, generateCareerReports } from '../services/careerReport.service.js';
 import { sendResponse } from '../utils/sendResponse.js';
+
 
 /**
  * Retrieve all career paths with search, pagination, and filter parameters.
@@ -234,7 +235,7 @@ export const selectCareer = async (req, res, next) => {
 export const getMyCareer = async (req, res, next) => {
   try {
     const studentCareer = await StudentCareer.findOne({ studentId: req.user._id }).populate('careerId');
-    
+
     if (!studentCareer) {
       return sendResponse(res, 404, false, 'No selected career path found for this student');
     }
@@ -246,7 +247,7 @@ export const getMyCareer = async (req, res, next) => {
 
     if (studentCareer.completionPercentage !== completionPercentage) {
       studentCareer.completionPercentage = completionPercentage;
-      
+
       // Update career level based on progress
       if (completionPercentage >= 100) {
         studentCareer.currentLevel = 'Expert';
@@ -255,7 +256,7 @@ export const getMyCareer = async (req, res, next) => {
       } else {
         studentCareer.currentLevel = 'Beginner';
       }
-      
+
       await studentCareer.save();
     }
 
@@ -279,72 +280,117 @@ export const getSkillAnalysis = async (req, res, next) => {
   try {
     const studentId = req.user._id;
 
-    // Get selected career to find required benchmark skills
-    const studentCareer = await StudentCareer.findOne({ studentId }).populate('careerId');
-    if (!studentCareer) {
-      return sendResponse(res, 404, false, 'No selected career path found. Please select a career path first.');
+    // Check cache or generate new report
+    let reports = await checkReportCache(studentId);
+    if (!reports) {
+      reports = await generateCareerReports(studentId);
     }
+    const skillGap = reports.skillGap;
+    const careerReport = reports.career;
+    const avgScore = careerReport ? (careerReport.portfolioScore || 70) : 70;
 
-    const career = studentCareer.careerId;
-    const requiredSkills = career.requiredSkills || [];
+    const allSkills = [...(skillGap.detectedSkills || []), ...(skillGap.missingSkills || [])];
+    const uniqueSkills = Array.from(new Set(allSkills));
+    const skillComparisonData = [];
+    const gaps = [];
 
-    // Get current student skills
-    let skillAnalysis = await SkillAnalysis.findOne({ studentId });
-    if (!skillAnalysis) {
-      // Initialize with required skills at 0
-      skillAnalysis = new SkillAnalysis({
-        studentId,
-        skills: requiredSkills.map(name => ({ name, level: 0 }))
-      });
-      await skillAnalysis.save();
-    }
+    uniqueSkills.forEach((skillName) => {
+      const isMissing = skillGap.missingSkills.includes(skillName);
+      const benchmark = 80;
 
-    // Build skillComparisonData
-    const skillComparisonData = requiredSkills.map(skillName => {
-      const match = skillAnalysis.skills.find(s => s.name.toLowerCase() === skillName.toLowerCase());
-      const current = match ? match.level : 0;
-      const benchmark = 80; // default industry benchmark
-      return {
+      let current;
+      if (isMissing) {
+        current = Math.max(10, Math.min(45, Math.round(avgScore * 0.5)));
+      } else {
+        current = Math.max(70, Math.min(98, Math.round(65 + (avgScore - 50) * 0.6)));
+      }
+
+      skillComparisonData.push({
         subject: skillName,
         current,
         benchmark,
         fullMark: 100
-      };
-    });
+      });
 
-    // Calculate gaps
-    const gaps = [];
-    requiredSkills.forEach(skillName => {
-      const match = skillAnalysis.skills.find(s => s.name.toLowerCase() === skillName.toLowerCase());
-      const current = match ? match.level : 0;
-      const benchmark = 80;
-      if (current < benchmark) {
-        const gapVal = current - benchmark;
+      if (isMissing) {
+        const gapVal = Math.max(0, benchmark - current);
+        const gap = `${gapVal}%`;
         let level = 'Beginner';
-        if (current >= 60) level = 'Advanced';
-        else if (current >= 30) level = 'Intermediate';
+        if (current >= 30) level = 'Intermediate';
 
         let recommend = `Complete more deliverables requiring ${skillName} to close the capability gap.`;
-        if (skillName.toLowerCase() === 'vector databases' || skillName.toLowerCase() === 'vector db indexes') {
-          recommend = 'Design embedding database schema structures. Practice indexing and filtering logic.';
-        } else if (skillName.toLowerCase() === 'langchain' || skillName.toLowerCase() === 'langchain orchestrator') {
-          recommend = 'Implement custom RAG routing streams with LangChain integration.';
-        } else if (skillName.toLowerCase() === 'prometheus metrics' || skillName.toLowerCase() === 'prometheus') {
-          recommend = 'Export prometheus metrics endpoints and setup dashboard gauges.';
+        if (skillName.toLowerCase() === 'system design') {
+          recommend = 'Practice rate limiters, database indexes optimizations, and caching design patterns.';
+        } else if (skillName.toLowerCase() === 'testing' || skillName.toLowerCase() === 'unit testing') {
+          recommend = 'Write centralized testing scripts with Jest, Supertest, or PyTest and check code coverage.';
+        } else if (skillName.toLowerCase() === 'authentication' || skillName.toLowerCase() === 'jwt') {
+          recommend = 'Implement JWT-based session security cookies and secure password hashing flows.';
         }
 
         gaps.push({
           skill: skillName,
-          gap: `${gapVal}%`,
+          gap,
           level,
           recommend
         });
       }
     });
 
+    // Dynamic career recommended modules based on track
+    let careerPath = careerReport?.recommendedRoles?.[0];
+    if (!careerPath) {
+      const internshipObj = await Internship.findOne({ studentId });
+      const studentCareerObj = await StudentCareer.findOne({ studentId }).populate('careerId');
+      if (internshipObj?.internshipRole) {
+        careerPath = internshipObj.internshipRole;
+      } else if (internshipObj?.roleTitle) {
+        careerPath = internshipObj.roleTitle;
+      } else if (studentCareerObj?.careerId?.title) {
+        careerPath = studentCareerObj.careerId.title;
+      } else {
+        careerPath = 'Backend Developer';
+      }
+    }
+    const pathClean = careerPath.toLowerCase();
+    let recommendedModules = [];
+
+    if (pathClean.includes('ai') || pathClean.includes('machine learning') || pathClean.includes('data science') || pathClean.includes('artificial')) {
+      recommendedModules = [
+        { title: 'LLM Observability Masterclass', duration: '4 hrs' },
+        { title: 'Vector Database Search Tuning', duration: '3 hrs' }
+      ];
+    } else if (pathClean.includes('frontend') || pathClean.includes('react') || pathClean.includes('web')) {
+      recommendedModules = [
+        { title: 'React Performance & Virtualization', duration: '3 hrs' },
+        { title: 'Advanced CSS Grid & Glassmorphism', duration: '2 hrs' }
+      ];
+    } else if (pathClean.includes('cyber') || pathClean.includes('security')) {
+      recommendedModules = [
+        { title: 'API Penetration Testing Masterclass', duration: '5 hrs' },
+        { title: 'OAuth2 & Token Validation Flow', duration: '3 hrs' }
+      ];
+    } else if (pathClean.includes('data engineer') || pathClean.includes('etl') || pathClean.includes('warehouse') || pathClean.includes('lake') || pathClean.includes('data warehousing') || pathClean.includes('lakehouse')) {
+      recommendedModules = [
+        { title: 'AWS Glue & ETL Pipelines', duration: '4 hrs' },
+        { title: 'Big Data Processing with Apache Spark', duration: '5 hrs' }
+      ];
+    } else if (pathClean.includes('design') || pathClean.includes('ui') || pathClean.includes('ux') || pathClean.includes('product designer') || pathClean.includes('product design')) {
+      recommendedModules = [
+        { title: 'Advanced Figma Component Systems', duration: '3 hrs' },
+        { title: 'Web Accessibility & WCAG Standards', duration: '2 hrs' }
+      ];
+    } else {
+      recommendedModules = [
+        { title: 'Node.js Event Loop Tuning', duration: '4 hrs' },
+        { title: 'MongoDB Query Optimization & Indexing', duration: '3 hrs' }
+      ];
+    }
+
+
     return sendResponse(res, 200, true, 'Skill analysis retrieved successfully', {
       skillComparisonData,
-      gaps
+      gaps,
+      recommendedModules
     });
   } catch (error) {
     next(error);
@@ -359,22 +405,28 @@ export const getCareerIntelligence = async (req, res, next) => {
   try {
     const studentId = req.user._id;
 
-    // Recalculate intelligence dynamically to ensure it is accurate
-    await updateStudentCareerIntelligence(studentId);
-
-    const careerIntel = await CareerIntelligence.findOne({ studentId });
-    if (!careerIntel) {
-      return sendResponse(res, 404, false, 'Career intelligence details not found.');
+    // Check cache or generate new report
+    let reports = await checkReportCache(studentId);
+    if (!reports) {
+      reports = await generateCareerReports(studentId);
     }
+    const careerReport = reports.career;
+    const feedbackReport = reports.feedback;
+    const skillGapReport = reports.skillGap;
 
     return sendResponse(res, 200, true, 'Career intelligence retrieved successfully', {
-      readinessScore: careerIntel.readinessScore,
-      portfolioScore: careerIntel.portfolioScore,
-      placementReadiness: careerIntel.placementReadiness,
-      recommendedRoles: careerIntel.recommendedRoles,
-      recommendedSkills: careerIntel.recommendedSkills,
-      recommendedProjects: careerIntel.recommendedProjects,
-      recommendedCertifications: careerIntel.recommendedCertifications
+      readinessScore: careerReport.readinessScore || 70,
+      portfolioScore: careerReport.portfolioScore || 0,
+      placementReadiness: careerReport.readinessScore || 0,
+      careerReadiness: careerReport.careerLevel || 'Beginner',
+      recommendedRoles: careerReport.recommendedRoles || [],
+      recommendedSkills: careerReport.recommendedSkills || [],
+      recommendedProjects: careerReport.recommendedProjects || [],
+      recommendedCertifications: careerReport.recommendedCertifications || [],
+      careerAdvice: careerReport.careerAdvice || '',
+      careerIntel: careerReport,
+      feedbackReport,
+      skillGapReport
     });
   } catch (error) {
     next(error);

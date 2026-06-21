@@ -11,25 +11,15 @@ import {
 import { ShieldCheck, Target, ArrowUpRight, Award, Zap } from 'lucide-react'
 import axiosInstance from '../api/axios.js'
 
-const defaultSkillData = [
-  { subject: 'LangChain Orchestrator', current: 65, benchmark: 85, fullMark: 100 },
-  { subject: 'Vector DB Indexes', current: 94, benchmark: 80, fullMark: 100 },
-  { subject: 'PyTorch models', current: 50, benchmark: 75, fullMark: 100 },
-  { subject: 'REST APIs (FastAPI)', current: 80, benchmark: 85, fullMark: 100 },
-  { subject: 'Prometheus metrics', current: 40, benchmark: 70, fullMark: 100 },
-  { subject: 'System Architecture', current: 85, benchmark: 80, fullMark: 100 },
-]
+const defaultSkillData = []
 
-const defaultGaps = [
-  { skill: 'Prometheus metrics', gap: '-30%', recommend: 'Implement the Prometheus metric endpoints task to build latency graphs.', level: 'Beginner' },
-  { skill: 'PyTorch models', gap: '-25%', recommend: 'Fine-tune SentenceTransformers embedding networks. Read the custom training guides.', level: 'Intermediate' },
-  { skill: 'LangChain Orchestrator', gap: '-20%', recommend: 'Develop streaming tokens route using fallback logic details.', level: 'Advanced' },
-]
+const defaultGaps = []
 
 export default function SkillGapPage() {
   const { isDark } = useTheme()
   const [skillComparisonData, setSkillComparisonData] = useState(defaultSkillData)
   const [gaps, setGaps] = useState(defaultGaps)
+  const [recommendedModules, setRecommendedModules] = useState([])
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -41,6 +31,7 @@ export default function SkillGapPage() {
             setSkillComparisonData(response.data.data.skillComparisonData)
           }
           setGaps(response.data.data.gaps || [])
+          setRecommendedModules(response.data.data.recommendedModules || [])
         }
       } catch (err) {
         console.error('Failed to load dynamic skill analysis from server:', err)
@@ -50,6 +41,11 @@ export default function SkillGapPage() {
     }
     fetchSkillAnalysis()
   }, [])
+
+  const formattedRadarData = (skillComparisonData || []).slice(0, 8).map(item => ({
+    ...item,
+    subject: item.subject.length > 18 ? item.subject.substring(0, 15) + '...' : item.subject
+  }));
 
   const gridColor = isDark ? '#1E293B' : '#E2E8F0'
   const tickColor = isDark ? '#94A3B8' : '#64748B'
@@ -76,7 +72,7 @@ export default function SkillGapPage() {
             <span className="text-xs font-bold text-text uppercase tracking-wider block mb-6">Capability Radar Comparison</span>
             <div className="h-[320px] w-full flex items-center justify-center">
               <ResponsiveContainer width="100%" height="100%">
-                <RadarChart data={skillComparisonData} cx="50%" cy="50%" outerRadius="70%">
+                <RadarChart data={formattedRadarData} cx="50%" cy="50%" outerRadius="70%">
                   <PolarGrid stroke={gridColor} />
                   <PolarAngleAxis dataKey="subject" tick={{ fill: tickColor, fontSize: 8 }} />
                   <Radar
@@ -136,21 +132,18 @@ export default function SkillGapPage() {
               </div>
 
               <div className="grid sm:grid-cols-2 gap-3 text-xs text-muted">
-                <div className="p-3 bg-surface-muted/30 border border-border rounded-xl flex justify-between items-center group cursor-pointer hover:border-accent/40 transition-colors">
-                  <div>
-                    <span className="font-semibold text-text block">LLM Observability Masterclass</span>
-                    <span className="text-[9px] text-muted block mt-0.5">Estimated: 4 hrs</span>
+                {recommendedModules.map((mod, idx) => (
+                  <div key={idx} className="p-3 bg-surface-muted/30 border border-border rounded-xl flex justify-between items-center group cursor-pointer hover:border-accent/40 transition-colors">
+                    <div>
+                      <span className="font-semibold text-text block">{mod.title}</span>
+                      <span className="text-[9px] text-muted block mt-0.5">Estimated: {mod.duration}</span>
+                    </div>
+                    <ArrowUpRight size={14} className="text-muted group-hover:text-accent transition-colors" />
                   </div>
-                  <ArrowUpRight size={14} className="text-muted group-hover:text-accent transition-colors" />
-                </div>
-
-                <div className="p-3 bg-surface-muted/30 border border-border rounded-xl flex justify-between items-center group cursor-pointer hover:border-accent/40 transition-colors">
-                  <div>
-                    <span className="font-semibold text-text block">FastAPI production optimizations</span>
-                    <span className="text-[9px] text-muted block mt-0.5">Estimated: 3 hrs</span>
-                  </div>
-                  <ArrowUpRight size={14} className="text-muted group-hover:text-accent transition-colors" />
-                </div>
+                ))}
+                {recommendedModules.length === 0 && (
+                  <p className="text-xs text-muted py-2 col-span-2 text-center">No cohort-specific learning modules assigned.</p>
+                )}
               </div>
             </div>
 
