@@ -10,7 +10,6 @@ import GithubProfile from '../../../models/GithubProfile.js';
 import GithubContribution from '../../../models/GithubContribution.js';
 import CareerPath from '../../../models/CareerPath.js';
 import Placement from '../../../models/Placement.js';
-import CollegeNotification from '../../../models/CollegeNotification.js';
 import Offer from '../../../models/Offer.js';
 import mongoose from 'mongoose';  
 
@@ -1009,20 +1008,3 @@ export const queryPlacements = async (college, queryParams) => {
   };
 };
 
-export const getNotifications = async (college) => {
-  return await CollegeNotification.find({ collegeId: college._id })
-    .populate('senderId', 'fullName email avatar')
-    .sort({ createdAt: -1 });
-};
-
-export const markNotificationAsRead = async (college, notificationId) => {
-  const notification = await CollegeNotification.findOneAndUpdate(
-    { _id: notificationId, collegeId: college._id },
-    { $set: { isRead: true } },
-    { returnDocument: 'after' }
-  );
-  if (!notification) {
-    throw new Error('Notification not found');
-  }
-  return notification;
-};

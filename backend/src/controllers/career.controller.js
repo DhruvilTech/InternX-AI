@@ -11,6 +11,7 @@ import { sendResponse } from '../utils/sendResponse.js';
 import Certificate from '../modules/college/models/Certificate.js';
 import Student from '../models/Student.js';
 import College from '../modules/college/models/College.js';
+import Notification from '../models/Notification.js';
 
 
 /**
@@ -251,9 +252,10 @@ export const getMyCareer = async (req, res, next) => {
     if (studentCareer.completionPercentage !== completionPercentage) {
       studentCareer.completionPercentage = completionPercentage;
 
-      // Update career level based on progress
+      // Update career level and status based on progress
       if (completionPercentage >= 100) {
         studentCareer.currentLevel = 'Expert';
+        studentCareer.status = 'completed';
       } else if (completionPercentage >= 50) {
         studentCareer.currentLevel = 'Intermediate';
       } else {
@@ -261,6 +263,43 @@ export const getMyCareer = async (req, res, next) => {
       }
 
       await studentCareer.save();
+
+      // Trigger completion notifications if 100% complete
+      if (completionPercentage >= 100) {
+        const studentRecord = await Student.findOne({ userId: req.user._id });
+        let collegeId = null;
+        if (studentRecord) {
+          const college = await College.findOne({
+            $or: [
+              { name: studentRecord.collegeName },
+              { collegeName: studentRecord.collegeName }
+            ]
+          });
+          if (college) collegeId = college._id;
+        }
+
+        const trackTitle = studentCareer.careerId?.title || 'Selected Track';
+
+        await Notification.createUnique({
+          recipientId: req.user._id,
+          senderId: req.user._id,
+          title: 'Internship Track Completed!',
+          message: `Congratulations! You have completed 100% of your tasks for the ${trackTitle} track. Check your certificate progress.`,
+          type: 'internship_completed',
+          entityId: studentCareer._id
+        });
+
+        if (collegeId) {
+          await Notification.createUnique({
+            recipientId: collegeId,
+            senderId: req.user._id,
+            title: 'Student Completed Internship',
+            message: `Student ${req.user.fullName} has completed 100% of their tasks for the ${trackTitle} track.`,
+            type: 'internship_completed',
+            entityId: studentCareer._id
+          });
+        }
+      }
     }
 
     return sendResponse(res, 200, true, 'My career details retrieved successfully', {
@@ -503,6 +542,27 @@ export const getCertificateProgress = async (req, res, next) => {
             issueDate: new Date(),
             status: 'Active & Verified'
           });
+
+          // Trigger notifications for Certificate Generated
+          await Notification.createUnique({
+            recipientId: studentId,
+            senderId: collegeId || req.user._id,
+            title: 'Certificate Generated!',
+            message: `Your verified simulated internship certificate for ${finalRole} at ${company} has been generated.`,
+            type: 'certificate_generated',
+            entityId: cert._id
+          });
+
+          if (collegeId) {
+            await Notification.createUnique({
+              recipientId: collegeId,
+              senderId: studentId,
+              title: 'Certificate Issued',
+              message: `A verified internship certificate has been issued to ${req.user.fullName} for the role of ${finalRole}.`,
+              type: 'certificate_generated',
+              entityId: cert._id
+            });
+          }
         } else {
           // Use the certificateId from the database
           verificationCode = cert.certificateId;

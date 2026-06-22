@@ -3,7 +3,6 @@ import { motion, AnimatePresence, useScroll, useSpring } from 'framer-motion'
 import { Menu, X, Bell, User, Settings, LogOut, Search, ShieldCheck } from 'lucide-react'
 import { useDispatch, useSelector } from 'react-redux'
 import { fetchNotifications } from '../../store/slices/notificationsSlice.js'
-import { fetchCollegeNotifications } from '../../store/slices/collegeNotificationSlice.js'
 import MagneticButton from '../ui/MagneticButton'
 import ThemeToggle from '../ui/ThemeToggle'
 import { useNavigation } from '../../context/NavigationContext'
@@ -22,8 +21,6 @@ export default function Navbar() {
 
   const dispatch = useDispatch()
   const { unreadCount } = useSelector((state) => state.notifications)
-  const { notifications: collegeNotifications } = useSelector((state) => state.collegeNotifications || { notifications: [] })
-  const collegeUnreadCount = (collegeNotifications || []).filter(n => !n.isRead).length
 
   const isPendingApproval = user && user.role !== 'admin' && (
     (user.role === 'student' && !user.isVerified) ||
@@ -36,18 +33,8 @@ export default function Navbar() {
   const isLocked = isPendingApproval || isEmailPending
 
   useEffect(() => {
-    if (role === 'student' && !isLocked) {
-      dispatch(fetchNotifications());
-      const interval = setInterval(() => {
-        dispatch(fetchNotifications());
-      }, 30000);
-      return () => clearInterval(interval);
-    } else if ((role === 'college_representative' || role === 'college_admin') && !isLocked) {
-      dispatch(fetchCollegeNotifications());
-      const interval = setInterval(() => {
-        dispatch(fetchCollegeNotifications());
-      }, 30000);
-      return () => clearInterval(interval);
+    if (role && role !== 'guest' && !isLocked) {
+      dispatch(fetchNotifications({ page: 1, limit: 20 }));
     }
   }, [role, isLocked, dispatch]);
 
@@ -236,20 +223,10 @@ export default function Navbar() {
                     className="relative flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-surface-muted/50 text-muted hover:text-text hover:border-border-strong transition-colors"
                   >
                     <Bell size={15} />
-                    {role === 'student' ? (
-                      unreadCount > 0 && (
-                        <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center bg-accent text-[9px] font-bold text-white rounded-full border border-void animate-pulse">
-                          {unreadCount}
-                        </span>
-                      )
-                    ) : role === 'college_representative' || role === 'college_admin' ? (
-                      collegeUnreadCount > 0 && (
-                        <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center bg-accent text-[9px] font-bold text-white rounded-full border border-void animate-pulse">
-                          {collegeUnreadCount}
-                        </span>
-                      )
-                    ) : (
-                      <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 bg-accent rounded-full animate-pulse" />
+                    {unreadCount > 0 && (
+                      <span className="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 flex items-center justify-center bg-accent text-[9px] font-bold text-white rounded-full border border-void animate-pulse">
+                        {unreadCount}
+                      </span>
                     )}
                   </button>
                 )}
