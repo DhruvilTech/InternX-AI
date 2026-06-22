@@ -4,13 +4,12 @@ const notificationSchema = new mongoose.Schema(
   {
     recipientId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
       required: true,
     },
     senderId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      default: null,
     },
     title: {
       type: String,
@@ -22,10 +21,17 @@ const notificationSchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ['offer', 'offer_response', 'message'],
-      default: 'message',
+      required: true,
+    },
+    entityId: {
+      type: mongoose.Schema.Types.ObjectId,
+      default: null,
     },
     isRead: {
+      type: Boolean,
+      default: false,
+    },
+    isDeleted: {
       type: Boolean,
       default: false,
     },
@@ -34,6 +40,28 @@ const notificationSchema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+// Index for fast dashboard badge counting and retrieval
+notificationSchema.index({ recipientId: 1, isDeleted: 1, isRead: 1, createdAt: -1 });
+
+notificationSchema.statics.createUnique = async function (data) {
+  const { recipientId, type, entityId, title, message } = data;
+  
+  const query = { recipientId, type, isDeleted: false };
+  if (entityId) {
+    query.entityId = entityId;
+  } else {
+    query.title = title;
+    query.message = message;
+  }
+  
+  const existing = await this.findOne(query);
+  if (existing) {
+    return existing;
+  }
+  
+  return await this.create(data);
+};
 
 const Notification = mongoose.model('Notification', notificationSchema);
 export default Notification;

@@ -1,7 +1,6 @@
 import Offer from '../models/Offer.js';
 import Notification from '../models/Notification.js';
 import Placement from '../models/Placement.js';
-import CollegeNotification from '../models/CollegeNotification.js';
 import { refreshAnalytics } from '../modules/college/services/college.service.js';
 import { sendResponse } from '../utils/sendResponse.js';
 import Student from '../models/Student.js';
@@ -38,13 +37,13 @@ export const respondToOffer = async (req, res, next) => {
     await offer.save();
 
     // Create notification for recruiter
-    await Notification.create({
+    await Notification.createUnique({
       recipientId: offer.recruiterId,
       senderId: req.user._id,
       title: 'Offer Response Received',
       message: `${req.user.fullName || 'Student'} has ${status} your internship offer for ${offer.companyName}.`,
       type: 'offer_response',
-      isRead: false,
+      entityId: offer._id,
     });
 
     // Centralized Placement Tracking & College Analytics Automation
@@ -91,14 +90,14 @@ export const respondToOffer = async (req, res, next) => {
         });
       }
 
-      // Create College Notification
-      await CollegeNotification.create({
-        collegeId,
+      // Create College Notification using the unified Notification model
+      await Notification.createUnique({
+        recipientId: collegeId,
         senderId: req.user._id,
         title: status === 'accepted' ? 'New Placement Accepted' : 'Placement Status Updates',
         message: `${req.user.fullName || 'Student'} has ${status} the internship offer from ${offer.companyName} as ${offer.jobRole || 'Software Engineer Intern'} at ${offer.package || 6} LPA.`,
         type: status === 'accepted' ? 'placement_accepted' : 'placement_updated',
-        isRead: false,
+        entityId: placement._id,
       });
 
       // Update College Analytics
@@ -115,32 +114,3 @@ export const respondToOffer = async (req, res, next) => {
   }
 };
 
-export const getNotifications = async (req, res, next) => {
-  try {
-    const notifications = await Notification.find({ recipientId: req.user._id })
-      .sort({ createdAt: -1 });
-    return sendResponse(res, 200, true, 'Notifications retrieved successfully', notifications);
-  } catch (error) {
-    next(error);
-  }
-};
-
-export const readNotification = async (req, res, next) => {
-  try {
-    const notification = await Notification.findById(req.params.id);
-    if (!notification) {
-      return sendResponse(res, 404, false, 'Notification not found');
-    }
-
-    if (notification.recipientId.toString() !== req.user._id.toString()) {
-      return sendResponse(res, 403, false, 'Unauthorized to access this notification');
-    }
-
-    notification.isRead = true;
-    await notification.save();
-
-    return sendResponse(res, 200, true, 'Notification marked as read successfully', notification);
-  } catch (error) {
-    next(error);
-  }
-};

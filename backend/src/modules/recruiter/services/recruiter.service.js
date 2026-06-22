@@ -13,7 +13,6 @@ import { sendMail } from '../../../utils/mailer.js';
 import Offer from '../../../models/Offer.js';
 import Notification from '../../../models/Notification.js';
 import Placement from '../../../models/Placement.js';
-import CollegeNotification from '../../../models/CollegeNotification.js';
 
 /**
  * Retrieves recruiter user and corporate profile details.
@@ -787,18 +786,18 @@ export const createOffer = async (recruiterUserId, studentUserId, companyName, m
   });
 
   // Create notification for student
-  await Notification.create({
+  await Notification.createUnique({
     recipientId: studentUserId,
     senderId: recruiterUserId,
     title: 'New Internship Offer',
     message: `You have received a new internship offer from ${companyName}.`,
     type: 'offer',
-    isRead: false,
+    entityId: offer._id,
   });
 
   // Centralized Placement Tracking: Create pending Placement record and alert College Reps
   if (studentUser.collegeId) {
-    await Placement.create({
+    const placement = await Placement.create({
       studentId: studentUserId,
       collegeId: studentUser.collegeId,
       recruiterId: recruiterUserId,
@@ -808,13 +807,13 @@ export const createOffer = async (recruiterUserId, studentUserId, companyName, m
       package: salaryPackage,
     });
 
-    await CollegeNotification.create({
-      collegeId: studentUser.collegeId,
+    await Notification.createUnique({
+      recipientId: studentUser.collegeId,
       senderId: studentUserId,
       title: 'New Offer Received',
       message: `A new internship offer for the role of ${jobRole} has been received by ${studentUser.fullName || 'Student'} from ${companyName} at ${salaryPackage} LPA.`,
       type: 'offer_received',
-      isRead: false,
+      entityId: placement._id,
     });
   }
 

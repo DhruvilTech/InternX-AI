@@ -179,11 +179,6 @@ export function NavigationProvider({ children }) {
     companies: []
   })
 
-  // Feedback notifications
-  const [notifications, setNotifications] = useState([
-    { id: 1, title: 'Welcome to InternX AI!', message: 'Complete your onboarding flow to unlock custom internships.', category: 'system', read: false, time: 'Just now' },
-    { id: 2, title: 'Recruiter Insight', message: 'Apex AI is looking for AI Developers with skills in Vector Databases.', category: 'recruiter', read: false, time: '2 hours ago' }
-  ])
 
   // Dialogs and layout tools
   const [toasts, setToasts] = useState([])
@@ -363,8 +358,6 @@ export function NavigationProvider({ children }) {
         evaluationReport,
         setEvaluationReport,
         fetchStudentInternshipAndTasks,
-        notifications,
-        setNotifications,
         toasts,
         addToast,
         removeToast,

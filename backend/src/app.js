@@ -24,6 +24,7 @@ import feedbackRoutes from './routes/feedback.routes.js';
 import skillsRoutes from './routes/skills.routes.js';
 import careerIntelRoutes from './routes/careerIntel.routes.js';
 import evaluationRoutes from './routes/evaluation.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
 import { setupSwagger } from './config/swagger.js';
 import { callGroq } from './services/groq.service.js';
 
@@ -115,6 +116,7 @@ app.use('/api/feedback', feedbackRoutes);
 app.use('/api/skills', skillsRoutes);
 app.use('/api/career', careerIntelRoutes);
 app.use('/api/evaluation', evaluationRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 
 // GET /api/debug/groq

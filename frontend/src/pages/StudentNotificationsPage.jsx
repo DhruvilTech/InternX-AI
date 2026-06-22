@@ -1,39 +1,77 @@
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { fetchNotifications, readNotification } from '../store/slices/notificationsSlice.js';
-import { Bell, BellOff, Check, ArrowLeft, Calendar, Mail, FileText, Award } from 'lucide-react';
+import {
+  selectAllNotifications,
+  fetchNotifications,
+  readNotification,
+  readAllNotifications,
+  deleteNotification,
+} from '../store/slices/notificationsSlice.js';
+import { Bell, BellOff, Check, ArrowLeft, Calendar, Award, Trash2, CheckSquare, Loader2 } from 'lucide-react';
 import { useNavigation } from '../context/NavigationContext';
 
 export default function StudentNotificationsPage() {
   const dispatch = useDispatch();
-  const { navigate } = useNavigation();
-  const { notifications, loading } = useSelector((state) => state.notifications);
+  const { navigate, addToast } = useNavigation();
+
+  const notifications = useSelector(selectAllNotifications);
+  const { loading, page, totalPages, unreadCount } = useSelector((state) => state.notifications);
 
   useEffect(() => {
-    dispatch(fetchNotifications());
+    dispatch(fetchNotifications({ page: 1, limit: 20 }));
   }, [dispatch]);
 
   const handleMarkRead = (id) => {
-    dispatch(readNotification(id));
+    dispatch(readNotification(id))
+      .unwrap()
+      .catch((err) => addToast(err || 'Failed to mark read', 'error'));
+  };
+
+  const handleMarkAllRead = () => {
+    dispatch(readAllNotifications())
+      .unwrap()
+      .then(() => addToast('All notifications marked as read', 'success'))
+      .catch((err) => addToast(err || 'Failed to mark all as read', 'error'));
+  };
+
+  const handleDelete = (id) => {
+    dispatch(deleteNotification(id))
+      .unwrap()
+      .then(() => addToast('Notification deleted', 'info'))
+      .catch((err) => addToast(err || 'Failed to delete notification', 'error'));
+  };
+
+  const handleLoadMore = () => {
+    if (page < totalPages && !loading) {
+      dispatch(fetchNotifications({ page: page + 1, limit: 20, append: true }));
+    }
   };
 
   const getIcon = (type) => {
     switch (type) {
       case 'offer':
+      case 'offer_received':
         return <Award size={14} className="text-amber-500" />;
       case 'offer_response':
+      case 'placement_accepted':
+      case 'certificate_generated':
+      case 'internship_completed':
         return <Check size={14} className="text-emerald" />;
       case 'message':
       default:
-        return <Mail size={14} className="text-accent" />;
+        return <Bell size={14} className="text-accent" />;
     }
   };
 
   const getIconBg = (type) => {
     switch (type) {
       case 'offer':
+      case 'offer_received':
         return 'bg-amber-500/10 border-amber-500/20 text-amber-500';
       case 'offer_response':
+      case 'placement_accepted':
+      case 'certificate_generated':
+      case 'internship_completed':
         return 'bg-emerald/10 border-emerald/20 text-emerald';
       case 'message':
       default:
@@ -63,10 +101,21 @@ export default function StudentNotificationsPage() {
           </span>
         </div>
 
-        {/* Title */}
-        <div className="space-y-1">
-          <h2 className="font-display font-bold text-2xl text-text">Notification Alerts</h2>
-          <p className="text-xs text-muted">Stay updated with internship offers, corporate requests, and simulated program alerts.</p>
+        {/* Title & Mark All Read */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="space-y-1">
+            <h2 className="font-display font-bold text-2xl text-text">Notification Alerts</h2>
+            <p className="text-xs text-muted">Stay updated with internship offers, corporate requests, and simulated program alerts.</p>
+          </div>
+          {unreadCount > 0 && (
+            <button
+              onClick={handleMarkAllRead}
+              className="inline-flex items-center justify-center gap-1.5 px-4 py-2 border border-border hover:border-accent hover:text-accent rounded-xl text-xs font-semibold text-muted transition-colors cursor-pointer"
+            >
+              <CheckSquare size={13} />
+              <span>Mark all read</span>
+            </button>
+          )}
         </div>
 
         {/* Notifications List */}
@@ -119,17 +168,40 @@ export default function StudentNotificationsPage() {
                   </div>
                 </div>
 
-                {!n.isRead && (
+                <div className="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-end">
+                  {!n.isRead && (
+                    <button
+                      onClick={() => handleMarkRead(n._id)}
+                      className="px-3.5 py-1.5 bg-white/5 hover:bg-white/10 border border-border text-xs font-semibold rounded-xl text-muted hover:text-text cursor-pointer transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <Check size={12} />
+                      <span>Mark Read</span>
+                    </button>
+                  )}
                   <button
-                    onClick={() => handleMarkRead(n._id)}
-                    className="w-full sm:w-auto shrink-0 px-3.5 py-1.5 bg-white/5 hover:bg-white/10 border border-border hover:border-border-strong text-xs font-semibold rounded-xl text-muted hover:text-text cursor-pointer transition-colors flex items-center justify-center gap-1.5"
+                    onClick={() => handleDelete(n._id)}
+                    className="p-2 border border-border rounded-xl text-muted hover:text-rose hover:border-rose/30 hover:bg-rose/5 cursor-pointer transition-colors"
+                    title="Delete"
                   >
-                    <Check size={12} />
-                    <span>Mark as Read</span>
+                    <Trash2 size={12} />
                   </button>
-                )}
+                </div>
               </div>
             ))}
+
+            {/* Load More Pagination */}
+            {page < totalPages && (
+              <div className="pt-4 text-center">
+                <button
+                  onClick={handleLoadMore}
+                  disabled={loading}
+                  className="px-4 py-2 border border-border text-xs font-semibold rounded-xl hover:bg-white/5 text-muted hover:text-text cursor-pointer transition-colors disabled:opacity-50 inline-flex items-center gap-2"
+                >
+                  {loading && <Loader2 size={12} className="animate-spin" />}
+                  <span>Load More Notifications</span>
+                </button>
+              </div>
+            )}
           </div>
         )}
 
