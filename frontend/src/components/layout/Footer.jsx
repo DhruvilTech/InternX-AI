@@ -22,7 +22,7 @@ export default function Footer() {
     <footer className="border-t border-border bg-void relative z-10">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-8 lg:gap-12">
-          
+
           {/* Brand */}
           <div className="col-span-2 md:col-span-4 lg:col-span-2">
             <a href="#/" onClick={(e) => handleLinkClick(e, 'landing')} className="flex items-center gap-2.5 group">
@@ -73,17 +73,17 @@ export default function Footer() {
             <p className="text-sm font-semibold mb-4 text-text">Enterprise Portals</p>
             <ul className="space-y-3 text-sm text-muted">
               <li>
-                <a href="#/" onClick={(e) => handleLinkClick(e, 'career_selection')} className="hover:text-text transition-colors">
+                <a href="#/" onClick={(e) => handleLinkClick(e, 'login')} className="hover:text-text transition-colors">
                   For Students
                 </a>
               </li>
               <li>
-                <a href="#/" onClick={(e) => handleLinkClick(e, 'recruiter_login')} className="hover:text-text transition-colors text-amber-500 font-semibold">
+                <a href="#/" onClick={(e) => handleLinkClick(e, 'login')} className="hover:text-text transition-colors text-amber-500 font-semibold">
                   For Recruiters
                 </a>
               </li>
               <li>
-                <a href="#/" onClick={(e) => handleLinkClick(e, 'college_login')} className="hover:text-text transition-colors text-emerald font-semibold">
+                <a href="#/" onClick={(e) => handleLinkClick(e, 'login')} className="hover:text-text transition-colors text-emerald font-semibold">
                   For Colleges
                 </a>
               </li>

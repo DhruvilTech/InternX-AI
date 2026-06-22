@@ -28,6 +28,7 @@ import { FaGithub } from 'react-icons/fa6'
 import { fetchStudentDashboard } from '../store/slices/studentDashboardSlice.js'
 import useAuth from '../hooks/useAuth'
 import AnimatedCounter from '../components/ui/AnimatedCounter'
+import PageSkeleton from '../components/ui/PageSkeleton'
 
 const chartData = [
   { day: 'Mon', views: 4 },
@@ -98,14 +99,7 @@ export default function StudentDashboardPage() {
   }
 
   if (loading && !data) {
-    return (
-      <div className="min-h-screen pt-24 pb-16 bg-void relative overflow-hidden text-text flex items-center justify-center">
-        <div className="flex flex-col items-center justify-center space-y-4">
-          <Loader2 className="h-8 w-8 text-accent animate-spin" />
-          <p className="text-xs text-muted font-semibold tracking-wider uppercase">Loading Student Dashboard...</p>
-        </div>
-      </div>
-    )
+    return <PageSkeleton />
   }
 
   const easyTasks = tasks.filter(t => t.difficulty === 'Easy')
@@ -512,11 +506,13 @@ export default function StudentDashboardPage() {
                     <YAxis tick={{ fill: '#64748b', fontSize: 9 }} stroke="rgba(255,255,255,0.05)" />
                     <Tooltip
                       contentStyle={{
-                        borderRadius: '8px',
+                        borderRadius: '12px',
                         border: '1px solid rgba(255,255,255,0.08)',
-                        backgroundColor: isDark ? '#050816' : '#ffffff',
+                        backgroundColor: 'rgba(15, 22, 41, 0.85)',
+                        backdropFilter: 'blur(10px)',
                         color: isDark ? '#f1f5f9' : '#0f172a',
                         fontSize: '11px',
+                        boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.3)',
                       }}
                     />
                     <Area

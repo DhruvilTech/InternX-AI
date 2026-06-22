@@ -44,11 +44,17 @@ axiosInstance.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Avoid infinite loops for login or token refresh endpoints
+    // Avoid infinite loops for login, refresh, or auth endpoints
     if (
       originalRequest.url.includes('/auth/refresh-token') ||
       originalRequest.url.includes('/auth/login')
     ) {
+      return Promise.reject(error);
+    }
+
+    // If there is no access token at all, the user is not logged in.
+    // Do NOT attempt a refresh — there's no session to recover.
+    if (!localStorage.getItem('accessToken')) {
       return Promise.reject(error);
     }
 

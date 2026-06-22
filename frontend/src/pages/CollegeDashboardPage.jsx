@@ -20,6 +20,7 @@ import { useNavigation } from '../context/NavigationContext';
 import { getDashboard, getStudents } from '../store/slices/collegeSlice.js';
 import { fetchPlacements } from '../store/slices/placementSlice.js';
 import AnimatedCounter from '../components/ui/AnimatedCounter';
+import PageSkeleton from '../components/ui/PageSkeleton';
 
 const pieColors = ['#8B5CF6', '#6366F1', '#38BDF8', '#10B981', '#F59E0B'];
 
@@ -61,14 +62,7 @@ export default function CollegeDashboardPage() {
   }, [pArr]);
 
   if (loading && !data) {
-    return (
-      <div className="min-h-screen pt-24 pb-16 bg-void relative overflow-hidden text-text flex items-center justify-center">
-        <div className="flex flex-col items-center justify-center space-y-4">
-          <Loader2 className="h-8 w-8 text-accent animate-spin" />
-          <p className="text-xs text-muted font-semibold tracking-wider uppercase">Loading College Dashboard...</p>
-        </div>
-      </div>
-    );
+    return <PageSkeleton />;
   }
 
   // Fallbacks if data empty
@@ -314,19 +308,27 @@ export default function CollegeDashboardPage() {
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={charts.studentsByDepartment} margin={{ left: -20, right: 10, top: 10, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="colorStudents" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#8B5CF6" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#8B5CF6" stopOpacity={0.15}/>
+                      </linearGradient>
+                    </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                     <XAxis dataKey="name" tick={{ fill: tickColor, fontSize: 8 }} stroke="rgba(255,255,255,0.05)" />
                     <YAxis tick={{ fill: tickColor, fontSize: 8 }} stroke="rgba(255,255,255,0.05)" allowDecimals={false} />
                     <Tooltip
                       contentStyle={{
-                        borderRadius: '8px',
+                        borderRadius: '12px',
                         border: '1px solid rgba(255,255,255,0.08)',
-                        backgroundColor: isDark ? '#050816' : '#ffffff',
+                        backgroundColor: 'rgba(15, 22, 41, 0.85)',
+                        backdropFilter: 'blur(10px)',
                         color: isDark ? '#f1f5f9' : '#0f172a',
                         fontSize: '11px',
+                        boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.3)',
                       }}
                     />
-                    <Bar dataKey="count" fill="#8B5CF6" radius={[4, 4, 0, 0]} name="Students Count" barSize={25} />
+                    <Bar dataKey="count" fill="url(#colorStudents)" radius={[4, 4, 0, 0]} name="Students Count" barSize={25} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
@@ -346,19 +348,27 @@ export default function CollegeDashboardPage() {
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={charts.internshipStats} margin={{ left: -20, right: 10, top: 10, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="colorInterns" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10B981" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#10B981" stopOpacity={0.15}/>
+                      </linearGradient>
+                    </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                     <XAxis dataKey="status" tick={{ fill: tickColor, fontSize: 8 }} stroke="rgba(255,255,255,0.05)" />
                     <YAxis tick={{ fill: tickColor, fontSize: 8 }} stroke="rgba(255,255,255,0.05)" allowDecimals={false} />
                     <Tooltip
                       contentStyle={{
-                        borderRadius: '8px',
+                        borderRadius: '12px',
                         border: '1px solid rgba(255,255,255,0.08)',
-                        backgroundColor: isDark ? '#050816' : '#ffffff',
+                        backgroundColor: 'rgba(15, 22, 41, 0.85)',
+                        backdropFilter: 'blur(10px)',
                         color: isDark ? '#f1f5f9' : '#0f172a',
                         fontSize: '11px',
+                        boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.3)',
                       }}
                     />
-                    <Bar dataKey="count" fill="#10B981" radius={[4, 4, 0, 0]} name="Students" barSize={25} />
+                    <Bar dataKey="count" fill="url(#colorInterns)" radius={[4, 4, 0, 0]} name="Students" barSize={25} />
                   </BarChart>
                 </ResponsiveContainer>
               )}
@@ -378,19 +388,27 @@ export default function CollegeDashboardPage() {
               ) : (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={charts.studentsByYear} margin={{ left: -20, right: 10, top: 10, bottom: 5 }}>
+                    <defs>
+                      <linearGradient id="colorYear" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.8}/>
+                        <stop offset="95%" stopColor="#F59E0B" stopOpacity={0.15}/>
+                      </linearGradient>
+                    </defs>
                     <CartesianGrid strokeDasharray="3 3" stroke={gridColor} />
                     <XAxis dataKey="name" tick={{ fill: tickColor, fontSize: 8 }} stroke="rgba(255,255,255,0.05)" />
                     <YAxis tick={{ fill: tickColor, fontSize: 8 }} stroke="rgba(255,255,255,0.05)" allowDecimals={false} />
                     <Tooltip
                       contentStyle={{
-                        borderRadius: '8px',
+                        borderRadius: '12px',
                         border: '1px solid rgba(255,255,255,0.08)',
-                        backgroundColor: isDark ? '#050816' : '#ffffff',
+                        backgroundColor: 'rgba(15, 22, 41, 0.85)',
+                        backdropFilter: 'blur(10px)',
                         color: isDark ? '#f1f5f9' : '#0f172a',
                         fontSize: '11px',
+                        boxShadow: '0 8px 32px 0 rgba(0, 0, 0, 0.3)',
                       }}
                     />
-                    <Bar dataKey="count" fill="#F59E0B" radius={[4, 4, 0, 0]} name="Students Count" barSize={25} />
+                    <Bar dataKey="count" fill="url(#colorYear)" radius={[4, 4, 0, 0]} name="Students Count" barSize={25} />
                   </BarChart>
                 </ResponsiveContainer>
               )}

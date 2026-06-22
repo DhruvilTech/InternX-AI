@@ -175,31 +175,39 @@ export default function FuturisticBackground() {
         style={parallaxStyle}
       >
         {/* Top Left: Large floating glow */}
-        <div className="absolute top-[-15%] left-[-15%] w-[60vw] h-[60vw] rounded-full bg-radial from-accent/15 via-accent/5 to-transparent blur-[120px] pointer-events-none opacity-[0.06] animate-aurora-slow" />
+        <div className="absolute top-[-15%] left-[-15%] w-[65vw] h-[65vw] rounded-full bg-radial from-accent/20 via-accent/8 to-transparent blur-[100px] pointer-events-none opacity-[0.18] animate-aurora-slow" />
         
         {/* Top Right: Secondary floating glow */}
-        <div className="absolute top-[-15%] right-[-15%] w-[50vw] h-[50vw] rounded-full bg-radial from-violet/15 via-violet/5 to-transparent blur-[120px] pointer-events-none opacity-[0.05] animate-aurora-delayed" />
+        <div className="absolute top-[-10%] right-[-15%] w-[55vw] h-[55vw] rounded-full bg-radial from-violet/20 via-violet/8 to-transparent blur-[100px] pointer-events-none opacity-[0.14] animate-aurora-delayed" />
         
         {/* Bottom Center: Soft ambient glow */}
-        <div className="absolute bottom-[-25%] left-[50%] -translate-x-1/2 w-[70vw] h-[70vw] rounded-full bg-radial from-cyan/15 via-cyan/5 to-transparent blur-[140px] pointer-events-none opacity-[0.06] animate-aurora-fast" />
+        <div className="absolute bottom-[-20%] left-[50%] -translate-x-1/2 w-[75vw] h-[75vw] rounded-full bg-radial from-cyan/18 via-cyan/6 to-transparent blur-[120px] pointer-events-none opacity-[0.16] animate-aurora-fast" />
+
+        {/* Mid-page: Extra accent glow for depth */}
+        <div className="absolute top-[40%] left-[20%] w-[40vw] h-[40vw] rounded-full bg-radial from-violet/12 via-accent/4 to-transparent blur-[140px] pointer-events-none opacity-[0.10] animate-aurora-delayed" />
       </div>
 
-      {/* Layer 2: Subtle Grid Pattern (Light AI/SaaS style grid, net opacity 2-4% - barely visible) */}
+      {/* Layer 2: Dot-Grid Pattern (Light AI/SaaS style grid with intersections, net opacity 3-5%) */}
       <div 
-        className="absolute inset-0 z-[2] pointer-events-none select-none opacity-[0.03]"
+        className="absolute inset-0 z-[2] pointer-events-none select-none"
         style={{
           backgroundImage: isDark 
-            ? `linear-gradient(rgba(255, 255, 255, 0.8) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.8) 1px, transparent 1px)`
-            : `linear-gradient(rgba(15, 23, 42, 0.8) 1px, transparent 1px), linear-gradient(90deg, rgba(15, 23, 42, 0.8) 1px, transparent 1px)`,
-          backgroundSize: '36px 36px',
+            ? `radial-gradient(rgba(129, 140, 248, 0.18) 1.2px, transparent 1.2px), 
+               linear-gradient(rgba(255, 255, 255, 0.022) 1px, transparent 1px), 
+               linear-gradient(90deg, rgba(255, 255, 255, 0.022) 1px, transparent 1px)`
+            : `radial-gradient(rgba(99, 102, 241, 0.15) 1.2px, transparent 1.2px), 
+               linear-gradient(rgba(15, 23, 42, 0.04) 1px, transparent 1px), 
+               linear-gradient(90deg, rgba(15, 23, 42, 0.04) 1px, transparent 1px)`,
+          backgroundSize: '40px 40px',
         }}
       />
 
-      {/* Layer 3: Noise Texture (Subtle grain overlay, 1-2% opacity) */}
+      {/* Layer 3: Noise Texture (Subtle grain overlay, 2-3% opacity) */}
       <div 
-        className="absolute inset-0 z-[3] pointer-events-none mix-blend-overlay opacity-[0.012]"
+        className="absolute inset-0 z-[3] pointer-events-none mix-blend-overlay opacity-[0.03]"
         style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+          backgroundSize: '256px 256px',
         }}
       />
 
@@ -207,27 +215,37 @@ export default function FuturisticBackground() {
       <div className="absolute inset-0 z-[4]" style={parallaxStyle}>
         {/* Dashboard: Soft glow behind analytics section */}
         {path.startsWith('/student/dashboard') && (
-          <div className="absolute top-[25%] left-[50%] -translate-x-1/2 w-[60vw] h-[400px] rounded-full bg-radial from-accent/8 via-cyan/2 to-transparent blur-[120px] pointer-events-none transition-opacity duration-1000" />
+          <div className="absolute top-[25%] left-[50%] -translate-x-1/2 w-[70vw] h-[500px] rounded-full bg-radial from-accent/12 via-cyan/4 to-transparent blur-[100px] pointer-events-none transition-opacity duration-1000" />
         )}
         
-        {/* Interview Module: Very subtle spotlight behind AI avatar */}
+        {/* Interview Module: Spotlight behind AI avatar */}
         {(path.includes('/interview') || path.includes('/interview_simulator')) && (
-          <div className="absolute top-[15%] left-[50%] -translate-x-1/2 w-[45vw] h-[350px] rounded-full bg-radial from-violet/8 via-accent/2 to-transparent blur-[100px] pointer-events-none transition-opacity duration-1000" />
+          <div className="absolute top-[15%] left-[50%] -translate-x-1/2 w-[50vw] h-[400px] rounded-full bg-radial from-violet/14 via-accent/4 to-transparent blur-[90px] pointer-events-none transition-opacity duration-1000" />
         )}
         
-        {/* Task Dashboard: Subtle glow around active task area */}
+        {/* Task Dashboard: Glow around active task area */}
         {path.startsWith('/kanban') && (
-          <div className="absolute top-[30%] left-[30%] w-[50vw] h-[400px] rounded-full bg-radial from-accent/6 via-violet/2 to-transparent blur-[120px] pointer-events-none transition-opacity duration-1000" />
+          <div className="absolute top-[30%] left-[30%] w-[55vw] h-[450px] rounded-full bg-radial from-accent/10 via-violet/3 to-transparent blur-[110px] pointer-events-none transition-opacity duration-1000" />
         )}
         
         {/* Recruiter Dashboard: Ambient glow behind candidate analytics */}
         {path.startsWith('/recruiter') && (
-          <div className="absolute top-[20%] left-[60%] -translate-x-1/2 w-[55vw] h-[400px] rounded-full bg-radial from-cyan/8 via-accent/2 to-transparent blur-[110px] pointer-events-none transition-opacity duration-1000" />
+          <div className="absolute top-[20%] left-[60%] -translate-x-1/2 w-[60vw] h-[450px] rounded-full bg-radial from-cyan/12 via-accent/4 to-transparent blur-[100px] pointer-events-none transition-opacity duration-1000" />
         )}
         
         {/* College Dashboard: Soft glow behind statistics section */}
         {path.startsWith('/college') && (
-          <div className="absolute top-[25%] left-[40%] w-[60vw] h-[450px] rounded-full bg-radial from-emerald/6 via-accent/2 to-transparent blur-[130px] pointer-events-none transition-opacity duration-1000" />
+          <div className="absolute top-[25%] left-[40%] w-[65vw] h-[500px] rounded-full bg-radial from-emerald/10 via-accent/3 to-transparent blur-[120px] pointer-events-none transition-opacity duration-1000" />
+        )}
+
+        {/* Skill Gap: Purple-cyan analytics glow */}
+        {path.startsWith('/skill_gap') && (
+          <div className="absolute top-[20%] left-[50%] -translate-x-1/2 w-[65vw] h-[450px] rounded-full bg-radial from-violet/14 via-cyan/4 to-transparent blur-[110px] pointer-events-none transition-opacity duration-1000" />
+        )}
+
+        {/* Profile / Career Coach: Warm accent glow */}
+        {(path.startsWith('/career_coach') || path.startsWith('/profile')) && (
+          <div className="absolute top-[20%] left-[50%] -translate-x-1/2 w-[60vw] h-[400px] rounded-full bg-radial from-amber/8 via-accent/4 to-transparent blur-[120px] pointer-events-none transition-opacity duration-1000" />
         )}
       </div>
 
@@ -239,12 +257,32 @@ export default function FuturisticBackground() {
         />
       )}
 
+      {/* Layer 5: Premium SVG Vector Wave Paths (Curved design lines for visual interest) */}
+      <div className="absolute inset-0 z-[5]" style={parallaxStyle}>
+        <svg className="absolute inset-0 w-full h-full opacity-[0.08] dark:opacity-[0.05] pointer-events-none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M-100,200 C300,450 600,100 1200,350 C1600,500 1800,200 2200,450" fill="none" stroke="url(#gradient-line-1)" strokeWidth="1.5" />
+          <path d="M-50,350 C500,150 700,600 1300,250 C1700,400 1900,100 2300,350" fill="none" stroke="url(#gradient-line-2)" strokeWidth="1" strokeDasharray="6 6" />
+          <defs>
+            <linearGradient id="gradient-line-1" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#818CF8" />
+              <stop offset="50%" stopColor="#8B5CF6" />
+              <stop offset="100%" stopColor="#22D3EE" />
+            </linearGradient>
+            <linearGradient id="gradient-line-2" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stopColor="#22D3EE" />
+              <stop offset="50%" stopColor="#818CF8" />
+              <stop offset="100%" stopColor="#8B5CF6" />
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+
       {/* Interactive Spotlight Glow Overlay (Completely CSS computed, 0% CPU overhead) */}
       <div 
-        className="absolute inset-0 z-[5]"
+        className="absolute inset-0 z-[6]"
         style={{
-          background: `radial-gradient(550px circle at var(--mouse-x) var(--mouse-y), ${
-            isDark ? 'rgba(129, 140, 248, 0.08)' : 'rgba(99, 102, 241, 0.05)'
+          background: `radial-gradient(600px circle at var(--mouse-x) var(--mouse-y), ${
+            isDark ? 'rgba(129, 140, 248, 0.10)' : 'rgba(99, 102, 241, 0.07)'
           }, transparent 80%)`,
         }}
       />
