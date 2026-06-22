@@ -85,12 +85,12 @@ export default function InternshipGeneratorPage() {
   }
 
   // Fallback check if user navigated directly without selecting career
-  const companyInfo = internship || {
-    name: 'NeuralMind Technologies',
-    manager: 'Sarah Johnson',
-    department: 'Artificial Intelligence',
-    project: 'Resume Intelligence Platform',
-    roleTitle: 'AI Research Intern',
+  const companyInfo = {
+    name: internship?.companyName || 'NeuralMind Technologies',
+    manager: internship?.managerName || 'Sarah Johnson',
+    department: internship?.department || 'Artificial Intelligence',
+    project: internship?.projectName || 'Resume Intelligence Platform',
+    roleTitle: internship?.internshipRole || 'AI Research Intern',
     team: ['Alex Rivera (Lead Engineer)', 'Sophia Patel (ML Researcher)', 'David Kim (Data Architect)']
   }
 

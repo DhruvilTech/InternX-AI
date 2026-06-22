@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { useTheme } from '../../context/ThemeContext'
+import AnimatedCounter from './AnimatedCounter'
 
 export default function ScoreRing({ score, size = 120, strokeWidth = 6, label }) {
   const { isDark } = useTheme()
@@ -46,9 +47,12 @@ export default function ScoreRing({ score, size = 120, strokeWidth = 6, label })
         className="absolute inset-0 flex flex-col items-center justify-center"
         style={{ width: size, height: size }}
       >
-        <span className={`font-display font-bold text-text ${size <= 80 ? 'text-lg' : 'text-2xl'}`}>{score}</span>
+        <span className={`font-display font-bold text-text ${size <= 80 ? 'text-lg' : 'text-2xl'}`}>
+          <AnimatedCounter value={Number(score) || 0} />
+        </span>
         {label && <span className="text-[10px] text-muted uppercase tracking-wider">{label}</span>}
       </div>
     </div>
   )
 }
+

@@ -5,6 +5,11 @@ import { refreshAnalytics } from '../modules/college/services/college.service.js
 import { sendResponse } from '../utils/sendResponse.js';
 import Student from '../models/Student.js';
 import College from '../models/College.js';
+import StudentCareer from '../models/StudentCareer.js';
+import Task from '../models/Task.js';
+import SubmissionRepository from '../models/SubmissionRepository.js';
+import EvaluationReport from '../models/EvaluationReport.js';
+import Internship from '../models/Internship.js';
 
 export const getReceivedOffers = async (req, res, next) => {
   try {
@@ -109,6 +114,39 @@ export const respondToOffer = async (req, res, next) => {
     }
 
     return sendResponse(res, 200, true, `Offer successfully ${status}`, offer);
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getStudentDashboard = async (req, res, next) => {
+  try {
+    const studentId = req.user._id;
+
+    const [studentCareer, internship, tasks, connectedRepo, evaluationReport] = await Promise.all([
+      StudentCareer.findOne({ studentId }).populate('careerId').lean(),
+      Internship.findOne({ studentId }).lean(),
+      Task.find({ studentId }).lean(),
+      SubmissionRepository.findOne({ userId: studentId }).lean(),
+      (async () => {
+        let rep = await EvaluationReport.findOne({ studentId }).lean();
+        if (!rep) {
+          const student = await Student.findOne({ userId: studentId }).lean();
+          if (student) {
+            rep = await EvaluationReport.findOne({ studentId: student.userId }).lean();
+          }
+        }
+        return rep;
+      })()
+    ]);
+
+    return sendResponse(res, 200, true, 'Student dashboard summary retrieved successfully', {
+      studentCareer,
+      internship,
+      tasks,
+      connectedRepo,
+      evaluationReport
+    });
   } catch (error) {
     next(error);
   }

@@ -28,7 +28,7 @@ export const updateRecruiterProfile = createAsyncThunk(
 
 export const getRecruiterDashboard = createAsyncThunk(
   'recruiter/getDashboard',
-  async (_, { rejectWithValue }) => {
+  async (force = false, { rejectWithValue }) => {
     try {
       const response = await recruiterApi.getDashboard();
       return response.data;
@@ -37,10 +37,14 @@ export const getRecruiterDashboard = createAsyncThunk(
     }
   },
   {
-    // Skip if already loading or data is fresh (< 60s old)
-    condition: (_, { getState }) => {
+    // Skip if already loading or data is fresh (< 30s old)
+    condition: (force, { getState }) => {
       const { recruiter } = getState();
       if (recruiter.loading) return false;
+      if (!force && recruiter.dashboard && recruiter.lastFetchedDashboard) {
+        const age = Date.now() - recruiter.lastFetchedDashboard;
+        if (age < 30000) return false;
+      }
       return true;
     },
   }
@@ -241,6 +245,7 @@ const recruiterSlice = createSlice({
       .addCase(getRecruiterDashboard.fulfilled, (state, action) => {
         state.loading = false;
         state.dashboard = action.payload;
+        state.lastFetchedDashboard = Date.now();
       })
       .addCase(getRecruiterDashboard.rejected, (state, action) => {
         state.loading = false;

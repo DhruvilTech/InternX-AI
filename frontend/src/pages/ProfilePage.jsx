@@ -17,9 +17,9 @@ export default function ProfilePage() {
   const { internship } = useNavigation()
   const { user } = useAuth()
 
-  const companyInfo = internship || {
-    name: 'NeuralMind Technologies',
-    roleTitle: 'AI Research Intern'
+  const companyInfo = {
+    name: internship?.companyName || 'NeuralMind Technologies',
+    roleTitle: internship?.internshipRole || 'AI Research Intern'
   }
 
   const initials = user?.fullName

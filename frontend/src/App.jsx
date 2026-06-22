@@ -4,10 +4,7 @@ import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import useLenis from './hooks/useLenis';
 
 // ── Always-eager: layout shells & UI canvas (tiny, needed immediately) ──────
-import Spotlight from './components/ui/Spotlight';
-import SplashCursor from './components/ui/SplashCursor';
-import MatrixRain from './components/ui/MatrixRain';
-import LiquidGlass from './components/ui/LiquidGlass';
+import FuturisticBackground from './components/ui/FuturisticBackground';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import ToastContainer from './components/ui/ToastContainer';
@@ -109,11 +106,8 @@ export default function App() {
 
   return (
     <div className="relative min-h-screen bg-void text-text overflow-x-hidden transition-colors duration-500">
-      {/* Background/Futuristic Canvas and Glow layers */}
-      <LiquidGlass />
-      <MatrixRain />
-      <SplashCursor />
-      <Spotlight />
+      {/* Consolidated GPU Background system */}
+      <FuturisticBackground />
       
       {/* Global Overlays and Dialog Controllers */}
       <Navbar />

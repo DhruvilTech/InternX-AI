@@ -1,4 +1,5 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
 import { useTheme } from '../context/ThemeContext';
 import {
   BarChart,
@@ -12,92 +13,59 @@ import {
   Pie,
   Cell
 } from 'recharts';
-import { GraduationCap, Users, CheckCircle2, TrendingUp, Award, RefreshCw, BookOpen, Star, Briefcase, XCircle } from 'lucide-react';
+import { GraduationCap, Users, CheckCircle2, TrendingUp, Award, RefreshCw, BookOpen, Star, Briefcase, XCircle, Loader2 } from 'lucide-react';
 import { FaGithub } from 'react-icons/fa6';
 import { useNavigate } from 'react-router-dom';
-import axiosInstance from '../api/axios.js';
 import { useNavigation } from '../context/NavigationContext';
-import { SkeletonKPIRow } from '../components/ui/PageSkeleton.jsx';
+import { getDashboard, getStudents } from '../store/slices/collegeSlice.js';
+import { fetchPlacements } from '../store/slices/placementSlice.js';
+import AnimatedCounter from '../components/ui/AnimatedCounter';
 
 const pieColors = ['#8B5CF6', '#6366F1', '#38BDF8', '#10B981', '#F59E0B'];
 
 export default function CollegeDashboardPage() {
   const navigate = useNavigate();
+  const dispatch = useDispatch();
   const { addToast } = useNavigation();
   const { isDark } = useTheme();
-  
-  const [data, setData] = useState(null);
-  const [students, setStudents] = useState([]);
-  const [placements, setPlacements] = useState({ total: 0, accepted: 0, rejected: 0 });
-  const [loading, setLoading] = useState(true);
+
+  const { dashboard: data, students, loading: collegeLoading } = useSelector((state) => state.college);
+  const { placements: pArr, loading: placementLoading } = useSelector((state) => state.placement);
+
+  const loading = collegeLoading || placementLoading;
 
   const gridColor = isDark ? '#1E293B' : '#E2E8F0';
   const tickColor = isDark ? '#94A3B8' : '#64748B';
 
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const [dashRes, studRes, placementRes] = await Promise.all([
-        axiosInstance.get('/api/college/dashboard'),
-        axiosInstance.get('/api/college/students'),
-        axiosInstance.get('/api/college/placements').catch(() => ({ data: { data: [] } }))
-      ]);
-      
-      if (dashRes.data?.success) {
-        setData(dashRes.data.data);
-      }
-      if (studRes.data?.success) {
-        setStudents(studRes.data.data?.students || studRes.data.data || []);
-      }
-      // Build placement KPIs from returned array (paginated response shape)
-      const pArr = placementRes.data?.data?.placements || placementRes.data?.data || [];
-      setPlacements({
-        total: pArr.length,
-        accepted: pArr.filter(p => p.offerStatus === 'accepted').length,
-        rejected: pArr.filter(p => p.offerStatus === 'rejected').length,
-      });
-    } catch (err) {
-      console.error(err);
-      if (typeof addToast === 'function') {
-        addToast('Failed to fetch college diagnostic metrics.', 'error');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    loadData();
-  }, []);
+    dispatch(getDashboard());
+    dispatch(getStudents({ limit: 100 }));
+    dispatch(fetchPlacements({ limit: 100 }));
+  }, [dispatch]);
 
   const handleRefresh = () => {
-    loadData();
-    if (typeof addToast === 'function') {
-      addToast('Synchronizing campus directory...', 'success');
-    }
+    dispatch(getDashboard(true));
+    dispatch(getStudents({ limit: 100 }));
+    dispatch(fetchPlacements({ limit: 100 }));
+    addToast('Synchronizing campus directory...', 'success');
   };
+
+  // Memoize placement KPIs
+  const placements = useMemo(() => {
+    const list = pArr || [];
+    return {
+      total: list.length,
+      accepted: list.filter(p => p.offerStatus === 'accepted').length,
+      rejected: list.filter(p => p.offerStatus === 'rejected').length,
+    };
+  }, [pArr]);
 
   if (loading && !data) {
     return (
-      <div className="min-h-screen pt-24 pb-16 bg-void relative overflow-hidden">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-violet/5 rounded-full blur-[100px] pointer-events-none" />
-        <div className="max-w-6xl mx-auto px-4 space-y-8">
-          {/* Header skeleton */}
-          <div className="flex items-start justify-between border-b border-border pb-6">
-            <div className="space-y-2">
-              <div className="h-3 w-28 bg-white/5 rounded-lg animate-pulse" />
-              <div className="h-8 w-64 bg-white/5 rounded-xl animate-pulse" />
-              <div className="h-2 w-48 bg-white/5 rounded-lg animate-pulse" />
-            </div>
-            <div className="h-9 w-28 bg-white/5 rounded-xl animate-pulse" />
-          </div>
-          {/* KPI skeleton */}
-          <SkeletonKPIRow />
-          {/* Chart area skeleton */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="h-64 bg-white/5 border border-border rounded-2xl animate-pulse" />
-            <div className="h-64 bg-white/5 border border-border rounded-2xl animate-pulse" />
-          </div>
+      <div className="min-h-screen pt-24 pb-16 bg-void relative overflow-hidden text-text flex items-center justify-center">
+        <div className="flex flex-col items-center justify-center space-y-4">
+          <Loader2 className="h-8 w-8 text-accent animate-spin" />
+          <p className="text-xs text-muted font-semibold tracking-wider uppercase">Loading College Dashboard...</p>
         </div>
       </div>
     );
@@ -172,7 +140,9 @@ export default function CollegeDashboardPage() {
               <Users size={16} />
               <span className="text-[10px] text-muted uppercase tracking-wider block">Total Students</span>
             </div>
-            <span className="text-2xl font-bold text-text block text-center font-mono">{stats.totalStudents}</span>
+            <span className="text-2xl font-bold text-text block text-center font-mono text-center">
+              <AnimatedCounter value={stats.totalStudents} />
+            </span>
           </div>
 
           <div className="p-5 rounded-2xl border border-border bg-void/50 glass hover:scale-[1.01] transition-transform">
@@ -180,7 +150,9 @@ export default function CollegeDashboardPage() {
               <CheckCircle2 size={16} />
               <span className="text-[10px] text-muted uppercase tracking-wider block">Readiness Index</span>
             </div>
-            <span className="text-2xl font-bold text-emerald block text-center font-mono">{stats.placementReadiness}%</span>
+            <span className="text-2xl font-bold text-emerald block text-center font-mono">
+              <AnimatedCounter value={stats.placementReadiness} suffix="%" />
+            </span>
           </div>
 
           <div className="p-5 rounded-2xl border border-border bg-void/50 glass hover:scale-[1.01] transition-transform">
@@ -188,7 +160,9 @@ export default function CollegeDashboardPage() {
               <Award size={16} />
               <span className="text-[10px] text-muted uppercase tracking-wider block">Avg Task Grade</span>
             </div>
-            <span className="text-2xl font-bold text-violet block text-center font-mono">{stats.avgInternshipScore}%</span>
+            <span className="text-2xl font-bold text-violet block text-center font-mono">
+              <AnimatedCounter value={stats.avgInternshipScore} suffix="%" />
+            </span>
           </div>
 
           <div className="p-5 rounded-2xl border border-border bg-void/50 glass hover:scale-[1.01] transition-transform">
@@ -196,7 +170,9 @@ export default function CollegeDashboardPage() {
               <FaGithub size={16} />
               <span className="text-[10px] text-muted uppercase tracking-wider block">GitHub Sync</span>
             </div>
-            <span className="text-2xl font-bold text-text block text-center font-mono">{stats.githubConnectedCount || 0}</span>
+            <span className="text-2xl font-bold text-text block text-center font-mono">
+              <AnimatedCounter value={stats.githubConnectedCount || 0} />
+            </span>
           </div>
 
           <div className="p-5 rounded-2xl border border-border bg-void/50 glass hover:scale-[1.01] transition-transform col-span-2 sm:col-span-1">
@@ -204,7 +180,9 @@ export default function CollegeDashboardPage() {
               <BookOpen size={16} />
               <span className="text-[10px] text-muted uppercase tracking-wider block">Active Interns</span>
             </div>
-            <span className="text-2xl font-bold text-text block text-center font-mono">{stats.activeInternships}</span>
+            <span className="text-2xl font-bold text-text block text-center font-mono">
+              <AnimatedCounter value={stats.activeInternships} />
+            </span>
           </div>
         </div>
 
@@ -215,7 +193,9 @@ export default function CollegeDashboardPage() {
               <Briefcase size={16} />
               <span className="text-[10px] text-muted uppercase tracking-wider block">Total Offers</span>
             </div>
-            <span className="text-2xl font-bold text-violet block text-center font-mono">{placements.total}</span>
+            <span className="text-2xl font-bold text-violet block text-center font-mono">
+              <AnimatedCounter value={placements.total} />
+            </span>
           </div>
 
           <div className="p-5 rounded-2xl border border-emerald/20 bg-emerald/5 glass hover:scale-[1.01] transition-transform">
@@ -223,7 +203,9 @@ export default function CollegeDashboardPage() {
               <CheckCircle2 size={16} />
               <span className="text-[10px] text-muted uppercase tracking-wider block">Accepted Offers</span>
             </div>
-            <span className="text-2xl font-bold text-emerald block text-center font-mono">{placements.accepted}</span>
+            <span className="text-2xl font-bold text-emerald block text-center font-mono">
+              <AnimatedCounter value={placements.accepted} />
+            </span>
           </div>
 
           <div className="p-5 rounded-2xl border border-rose/20 bg-rose/5 glass hover:scale-[1.01] transition-transform">
@@ -231,7 +213,9 @@ export default function CollegeDashboardPage() {
               <XCircle size={16} />
               <span className="text-[10px] text-muted uppercase tracking-wider block">Rejected Offers</span>
             </div>
-            <span className="text-2xl font-bold text-rose block text-center font-mono">{placements.rejected}</span>
+            <span className="text-2xl font-bold text-rose block text-center font-mono">
+              <AnimatedCounter value={placements.rejected} />
+            </span>
           </div>
         </div>
 

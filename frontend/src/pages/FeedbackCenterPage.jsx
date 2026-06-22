@@ -60,10 +60,10 @@ export default function FeedbackCenterPage() {
   const [inputText, setInputText] = useState('')
   const chatEndRef = useRef(null)
 
-  const companyInfo = internship || {
-    name: 'NeuralMind Technologies',
-    manager: 'Sarah Johnson',
-    roleTitle: 'AI Research Intern'
+  const companyInfo = {
+    name: internship?.companyName || 'NeuralMind Technologies',
+    manager: internship?.managerName || 'Sarah Johnson',
+    roleTitle: internship?.internshipRole || 'AI Research Intern'
   }
 
   const managerFirstName = companyInfo.manager

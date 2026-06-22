@@ -3,6 +3,7 @@ import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
 
 export default function TiltCard({ children, className = '', intensity = 8 }) {
   const ref = useRef(null)
+  const rectRef = useRef(null)
   const x = useMotionValue(0)
   const y = useMotionValue(0)
   const mouseX = useMotionValue(0)
@@ -11,10 +12,21 @@ export default function TiltCard({ children, className = '', intensity = 8 }) {
   const rotateX = useSpring(useTransform(y, [-0.5, 0.5], [intensity, -intensity]), { damping: 20, stiffness: 150 })
   const rotateY = useSpring(useTransform(x, [-0.5, 0.5], [-intensity, intensity]), { damping: 20, stiffness: 150 })
 
+  const handleMouseEnter = () => {
+    const el = ref.current
+    if (el) {
+      rectRef.current = el.getBoundingClientRect()
+    }
+  }
+
   const handleMove = (e) => {
     const el = ref.current
     if (!el) return
-    const rect = el.getBoundingClientRect()
+    let rect = rectRef.current
+    if (!rect) {
+      rect = el.getBoundingClientRect()
+      rectRef.current = rect
+    }
     x.set((e.clientX - rect.left) / rect.width - 0.5)
     y.set((e.clientY - rect.top) / rect.height - 0.5)
     mouseX.set(e.clientX - rect.left)
@@ -24,6 +36,7 @@ export default function TiltCard({ children, className = '', intensity = 8 }) {
   const handleLeave = () => {
     x.set(0)
     y.set(0)
+    rectRef.current = null
   }
 
   const background = useTransform(
@@ -34,6 +47,7 @@ export default function TiltCard({ children, className = '', intensity = 8 }) {
   return (
     <motion.div
       ref={ref}
+      onMouseEnter={handleMouseEnter}
       onMouseMove={handleMove}
       onMouseLeave={handleLeave}
       style={{
@@ -54,3 +68,4 @@ export default function TiltCard({ children, className = '', intensity = 8 }) {
     </motion.div>
   )
 }
+

@@ -7,6 +7,7 @@ import { getRecruiterDashboard, toggleRecruiterShortlist } from '../store/slices
 import { getSentOffers } from '../store/slices/offersSlice.js';
 import { SkeletonKPIRow, SkeletonCardList } from '../components/ui/PageSkeleton.jsx';
 import TiltCard from '../components/ui/TiltCard';
+import AnimatedCounter from '../components/ui/AnimatedCounter';
 
 export default function RecruiterDashboardPage() {
   const { navigate, addToast } = useNavigation();
@@ -29,7 +30,7 @@ export default function RecruiterDashboardPage() {
           : `Removed ${fullName} from shortlist`,
         'success'
       );
-      dispatch(getRecruiterDashboard()); // Refresh metrics
+      dispatch(getRecruiterDashboard(true)); // Force refresh metrics
     } catch (err) {
       addToast(err || 'Failed to toggle shortlist', 'error');
     }
@@ -94,7 +95,9 @@ export default function RecruiterDashboardPage() {
             <div className="p-5 border border-border bg-void/50 glass flex items-center justify-between h-full">
               <div>
                 <span className="text-[10px] text-muted uppercase tracking-wider block mb-1">Global Candidate Pool</span>
-                <span className="text-2xl font-bold text-text font-display">{kpis.totalStudents}</span>
+                <span className="text-2xl font-bold text-text font-display">
+                  <AnimatedCounter value={kpis.totalStudents} />
+                </span>
               </div>
               <div className="h-10 w-10 bg-accent/10 border border-accent/20 rounded-xl flex items-center justify-center text-accent">
                 <Users size={18} />
@@ -105,7 +108,9 @@ export default function RecruiterDashboardPage() {
             <div className="p-5 border border-border bg-void/50 glass flex items-center justify-between h-full">
               <div>
                 <span className="text-[10px] text-muted uppercase tracking-wider block mb-1">My Shortlist</span>
-                <span className="text-2xl font-bold text-amber-500 font-display">{kpis.shortlistedCount}</span>
+                <span className="text-2xl font-bold text-amber-500 font-display">
+                  <AnimatedCounter value={kpis.shortlistedCount} />
+                </span>
               </div>
               <div className="h-10 w-10 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center justify-center text-amber-500">
                 <Star size={18} fill="currentColor" />
@@ -116,7 +121,9 @@ export default function RecruiterDashboardPage() {
             <div className="p-5 border border-border bg-void/50 glass flex items-center justify-between h-full">
               <div>
                 <span className="text-[10px] text-muted uppercase tracking-wider block mb-1">Hiring Pipeline (Active)</span>
-                <span className="text-2xl font-bold text-emerald font-display">{kpis.activePipelineCount}</span>
+                <span className="text-2xl font-bold text-emerald font-display">
+                  <AnimatedCounter value={kpis.activePipelineCount} />
+                </span>
               </div>
               <div className="h-10 w-10 bg-emerald/10 border border-emerald/20 rounded-xl flex items-center justify-center text-emerald">
                 <Activity size={18} />
@@ -133,7 +140,9 @@ export default function RecruiterDashboardPage() {
               <div className="p-5 border border-border bg-void/50 glass flex items-center justify-between h-full">
                 <div>
                   <span className="text-[10px] text-muted uppercase tracking-wider block mb-1">Pending Offer Letters</span>
-                  <span className="text-2xl font-bold text-amber-500 font-display">{pendingOffersCount}</span>
+                  <span className="text-2xl font-bold text-amber-500 font-display">
+                    <AnimatedCounter value={pendingOffersCount} />
+                  </span>
                 </div>
                 <div className="h-10 w-10 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center justify-center text-amber-500">
                   <Briefcase size={18} />
@@ -144,7 +153,9 @@ export default function RecruiterDashboardPage() {
               <div className="p-5 border border-border bg-void/50 glass flex items-center justify-between h-full">
                 <div>
                   <span className="text-[10px] text-muted uppercase tracking-wider block mb-1">Offers Accepted</span>
-                  <span className="text-2xl font-bold text-emerald font-display">{acceptedOffersCount}</span>
+                  <span className="text-2xl font-bold text-emerald font-display">
+                    <AnimatedCounter value={acceptedOffersCount} />
+                  </span>
                 </div>
                 <div className="h-10 w-10 bg-emerald/10 border border-emerald/20 rounded-xl flex items-center justify-center text-emerald">
                   <ClipboardCheck size={18} />
@@ -155,7 +166,9 @@ export default function RecruiterDashboardPage() {
               <div className="p-5 border border-border bg-void/50 glass flex items-center justify-between h-full">
                 <div>
                   <span className="text-[10px] text-muted uppercase tracking-wider block mb-1">Offers Declined</span>
-                  <span className="text-2xl font-bold text-rose font-display">{rejectedOffersCount}</span>
+                  <span className="text-2xl font-bold text-rose font-display">
+                    <AnimatedCounter value={rejectedOffersCount} />
+                  </span>
                 </div>
                 <div className="h-10 w-10 bg-rose/10 border border-rose/20 rounded-xl flex items-center justify-center text-rose">
                   <X size={18} />

@@ -267,3 +267,33 @@ body {
 .indicator-pulse {
   animation: indicator-glow 1.5s ease-in-out infinite;
 }
+
+@keyframes aurora-float {
+  0% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(5%, 8%) scale(1.08);
+  }
+  66% {
+    transform: translate(-5%, -4%) scale(0.95);
+  }
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+}
+
+.animate-aurora-slow {
+  animation: aurora-float 22s ease-in-out infinite;
+}
+
+.animate-aurora-delayed {
+  animation: aurora-float 28s ease-in-out infinite;
+  animation-delay: -6s;
+}
+
+.animate-aurora-fast {
+  animation: aurora-float 15s ease-in-out infinite;
+  animation-delay: -3s;
+}
+

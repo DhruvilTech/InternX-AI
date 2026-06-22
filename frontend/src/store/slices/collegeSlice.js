@@ -28,7 +28,7 @@ export const updateCollegeProfile = createAsyncThunk(
 
 export const getDashboard = createAsyncThunk(
   'college/getDashboard',
-  async (_, { rejectWithValue }) => {
+  async (force = false, { rejectWithValue }) => {
     try {
       const response = await collegeApi.getDashboard();
       return response.data;
@@ -37,9 +37,13 @@ export const getDashboard = createAsyncThunk(
     }
   },
   {
-    condition: (_, { getState }) => {
+    condition: (force, { getState }) => {
       const { college } = getState();
       if (college.loading) return false;
+      if (!force && college.dashboard && college.lastFetchedDashboard) {
+        const age = Date.now() - college.lastFetchedDashboard;
+        if (age < 30000) return false;
+      }
       return true;
     },
   }
@@ -226,6 +230,7 @@ const collegeSlice = createSlice({
       .addCase(getDashboard.fulfilled, (state, action) => {
         state.loading = false;
         state.dashboard = action.payload;
+        state.lastFetchedDashboard = Date.now();
       })
       .addCase(getDashboard.rejected, (state, action) => {
         state.loading = false;

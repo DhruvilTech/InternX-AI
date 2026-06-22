@@ -1,11 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo } from 'react'
+import { useDispatch, useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
 import {
   AreaChart,
   Area,
   ResponsiveContainer,
-  LineChart,
-  Line,
   XAxis,
   YAxis,
   Tooltip,
@@ -13,25 +12,22 @@ import {
 import {
   Building2,
   Clock,
-  CheckCircle2,
   AlertCircle,
   Eye,
   TrendingUp,
-  User,
   ArrowRight,
   Sparkles,
-  Calendar,
-  MessageSquare,
   Award,
+  Loader2
 } from 'lucide-react'
 import { useNavigation } from '../context/NavigationContext'
 import { useTheme } from '../context/ThemeContext'
 import ScoreRing from '../components/ui/ScoreRing'
 import PulseDot from '../components/ui/PulseDot'
 import { FaGithub } from 'react-icons/fa6'
-import { getMyCareer } from '../api/careerService.js'
-import axiosInstance from '../api/axios.js'
+import { fetchStudentDashboard } from '../store/slices/studentDashboardSlice.js'
 import useAuth from '../hooks/useAuth'
+import AnimatedCounter from '../components/ui/AnimatedCounter'
 
 const chartData = [
   { day: 'Mon', views: 4 },
@@ -44,120 +40,73 @@ const chartData = [
 ]
 
 export default function StudentDashboardPage() {
-  const { navigate, internship, tasks, setSelectedTaskId, addToast } = useNavigation()
+  const dispatch = useDispatch()
+  const { navigate, setSelectedTaskId, addToast } = useNavigation()
   const { isDark } = useTheme()
   const { user } = useAuth()
-  const firstName = user?.fullName ? user.fullName.split(' ')[0] : 'Arjun'
-  const [score, setScore] = useState(0)
-  const [progress, setProgress] = useState(0)
-  const [interviewReadyScore, setInterviewReadyScore] = useState(0)
-  const [portfolioScore, setPortfolioScore] = useState(0)
-  const [placementScore, setPlacementScore] = useState(0)
-  const [careerData, setCareerData] = useState(null)
-  const [careerIntel, setCareerIntel] = useState(null)
-  const [managerFeedback, setManagerFeedback] = useState('')
-  const [connectedRepo, setConnectedRepo] = useState(null)
-  const [evalError, setEvalError] = useState('')
+  
+  const { data, loading } = useSelector((state) => state.studentDashboard)
 
   useEffect(() => {
-    const fetchConnectedRepo = async () => {
-      try {
-        const res = await axiosInstance.get('/api/github/selected-repository')
-        if (res.data?.success && res.data?.data) {
-          setConnectedRepo(res.data.data)
-        }
-      } catch (err) {
-        console.log("No connected repository retrieved:", err)
-      }
-    }
-    fetchConnectedRepo()
-  }, [])
+    dispatch(fetchStudentDashboard())
+  }, [dispatch])
 
-  useEffect(() => {
-    if (tasks && tasks.length > 0) {
-      const completed = tasks.filter(t => t.status === 'completed')
-      const calculatedProgress = Math.round((completed.length / tasks.length) * 100)
-      setProgress(calculatedProgress)
+  // Extract consolidated data
+  const studentCareer = data?.studentCareer
+  const internship = data?.internship
+  const tasks = data?.tasks || []
+  const connectedRepo = data?.connectedRepo
+  const careerIntel = data?.evaluationReport
 
-      const completedWithScores = completed.filter(t => typeof t.score === 'number' && t.score > 0)
-      const calculatedScore = completedWithScores.length > 0
-        ? Math.round(completedWithScores.reduce((acc, t) => acc + t.score, 0) / completedWithScores.length)
-        : 0
-      setScore(calculatedScore)
+  const careerData = studentCareer?.careerId
 
-      const calculatedInterview = Math.round((completed.length / tasks.length) * 80 + 20)
-      setInterviewReadyScore(calculatedInterview)
-    } else {
-      setProgress(0)
-      setScore(0)
-      setInterviewReadyScore(0)
-    }
+  // Memoize task metric computations to prevent unneeded rerenders
+  const progress = useMemo(() => {
+    if (!tasks || tasks.length === 0) return 0
+    const completed = tasks.filter(t => t.status === 'completed')
+    return Math.round((completed.length / tasks.length) * 100)
   }, [tasks])
 
-  useEffect(() => {
-    if (!user) return
-    const fetchIntel = async () => {
-      try {
-        const studentId = user._id || user.id
-        const res = await axiosInstance.get(`/api/evaluation/student/${studentId}`)
-        const data = res.data
-        if (data) {
-          setPortfolioScore(data.technicalScore || 0)
-          setPlacementScore(data.overallScore || 0)
-          setCareerIntel(data)
-          setEvalError('')
-        }
-      } catch (err) {
-        console.error('Failed to load career intelligence for dashboard:', err)
-        setPortfolioScore(0)
-        setPlacementScore(0)
-        setCareerIntel(null)
-        setEvalError('No evaluation available yet.\nStudent has not completed any evaluated submissions.')
-      }
-    }
-    fetchIntel()
-  }, [user, tasks])
+  const score = useMemo(() => {
+    if (!tasks || tasks.length === 0) return 0
+    const completed = tasks.filter(t => t.status === 'completed')
+    const completedWithScores = completed.filter(t => typeof t.score === 'number' && t.score > 0)
+    return completedWithScores.length > 0
+      ? Math.round(completedWithScores.reduce((acc, t) => acc + t.score, 0) / completedWithScores.length)
+      : 0
+  }, [tasks])
 
+  const interviewReadyScore = useMemo(() => {
+    if (!tasks || tasks.length === 0) return 0
+    const completed = tasks.filter(t => t.status === 'completed')
+    return Math.round((completed.length / tasks.length) * 80 + 20)
+  }, [tasks])
 
-  useEffect(() => {
-    const checkStateAndFetchCareer = async () => {
-      try {
-        const res = await getMyCareer();
-        if (res.success && res.data) {
-          setCareerData(res.data.career);
-          setProgress(res.data.progress);
+  const portfolioScore = careerIntel?.technicalScore || 0
+  const placementScore = careerIntel?.overallScore || 0
 
-          try {
-            const internRes = await axiosInstance.get('/api/internships/my-internship');
-            if (!internRes.data?.success || !internRes.data?.data?.internship) {
-              navigate('generator');
-            }
-          } catch (err) {
-            navigate('generator');
-          }
-        } else {
-          navigate('careers');
-        }
-      } catch (err) {
-        console.error('Failed to load career path metadata for dashboard:', err);
-        navigate('careers');
-      }
-    };
-    checkStateAndFetchCareer();
-  }, []);
+  const activeTasks = useMemo(() => tasks.filter(t => t.status !== 'completed'), [tasks])
 
-  // Demo fallback
-  const companyInfo = internship || {
-    name: 'NeuralMind Technologies',
-    manager: 'Sarah Johnson',
-    department: 'Artificial Intelligence',
-    project: 'Resume Intelligence Platform',
-    roleTitle: 'AI Research Intern',
+  // Fallback demo info or mapped db values
+  const companyInfo = {
+    name: internship?.companyName || 'NeuralMind Technologies',
+    manager: internship?.managerName || 'Sarah Johnson',
+    department: internship?.department || 'Artificial Intelligence',
+    project: internship?.projectName || 'Resume Intelligence Platform',
+    roleTitle: internship?.internshipRole || 'AI Research Intern',
     team: ['Alex Rivera', 'Sophia Patel', 'David Kim']
   }
 
-  const activeTasks = tasks.filter(t => t.status !== 'completed')
-  const completedTasks = tasks.filter(t => t.status === 'completed')
+  if (loading && !data) {
+    return (
+      <div className="min-h-screen pt-24 pb-16 bg-void relative overflow-hidden text-text flex items-center justify-center">
+        <div className="flex flex-col items-center justify-center space-y-4">
+          <Loader2 className="h-8 w-8 text-accent animate-spin" />
+          <p className="text-xs text-muted font-semibold tracking-wider uppercase">Loading Student Dashboard...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen pt-24 pb-16 px-4 sm:px-6 lg:px-8 bg-void relative overflow-hidden">
@@ -189,14 +138,14 @@ export default function StudentDashboardPage() {
           <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
             <button
               onClick={() => navigate('company')}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 border border-border rounded-xl text-xs text-muted hover:text-text hover:border-border-strong transition-all bg-surface-muted/10 font-semibold"
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 border border-border rounded-xl text-xs text-muted hover:text-text hover:border-border-strong transition-all bg-surface-muted/10 font-semibold cursor-pointer"
             >
               <Building2 size={13} className="text-accent" />
               <span>AI Company Hub</span>
             </button>
             <button
               onClick={() => navigate('kanban')}
-              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-accent to-violet text-white rounded-xl text-xs font-semibold hover:shadow-lg hover:shadow-accent/25 transition-all"
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-accent to-violet text-white rounded-xl text-xs font-semibold hover:shadow-lg hover:shadow-accent/25 transition-all cursor-pointer"
             >
               <span>Work Sprint Board</span>
               <ArrowRight size={13} />
@@ -210,7 +159,7 @@ export default function StudentDashboardPage() {
           {/* LEFT COLUMN: Progress & Tasks & Skill Growth */}
           <div className="col-span-12 lg:col-span-8 space-y-6">
 
-            {evalError ? (
+            {!careerIntel && !loading ? (
               <div className="glass rounded-2xl p-8 border border-border bg-void/30 text-center flex flex-col items-center justify-center space-y-3 py-16">
                 <AlertCircle className="text-amber h-8 w-8" />
                 <h3 className="text-sm font-bold text-text">No evaluation available yet</h3>
@@ -229,7 +178,7 @@ export default function StudentDashboardPage() {
                       <p className="text-[10px] text-muted">Placement readiness metrics, advice, and paths</p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <button onClick={() => navigate('skill_gap')} className="text-xs text-accent hover:underline flex items-center gap-1 font-semibold">
+                      <button onClick={() => navigate('skill_gap')} className="text-xs text-accent hover:underline flex items-center gap-1 font-semibold cursor-pointer">
                         Skill Gap Analysis <ArrowRight size={12} />
                       </button>
                       <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${careerIntel?.readinessLevel === 'Industry Ready'
@@ -287,7 +236,7 @@ export default function StudentDashboardPage() {
                       <h3 className="text-sm font-bold text-text">Feedback Engine Audits</h3>
                       <p className="text-[10px] text-muted">Evaluation strengths and weaknesses</p>
                     </div>
-                    <button onClick={() => navigate('feedback_center')} className="text-xs text-accent hover:underline flex items-center gap-1">
+                    <button onClick={() => navigate('feedback_center')} className="text-xs text-accent hover:underline flex items-center gap-1 cursor-pointer">
                       Feedback Center <ArrowRight size={12} />
                     </button>
                   </div>
@@ -328,7 +277,7 @@ export default function StudentDashboardPage() {
                   <h3 className="text-sm font-bold text-text">Current Sprint Backlog</h3>
                   <p className="text-[10px] text-muted">{activeTasks.length} tasks remaining</p>
                 </div>
-                <button onClick={() => navigate('kanban')} className="text-xs text-accent hover:underline flex items-center gap-1">
+                <button onClick={() => navigate('kanban')} className="text-xs text-accent hover:underline flex items-center gap-1 cursor-pointer">
                   View Kanban <ArrowRight size={12} />
                 </button>
               </div>
@@ -373,7 +322,7 @@ export default function StudentDashboardPage() {
                   <h3 className="text-sm font-bold text-text">Internship Progress</h3>
                   <p className="text-[10px] text-muted">Weekly deliverables timeline</p>
                 </div>
-                <span className="text-sm font-semibold text-accent">{Math.round(progress)}% Complete</span>
+                <span className="text-sm font-semibold text-accent"><AnimatedCounter value={progress} />% Complete</span>
               </div>
 
               {/* Progress bar */}
@@ -477,7 +426,7 @@ export default function StudentDashboardPage() {
                     <div className="min-w-0">
                       <span className="text-[10px] text-muted uppercase tracking-wider block">AI GitHub Score</span>
                       <span className="text-sm font-display font-bold text-text block mt-0.5">
-                        {careerIntel?.githubScore || 0} / 100
+                        <AnimatedCounter value={careerIntel?.githubScore || 0} /> / 100
                       </span>
                       <span className="text-[9px] text-muted leading-relaxed block mt-1">
                         {(careerIntel?.githubScore || 0) >= 80 ? 'Exceptional codebase standards.' : (careerIntel?.githubScore || 0) >= 60 ? 'Standard delivery quality.' : 'Improve repo activity & documentation.'}
@@ -544,7 +493,7 @@ export default function StudentDashboardPage() {
                   <Eye size={12} className="text-accent" />
                   <span>24 views this week</span>
                 </div>
-                <button onClick={() => navigate('profile')} className="hover:text-text font-semibold flex items-center gap-1">
+                <button onClick={() => navigate('profile')} className="hover:text-text font-semibold flex items-center gap-1 cursor-pointer">
                   View Profile <ArrowRight size={10} />
                 </button>
               </div>
@@ -566,7 +515,7 @@ export default function StudentDashboardPage() {
                       setSelectedTaskId('ai-3')
                       navigate('submit_task')
                     }}
-                    className="px-2.5 py-1 bg-rose/10 border border-rose/30 text-rose-300 rounded-lg text-[9px] font-semibold hover:bg-rose/20 transition-colors"
+                    className="px-2.5 py-1 bg-rose/10 border border-rose/30 text-rose-300 rounded-lg text-[9px] font-semibold hover:bg-rose/20 transition-colors cursor-pointer"
                   >
                     Submit
                   </button>

@@ -2,6 +2,7 @@ import express from 'express';
 import {
   getReceivedOffers,
   respondToOffer,
+  getStudentDashboard,
 } from '../controllers/student.controller.js';
 import { protect } from '../middlewares/auth.middleware.js';
 import { authorizeRoles } from '../middlewares/role.middleware.js';
@@ -11,6 +12,9 @@ const router = express.Router();
 // Restrict all student endpoints to authenticated users with student role
 router.use(protect);
 router.use(authorizeRoles('student'));
+
+// Dashboard
+router.get('/dashboard', getStudentDashboard);
 
 // Offers
 router.get('/offers', getReceivedOffers);

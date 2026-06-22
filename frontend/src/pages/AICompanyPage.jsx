@@ -36,12 +36,19 @@ export default function AICompanyPage() {
   
   const company = internship ? {
     ...defaultCompany,
-    name: internship.name,
-    manager: internship.manager,
-    department: internship.department,
-    roleTitle: internship.roleTitle,
+    name: internship.companyName || defaultCompany.name,
+    manager: internship.managerName || defaultCompany.manager,
+    department: internship.department || defaultCompany.department,
+    roleTitle: internship.internshipRole || defaultCompany.roleTitle,
     team: defaultCompany.team.map((m, idx) => {
-      if (idx === 0) return { ...m, name: internship.manager, code: internship.manager.split(' ').map(n => n[0]).join('') }
+      if (idx === 0) {
+        const mgrName = internship.managerName || defaultCompany.manager;
+        return {
+          ...m,
+          name: mgrName,
+          code: mgrName ? mgrName.split(' ').map(n => n[0]).join('') : 'SJ'
+        }
+      }
       return m
     })
   } : defaultCompany

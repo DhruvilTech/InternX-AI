@@ -1,34 +1,70 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState } from 'react';
 
-const ThemeContext = createContext(null)
+const ThemeContext = createContext(null);
 
 function getInitialTheme() {
-  const stored = localStorage.getItem('internx-theme')
-  if (stored === 'light' || stored === 'dark') return stored
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  const stored = localStorage.getItem('internx-theme');
+  if (stored === 'light' || stored === 'dark' || stored === 'system') return stored;
+  return 'system'; // System theme as default
 }
 
 export function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState(getInitialTheme)
+  const [theme, setThemeState] = useState(getInitialTheme);
+  const [activeTheme, setActiveTheme] = useState('dark');
 
   useEffect(() => {
-    const root = document.documentElement
-    root.classList.remove('light', 'dark')
-    root.classList.add(theme)
-    localStorage.setItem('internx-theme', theme)
-  }, [theme])
+    const root = document.documentElement;
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
-  const toggleTheme = () => setTheme((t) => (t === 'light' ? 'dark' : 'light'))
+    const handleChange = () => {
+      const resolved = theme === 'system'
+        ? (mediaQuery.matches ? 'dark' : 'light')
+        : theme;
+      
+      root.classList.remove('light', 'dark');
+      root.classList.add(resolved);
+      setActiveTheme(resolved);
+    };
+
+    handleChange();
+    localStorage.setItem('internx-theme', theme);
+
+    // Register media query listener for system auto theme changes
+    if (theme === 'system') {
+      mediaQuery.addEventListener('change', handleChange);
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    }
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setThemeState((current) => {
+      if (current === 'dark') return 'light';
+      if (current === 'light') return 'system';
+      return 'dark'; // Cycle dark -> light -> system
+    });
+  };
+
+  const setTheme = (newTheme) => {
+    if (['dark', 'light', 'system'].includes(newTheme)) {
+      setThemeState(newTheme);
+    }
+  };
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, isDark: theme === 'dark' }}>
+    <ThemeContext.Provider value={{
+      theme,
+      activeTheme,
+      setTheme,
+      toggleTheme,
+      isDark: activeTheme === 'dark'
+    }}>
       {children}
     </ThemeContext.Provider>
-  )
+  );
 }
 
 export function useTheme() {
-  const ctx = useContext(ThemeContext)
-  if (!ctx) throw new Error('useTheme must be used within ThemeProvider')
-  return ctx
+  const ctx = useContext(ThemeContext);
+  if (!ctx) throw new Error('useTheme must be used within ThemeProvider');
+  return ctx;
 }
