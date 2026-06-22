@@ -177,13 +177,14 @@ export const getFallbackHeuristicData = (
 };
 
 const mapToValidCareerLevel = (level) => {
-  const allowed = ['Beginner', 'Intermediate', 'Job Ready', 'Industry Ready'];
+  const allowed = ['Beginner', 'Intermediate', 'Job Ready', 'Industry Ready', 'Not Enough Data'];
   if (!level) return 'Beginner';
   const clean = level.trim();
   if (allowed.includes(clean)) return clean;
   
   // Normalization mapping
   const lower = clean.toLowerCase();
+  if (lower.includes('not enough data') || lower.includes('insufficient')) return 'Not Enough Data';
   if (lower.includes('begin') || lower.includes('entry') || lower.includes('junior')) return 'Beginner';
   if (lower.includes('inter') || lower.includes('mid')) return 'Intermediate';
   if (lower.includes('job') || lower.includes('ready')) return 'Job Ready';
@@ -354,82 +355,126 @@ export const generateCareerReports = async (studentId) => {
 
   const gapPercentage = Math.round((missingSkills.length / Math.max(requiredSkills.length, 1)) * 100);
 
-  // Compute components for Readiness Score
-  // Task Score component (40%)
-  const avgTaskScore = completedTasks.length > 0
-    ? completedTasks.reduce((acc, t) => acc + (t.score || 70), 0) / completedTasks.length
-    : 0;
+  // Fetch all evaluations for all submissions by this student
+  const allSubIds = submissions.map(s => s._id);
+  const allEvaluations = await Evaluation.find({ submissionId: { $in: allSubIds } });
 
-  // Interview Score component (30%)
-  const interviews = await Interview.find({ studentId, status: 'completed' });
-  const interviewReports = await InterviewReport.find({ interviewId: { $in: interviews.map(i => i._id) } });
-  const avgInterviewScore = interviewReports.length > 0
-    ? interviewReports.reduce((acc, r) => acc + r.overallScore, 0) / interviewReports.length
-    : 0;
+  // 1. Task Completion Score (taskCompletion)
+  const totalTasks = tasks.length;
+  const completedTasksCount = completedTasks.length;
+  const taskCompletion = totalTasks > 0 ? (completedTasksCount / totalTasks) * 100 : 0;
 
-  // GitHub Score component
+  // 2. Submission Quality Score (submissionQuality)
+  let submissionQuality = 0;
+  if (allEvaluations.length > 0) {
+    const sum = allEvaluations.reduce((acc, e) => {
+      const codeQuality = e.codeQualityScore || 0;
+      const arch = e.architectureScore || 0;
+      const doc = e.documentationScore || 0;
+      const completion = e.overallScore || e.technicalScore || 0;
+      return acc + (codeQuality + arch + doc + completion) / 4;
+    }, 0);
+    submissionQuality = sum / allEvaluations.length;
+  }
+
+  // 3. GitHub Score (githubScore)
   let githubScore = 0;
-  const githubSubmissions = submissions.filter(s => s.submissionType === 'github' && s.status === 'Completed');
-  const submissionIds = githubSubmissions.map(s => s._id);
-  const evaluations = await Evaluation.find({ submissionId: { $in: submissionIds } });
-
-  if (evaluations.length > 0) {
-    const sumGithubScores = evaluations.reduce((acc, e) => acc + (e.githubScore || e.repositoryScore || 0), 0);
-    githubScore = Math.round(sumGithubScores / evaluations.length);
-  } else {
-    if (githubProfile) {
-      const commits = githubContributions.reduce((acc, c) => acc + (c.commitCount || 0), 0);
-      githubScore = Math.min(100, 40 + (githubProfile.publicRepos * 5) + (commits * 2));
+  const githubSubmissions = submissions.filter(s => s.submissionType === 'github');
+  if (githubProfile && githubSubmissions.length > 0) {
+    const gitSubIds = githubSubmissions.map(s => s._id);
+    const gitEvaluations = allEvaluations.filter(e => gitSubIds.some(id => id.toString() === e.submissionId.toString()));
+    if (gitEvaluations.length > 0) {
+      const sumGithubScores = gitEvaluations.reduce((acc, e) => acc + (e.githubScore || e.repositoryScore || 0), 0);
+      githubScore = Math.round(sumGithubScores / gitEvaluations.length);
     }
   }
 
-  // Consistency Score / Certificate Score
-  const progress = tasks.length > 0 
-    ? Math.round((completedTasks.length / tasks.length) * 100) 
-    : 0;
-  const certificateScore = progress >= 80 ? avgTaskScore : avgTaskScore * (progress / 100);
-  const interviewScore = avgInterviewScore || 60;
-
-  // Overall Readiness Score
-  const readinessScore = Math.min(100, Math.max(0, Math.round(
-    (avgTaskScore + interviewScore + certificateScore + githubScore) / 4
-  )));
-
-  // Calculate portfolioScore
-  let readmeScoreBonus = 0;
-  let structureScoreBonus = 0;
-  submissions.forEach(sub => {
-    if (sub.extractedMetadata?.readmeContent) readmeScoreBonus += 5;
-    if (sub.extractedMetadata?.folderStructure?.length > 0) structureScoreBonus += 5;
-  });
-  readmeScoreBonus = Math.min(15, readmeScoreBonus);
-  structureScoreBonus = Math.min(15, structureScoreBonus);
-
-  let portfolioScore = 0;
-  if (completedTasks.length > 0) {
-    portfolioScore = Math.round(avgTaskScore * 0.7 + readmeScoreBonus + structureScoreBonus);
+  // 4. Interview Score (interviewScore)
+  const interviews = await Interview.find({ studentId, status: 'completed' });
+  const interviewReports = await InterviewReport.find({ interviewId: { $in: interviews.map(i => i._id) } });
+  let interviewScore = 0;
+  if (interviewReports.length > 0) {
+    const sumInterviews = interviewReports.reduce((acc, r) => acc + r.overallScore, 0);
+    interviewScore = Math.round(sumInterviews / interviewReports.length);
   }
-  portfolioScore = Math.min(100, Math.max(0, portfolioScore));
+
+  // 5. Portfolio Score
+  let portfolioScore = (taskCompletion * 0.30) + (submissionQuality * 0.30) + (githubScore * 0.20) + (interviewScore * 0.20);
+  portfolioScore = Math.min(100, Math.max(0, Math.round(portfolioScore)));
+
+  // 6. Placement Ready Score (readinessScore)
+  const skillCoverage = requiredSkills.length > 0 
+    ? Math.round(((requiredSkills.length - missingSkills.length) / requiredSkills.length) * 100) 
+    : 0;
+  const internshipProgress = taskCompletion;
+  let readinessScore = (portfolioScore * 0.40) + (skillCoverage * 0.20) + (internshipProgress * 0.20) + (interviewScore * 0.20);
+  readinessScore = Math.min(100, Math.max(0, Math.round(readinessScore)));
+
+  // Insufficient Data Check
+  const noEvaluations = allEvaluations.length === 0;
+  const noSubmissions = submissions.length === 0;
+  const noInterviews = interviewReports.length === 0;
+  const hasInsufficientData = noEvaluations && noSubmissions && noInterviews;
+
+  if (hasInsufficientData) {
+    portfolioScore = 0;
+    readinessScore = 0;
+  }
 
   // Generate metrics
   let reportData;
-  const isMock = !process.env.GROQ_API_KEY;
-  if (!isMock) {
-    try {
-      reportData = await callGroqForReport(
-        studentProfile,
-        internship,
-        careerPath,
-        tasks,
-        avgTaskScore,
-        avgInterviewScore,
-        githubProfile,
-        missingSkills,
-        demonstratedArray,
-        readinessScore
-      );
-    } catch (err) {
-      console.error('[AI Career Report] Groq failed, using heuristic fallback:', err.message);
+  if (hasInsufficientData) {
+    reportData = {
+      strengths: [],
+      weaknesses: [],
+      recommendations: [],
+      managerFeedback: "Not enough tasks completed or evaluations conducted yet.",
+      careerLevel: "Not Enough Data",
+      recommendedRoles: [],
+      recommendedCertifications: [],
+      recommendedSkills: [],
+      recommendedProjects: [],
+      salaryRange: "N/A",
+      careerAdvice: "Please submit tasks and link your GitHub repository to generate career insights."
+    };
+  } else {
+    // Compute temporary average task score for heuristic reports
+    const avgTaskScore = completedTasks.length > 0
+      ? completedTasks.reduce((acc, t) => acc + (t.score || 0), 0) / completedTasks.length
+      : 0;
+    const avgInterviewScore = interviewScore;
+
+    const isMock = !process.env.GROQ_API_KEY;
+    if (!isMock) {
+      try {
+        reportData = await callGroqForReport(
+          studentProfile,
+          internship,
+          careerPath,
+          tasks,
+          avgTaskScore,
+          avgInterviewScore,
+          githubProfile,
+          missingSkills,
+          demonstratedArray,
+          readinessScore
+        );
+      } catch (err) {
+        console.error('[AI Career Report] Groq failed, using heuristic fallback:', err.message);
+        reportData = getFallbackHeuristicData(
+          studentProfile,
+          internship,
+          careerPath,
+          completedTasks,
+          avgTaskScore,
+          avgInterviewScore,
+          githubProfile,
+          missingSkills,
+          demonstratedArray,
+          readinessScore
+        );
+      }
+    } else {
       reportData = getFallbackHeuristicData(
         studentProfile,
         internship,
@@ -443,19 +488,6 @@ export const generateCareerReports = async (studentId) => {
         readinessScore
       );
     }
-  } else {
-    reportData = getFallbackHeuristicData(
-      studentProfile,
-      internship,
-      careerPath,
-      completedTasks,
-      avgTaskScore,
-      avgInterviewScore,
-      githubProfile,
-      missingSkills,
-      demonstratedArray,
-      readinessScore
-    );
   }
 
   // Save/Update in database collections
