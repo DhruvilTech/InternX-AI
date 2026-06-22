@@ -6,7 +6,7 @@ export const fetchPlacements = createAsyncThunk(
   async (params, { rejectWithValue }) => {
     try {
       const response = await collegeApi.getPlacements(params);
-      return response.data; // this is the results (i.e. { placements, pagination })
+      return response;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to fetch placements.');
     }

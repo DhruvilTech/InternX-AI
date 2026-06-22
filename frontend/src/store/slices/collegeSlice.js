@@ -54,7 +54,7 @@ export const getStudents = createAsyncThunk(
   async (params, { rejectWithValue }) => {
     try {
       const response = await collegeApi.getStudents(params);
-      return response.data;
+      return response;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to load students cohort.');
     }

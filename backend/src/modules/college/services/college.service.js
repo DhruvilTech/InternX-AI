@@ -1,3 +1,4 @@
+import { wrap } from '../../../utils/cache.js';
 import College from '../models/College.js';
 import Department from '../models/Department.js';
 import CollegeAnalytics from '../models/CollegeAnalytics.js';
@@ -370,34 +371,45 @@ export const queryStudents = async (college, queryParams) => {
     }
   }
 
-  // Resolve full details for list display
-  const resolvedStudents = [];
-  for (const s of students) {
-    if (!s.userId) continue;
+  // Resolve full details for list display using batched relational lookups
+  const studentIds = students.map((s) => s.userId?._id).filter(Boolean);
+  const [studentCareers, githubProfiles, certificates] = await Promise.all([
+    StudentCareer.find({ studentId: { $in: studentIds } }).populate('careerId').lean(),
+    GithubProfile.find({ userId: { $in: studentIds } }).lean(),
+    Certificate.find({ studentId: { $in: studentIds } }).lean(),
+  ]);
 
-    const career = await StudentCareer.findOne({ studentId: s.userId._id }).populate('careerId');
-    const github = await GithubProfile.findOne({ userId: s.userId._id });
-    const cert = await Certificate.findOne({ studentId: s.userId._id });
+  const careerMap = new Map(studentCareers.map((career) => [career.studentId.toString(), career]));
+  const githubMap = new Map(githubProfiles.map((profile) => [profile.userId.toString(), profile]));
+  const certificateMap = new Map(certificates.map((cert) => [cert.studentId.toString(), cert]));
 
-    resolvedStudents.push({
-      _id: s._id,
-      userId: s.userId._id,
-      fullName: s.fullName,
-      course: s.course,
-      year: s.year,
-      skills: s.skills,
-      email: s.userId.email,
-      avatar: s.userId.avatar,
-      careerTrack: career?.careerId?.title || 'Not Selected',
-      internshipProgress: career?.completionPercentage || 0,
-      internshipStatus: career?.status || 'in-progress',
-      githubConnected: !!github,
-      githubUsername: github?.username || '',
-      certificateIssued: !!cert,
-      certificateId: cert?.certificateId || null,
-      grade: career?.completionPercentage || 0
+  const resolvedStudents = students
+    .filter((s) => s.userId)
+    .map((s) => {
+      const studentId = s.userId._id.toString();
+      const career = careerMap.get(studentId);
+      const github = githubMap.get(studentId);
+      const cert = certificateMap.get(studentId);
+
+      return {
+        _id: s._id,
+        userId: s.userId._id,
+        fullName: s.fullName,
+        course: s.course,
+        year: s.year,
+        skills: s.skills,
+        email: s.userId.email,
+        avatar: s.userId.avatar,
+        careerTrack: career?.careerId?.title || 'Not Selected',
+        internshipProgress: career?.completionPercentage || 0,
+        internshipStatus: career?.status || 'in-progress',
+        githubConnected: !!github,
+        githubUsername: github?.username || '',
+        certificateIssued: !!cert,
+        certificateId: cert?.certificateId || null,
+        grade: career?.completionPercentage || 0,
+      };
     });
-  }
 
   // Sort results
   resolvedStudents.sort((a, b) => {
@@ -767,219 +779,230 @@ export const compileReportData = async (college, type) => {
  * Compiles a full unified dashboard metrics package matching the UI structure.
  */
 export const getDashboardData = async (college) => {
-  // 1. Ensure cohort is seeded if empty
-  await seedDemoCohortIfEmpty(college);
+  const cacheKey = `college_dashboard:${college._id}`;
+  return wrap(cacheKey, 30000, async () => {
+    await seedDemoCohortIfEmpty(college);
 
-  const collegeName = college.name || college.collegeName || college.get('collegeName') || '';
+    const collegeName = college.name || college.collegeName || college.get('collegeName') || '';
 
-  // 2. Fetch all student records for this college
-  const students = await Student.find({ collegeName }).populate('userId');
-  const studentUserIds = students.map(s => s.userId?._id).filter(id => !!id);
+    const students = await Student.find({ collegeName }).populate('userId', 'email avatar').lean();
+    const studentUserIds = students.map((s) => s.userId?._id).filter(Boolean);
 
-  // 3. Fetch careers, certificates, and github profiles for these students
-  const studentCareers = await StudentCareer.find({ studentId: { $in: studentUserIds } }).populate('careerId');
-  const githubProfiles = await GithubProfile.find({ userId: { $in: studentUserIds } });
-  const CareerIntelligence = mongoose.model('CareerIntelligence');
-  const GithubContribution = mongoose.model('GithubContribution');
-  const intelligences = await CareerIntelligence.find({ studentId: { $in: studentUserIds } });
-  const githubContributions = await GithubContribution.find({ userId: { $in: studentUserIds } });
+    const CareerIntelligence = mongoose.model('CareerIntelligence');
+    const GithubContribution = mongoose.model('GithubContribution');
 
-  const intelMap = new Map(intelligences.map(i => [i.studentId.toString(), i]));
+    const [studentCareers, githubProfiles, intelligences, githubContributions, placements] = await Promise.all([
+      StudentCareer.find({ studentId: { $in: studentUserIds } }).populate('careerId').lean(),
+      GithubProfile.find({ userId: { $in: studentUserIds } }).lean(),
+      CareerIntelligence.find({ studentId: { $in: studentUserIds } }).lean(),
+      GithubContribution.find({ userId: { $in: studentUserIds } }).lean(),
+      Placement.find({ collegeId: college._id }).lean(),
+    ]);
 
-  // 4. Fetch placement records
-  const placements = await Placement.find({ collegeId: college._id });
+    const careerMap = new Map(studentCareers.map((sc) => [sc.studentId.toString(), sc]));
+    const githubProfileMap = new Map(githubProfiles.map((gp) => [gp.userId.toString(), gp]));
+    const intelMap = new Map(intelligences.map((intel) => [intel.studentId.toString(), intel]));
+    const studentByUserId = new Map(students.filter((s) => s.userId).map((s) => [s.userId._id.toString(), s]));
 
-  // 5. Calculate KPI Cards
-  const totalStudents = students.length;
-  let activeInternships = 0;
-  let completedInternships = 0;
-  let scoreSum = 0;
+    let totalStudents = students.length;
+    let activeInternships = 0;
+    let completedInternships = 0;
+    let scoreSum = 0;
+    let placementReadySum = 0;
 
-  studentCareers.forEach(sc => {
-    if (sc.status === 'completed' || sc.completionPercentage === 100) {
-      completedInternships++;
-    } else {
-      activeInternships++;
-    }
-    scoreSum += sc.completionPercentage || 0;
-  });
+    const studentMetrics = students
+      .filter((student) => student.userId)
+      .map((student) => {
+        const studentId = student.userId._id.toString();
+        const career = careerMap.get(studentId);
+        const github = githubProfileMap.get(studentId);
+        const intel = intelMap.get(studentId);
+        const progress = career?.completionPercentage || 0;
+        const readinessIndex = intel
+          ? intel.placementReadiness
+          : Math.min(100, Math.round(progress * 0.8 + (github ? 20 : 0)));
 
-  const avgInternshipScore = studentCareers.length > 0 ? Math.round(scoreSum / studentCareers.length) : 0;
-  const githubConnectedCount = githubProfiles.length;
-  const sumReadiness = intelligences.reduce((sum, i) => sum + (i.placementReadiness || 0), 0);
-  const placementReadiness = intelligences.length > 0 ? Math.round(sumReadiness / intelligences.length) : 0;
+        if (career?.status === 'completed' || progress === 100) {
+          completedInternships += 1;
+        } else {
+          activeInternships += 1;
+        }
 
-  // Placement-specific KPIs
-  const totalOffers = placements.length;
-  const acceptedOffers = placements.filter(p => p.offerStatus === 'accepted').length;
-  const rejectedOffers = placements.filter(p => p.offerStatus === 'rejected').length;
-  const studentsPlaced = new Set(placements.filter(p => p.offerStatus === 'accepted').map(p => p.studentId.toString())).size;
-  const studentsSeeking = Math.max(0, totalStudents - studentsPlaced);
-  const placementRate = totalStudents > 0 ? Math.round((studentsPlaced / totalStudents) * 100) : 0;
+        scoreSum += progress;
+        placementReadySum += intel?.placementReadiness || readinessIndex;
 
-  // 6. Placement Readiness Engine calculations for each student (for topPerformers and charts)
-  const studentMetrics = students.map(student => {
-    if (!student.userId) return null;
-    const career = studentCareers.find(c => c.studentId.toString() === student.userId._id.toString());
-    const github = githubProfiles.find(g => g.userId.toString() === student.userId._id.toString());
-    const hasGithub = !!github;
-    const progress = career?.completionPercentage || 0;
+        return {
+          _id: student._id,
+          fullName: student.fullName,
+          department: student.course || 'Computer Science',
+          year: student.year || 3,
+          careerPath: career?.careerId?.title || 'AI Engineer',
+          internshipProgress: progress,
+          averageTaskScore: progress,
+          readinessIndex,
+          avgScore: progress,
+        };
+      });
 
-    const intel = intelMap.get(student.userId._id.toString());
-    const readinessIndex = intel ? intel.placementReadiness : Math.min(100, Math.round(progress * 0.8 + (hasGithub ? 20 : 0)));
+    const departmentStats = {};
+    const yearStats = {};
+    const careerPathStats = {};
 
-    return {
-      _id: student._id,
-      fullName: student.fullName,
-      department: student.course || 'Computer Science',
-      year: student.year || 3,
-      careerPath: career?.careerId?.title || 'AI Engineer',
-      internshipProgress: progress,
-      averageTaskScore: progress,
-      readinessIndex,
-      avgScore: progress,
-    };
-  }).filter(Boolean);
-
-  // 7. Student Analytics Distributions for charts
-  const departmentStats = {};
-  const yearStats = {};
-  const careerPathStats = {};
-
-  studentMetrics.forEach(sm => {
-    departmentStats[sm.department] = (departmentStats[sm.department] || 0) + 1;
-    yearStats[`Year ${sm.year}`] = (yearStats[`Year ${sm.year}`] || 0) + 1;
-    careerPathStats[sm.careerPath] = (careerPathStats[sm.careerPath] || 0) + 1;
-  });
-
-  const studentsByDepartment = Object.keys(departmentStats).map(name => ({ name, count: departmentStats[name] }));
-  const studentsByYear = Object.keys(yearStats).map(name => ({ name, count: yearStats[name] }));
-  const studentsByCareerPath = Object.keys(careerPathStats).map(name => ({ name, value: careerPathStats[name] }));
-
-  // Placement charts calculations
-  const companyCounts = {};
-  placements.filter(p => p.offerStatus === 'accepted').forEach(p => {
-    companyCounts[p.companyName] = (companyCounts[p.companyName] || 0) + 1;
-  });
-  const companyPlacements = Object.entries(companyCounts)
-    .map(([name, count]) => ({ name, count }))
-    .sort((a, b) => b.count - a.count);
-
-  const deptPlacementsCount = {};
-  placements.filter(p => p.offerStatus === 'accepted').forEach(p => {
-    const student = students.find(s => s.userId?._id?.toString() === p.studentId?.toString());
-    const dept = student?.course || 'Computer Science';
-    deptPlacementsCount[dept] = (deptPlacementsCount[dept] || 0) + 1;
-  });
-  const departmentPlacements = Object.entries(deptPlacementsCount).map(([name, count]) => ({ name, count }));
-
-  const acceptedPlacements = placements.filter(p => p.offerStatus === 'accepted');
-  const avgPackage = acceptedPlacements.length > 0
-    ? parseFloat((acceptedPlacements.reduce((sum, p) => sum + (p.package || 0), 0) / acceptedPlacements.length).toFixed(1))
-    : 0;
-
-  const topHiringCompanies = companyPlacements.slice(0, 5);
-
-  const recentPlacements = await Placement.find({ collegeId: college._id })
-    .populate('studentId', 'fullName email avatar department')
-    .sort({ createdAt: -1 })
-    .limit(6);
-
-  // 8. Top Performers List (sort by readinessIndex)
-  const topPerformers = [...studentMetrics]
-    .sort((a, b) => b.readinessIndex - a.readinessIndex)
-    .slice(0, 5);
-
-  // Compute GitHub top contributors
-  const contributionsByStudent = new Map();
-  githubContributions.forEach(gc => {
-    const studentUid = gc.userId.toString();
-    const currentContrib = contributionsByStudent.get(studentUid) || { commitCount: 0, score: 0 };
-    contributionsByStudent.set(studentUid, {
-      commitCount: currentContrib.commitCount + (gc.commitCount || 0),
-      score: currentContrib.score + (gc.contributionScore || 0)
+    studentMetrics.forEach((sm) => {
+      departmentStats[sm.department] = (departmentStats[sm.department] || 0) + 1;
+      yearStats[`Year ${sm.year}`] = (yearStats[`Year ${sm.year}`] || 0) + 1;
+      careerPathStats[sm.careerPath] = (careerPathStats[sm.careerPath] || 0) + 1;
     });
-  });
 
-  const topContributors = students.map(student => {
-    if (!student.userId) return null;
-    const contrib = contributionsByStudent.get(student.userId._id.toString()) || { commitCount: 0, score: 0 };
+    const studentsByDepartment = Object.entries(departmentStats).map(([name, count]) => ({ name, count }));
+    const studentsByYear = Object.entries(yearStats).map(([name, count]) => ({ name, count }));
+    const studentsByCareerPath = Object.entries(careerPathStats).map(([name, count]) => ({ name, value: count }));
+
+    const avgInternshipScore = studentMetrics.length > 0 ? Math.round(scoreSum / studentMetrics.length) : 0;
+    const githubConnectedCount = githubProfiles.length;
+    const placementReadiness = studentMetrics.length > 0 ? Math.round(placementReadySum / studentMetrics.length) : 0;
+
+    const totalOffers = placements.length;
+    let acceptedOffers = 0;
+    let rejectedOffers = 0;
+    const studentsPlacedSet = new Set();
+    const companyCounts = {};
+    const deptPlacementsCount = {};
+    let acceptedPackageSum = 0;
+
+    placements.forEach((placement) => {
+      if (placement.offerStatus === 'accepted') {
+        acceptedOffers += 1;
+        studentsPlacedSet.add(placement.studentId?.toString());
+        companyCounts[placement.companyName] = (companyCounts[placement.companyName] || 0) + 1;
+        acceptedPackageSum += placement.package || 0;
+
+        const student = studentByUserId.get(placement.studentId?.toString());
+        const dept = student?.course || 'Computer Science';
+        deptPlacementsCount[dept] = (deptPlacementsCount[dept] || 0) + 1;
+      }
+
+      if (placement.offerStatus === 'rejected') {
+        rejectedOffers += 1;
+      }
+    });
+
+    const studentsPlaced = studentsPlacedSet.size;
+    const studentsSeeking = Math.max(0, totalStudents - studentsPlaced);
+    const placementRate = totalStudents > 0 ? Math.round((studentsPlaced / totalStudents) * 100) : 0;
+
+    const companyPlacements = Object.entries(companyCounts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count);
+
+    const departmentPlacements = Object.entries(deptPlacementsCount).map(([name, count]) => ({ name, count }));
+
+    const avgPackage = acceptedOffers > 0 ? parseFloat((acceptedPackageSum / acceptedOffers).toFixed(1)) : 0;
+    const topHiringCompanies = companyPlacements.slice(0, 5);
+
+    const recentPlacements = await Placement.find({ collegeId: college._id })
+      .populate('studentId', 'fullName email avatar course')
+      .sort({ createdAt: -1 })
+      .limit(6)
+      .lean();
+
+    const topPerformers = [...studentMetrics]
+      .sort((a, b) => b.readinessIndex - a.readinessIndex)
+      .slice(0, 5);
+
+    const contributionsByStudent = new Map();
+    githubContributions.forEach((gc) => {
+      const studentUid = gc.userId.toString();
+      const currentContrib = contributionsByStudent.get(studentUid) || { commitCount: 0, score: 0 };
+      contributionsByStudent.set(studentUid, {
+        commitCount: currentContrib.commitCount + (gc.commitCount || 0),
+        score: currentContrib.score + (gc.contributionScore || 0),
+      });
+    });
+
+    const topContributors = [...contributionsByStudent.entries()]
+      .map(([studentUid, stats]) => {
+        const student = studentByUserId.get(studentUid);
+        const github = githubProfileMap.get(studentUid);
+        return {
+          _id: student?._id || studentUid,
+          fullName: student?.fullName || 'Student',
+          username: github?.username || '',
+          commitCount: stats.commitCount,
+          contributionScore: stats.score,
+        };
+      })
+      .filter((contrib) => contrib.commitCount > 0)
+      .sort((a, b) => b.commitCount - a.commitCount)
+      .slice(0, 5);
+
+    const departmentScoresMap = {};
+    const departmentStudentCounts = {};
+    studentMetrics.forEach((sm) => {
+      const dept = sm.department;
+      departmentScoresMap[dept] = (departmentScoresMap[dept] || 0) + sm.readinessIndex;
+      departmentStudentCounts[dept] = (departmentStudentCounts[dept] || 0) + 1;
+    });
+
+    const departmentScores = Object.entries(departmentScoresMap).map(([name, sum]) => ({
+      name,
+      averageScore: Math.round(sum / departmentStudentCounts[name]),
+    }));
+
+    const internshipStats = [
+      { status: 'Started', count: studentCareers.filter((c) => c.completionPercentage > 0 && c.completionPercentage <= 25).length },
+      { status: 'In Progress', count: studentCareers.filter((c) => c.completionPercentage > 25 && c.completionPercentage < 100).length },
+      { status: 'Completed', count: studentCareers.filter((c) => c.completionPercentage === 100).length },
+    ];
+
     return {
-      _id: student._id,
-      fullName: student.fullName,
-      username: githubProfiles.find(g => g.userId.toString() === student.userId._id.toString())?.username || '',
-      commitCount: contrib.commitCount,
-      contributionScore: contrib.score
+      college: {
+        name: college.name || college.collegeName || college.get('collegeName') || '',
+        shortName: college.shortName || college.name || college.collegeName || '',
+        code: college.collegeCode || 'N/A',
+        verified: college.verified,
+      },
+      kpis: {
+        totalStudents,
+        activeInternships,
+        completedInternships,
+        avgInternshipScore,
+        placementReadiness,
+        totalOffers,
+        acceptedOffers,
+        rejectedOffers,
+        placementRate,
+        studentsPlaced,
+        studentsSeeking,
+        githubConnectedCount,
+      },
+      charts: {
+        studentsByDepartment,
+        studentsByYear,
+        studentsByCareerPath,
+        companyPlacements,
+        departmentPlacements,
+        avgPackage,
+        topHiringCompanies,
+        internshipStats,
+      },
+      recentPlacements: recentPlacements.map((p) => ({
+        _id: p._id,
+        studentName: p.studentId?.fullName || 'Student',
+        studentAvatar: p.studentId?.avatar || '',
+        studentDepartment: p.studentId?.course || 'Computer Science',
+        companyName: p.companyName,
+        jobRole: p.jobRole,
+        package: p.package,
+        offerStatus: p.offerStatus,
+        acceptedAt: p.acceptedAt,
+        createdAt: p.createdAt,
+      })),
+      topPerformers,
+      topContributors,
+      departmentScores,
     };
-  }).filter(c => c && c.commitCount > 0)
-    .sort((a, b) => b.commitCount - a.commitCount)
-    .slice(0, 5);
-
-  // Compute Department scores
-  const departmentScoresMap = {};
-  const departmentStudentCounts = {};
-  studentMetrics.forEach(sm => {
-    const dept = sm.department;
-    departmentScoresMap[dept] = (departmentScoresMap[dept] || 0) + sm.readinessIndex;
-    departmentStudentCounts[dept] = (departmentStudentCounts[dept] || 0) + 1;
   });
-
-  const departmentScores = Object.entries(departmentScoresMap).map(([name, sum]) => ({
-    name,
-    averageScore: Math.round(sum / departmentStudentCounts[name])
-  }));
-
-  return {
-    college: {
-      name: college.name || college.collegeName || college.get('collegeName') || '',
-      shortName: college.shortName || college.name || college.collegeName || '',
-      code: college.collegeCode || 'N/A',
-      verified: college.verified,
-    },
-    kpis: {
-      totalStudents,
-      activeInternships,
-      completedInternships,
-      avgInternshipScore,
-      placementReadiness,
-      totalOffers,
-      acceptedOffers,
-      rejectedOffers,
-      placementRate,
-      studentsPlaced,
-      studentsSeeking,
-      githubConnectedCount,
-    },
-    charts: {
-      studentsByDepartment,
-      studentsByYear,
-      studentsByCareerPath,
-      companyPlacements,
-      departmentPlacements,
-      avgPackage,
-      topHiringCompanies,
-      internshipStats: [
-        { status: 'Started', count: studentCareers.filter(c => c.completionPercentage > 0 && c.completionPercentage <= 25).length },
-        { status: 'In Progress', count: studentCareers.filter(c => c.completionPercentage > 25 && c.completionPercentage < 100).length },
-        { status: 'Completed', count: studentCareers.filter(c => c.completionPercentage === 100).length },
-      ],
-    },
-    recentPlacements: recentPlacements.map(p => ({
-      _id: p._id,
-      studentName: p.studentId?.fullName || 'Student',
-      studentAvatar: p.studentId?.avatar || '',
-      studentDepartment: p.studentId?.department || p.studentId?.course || 'Computer Science',
-      companyName: p.companyName,
-      jobRole: p.jobRole,
-      package: p.package,
-      offerStatus: p.offerStatus,
-      acceptedAt: p.acceptedAt,
-      createdAt: p.createdAt
-    })),
-    topPerformers,
-    topContributors,
-    departmentScores,
-  };
 };
 
 export const queryPlacements = async (college, queryParams) => {
