@@ -6,7 +6,7 @@ import CareerIntelligence from '../models/CareerIntelligence.js';
 import Internship from '../models/Internship.js';
 import Interview from '../models/Interview.js';
 import InterviewReport from '../models/InterviewReport.js';
-import { checkReportCache, generateCareerReports } from '../services/careerReport.service.js';
+import { checkReportCache, generateCareerReports, validateReportPath } from '../services/careerReport.service.js';
 import { sendResponse } from '../utils/sendResponse.js';
 import Certificate from '../modules/college/models/Certificate.js';
 import Student from '../models/Student.js';
@@ -322,116 +322,28 @@ export const getSkillAnalysis = async (req, res, next) => {
   try {
     const studentId = req.user._id;
 
-    // Check cache or generate new report
+    const studentCareerObj = await StudentCareer.findOne({ studentId }).populate('careerId');
+    const pathName = studentCareerObj?.careerId?.title || 'Cybersecurity Analyst';
+
     let reports = await checkReportCache(studentId);
-    if (!reports) {
+    const forceRegen = req.query.regenerate === 'true';
+    const isCacheValid = reports && validateReportPath(reports, pathName);
+
+    if (!reports || !isCacheValid || forceRegen) {
+      console.log(`[Career Controller] Cache invalid or missing for path: ${pathName}. Generating new reports...`);
+      reports = await generateCareerReports(studentId);
+    } else {
       reports = await generateCareerReports(studentId);
     }
-    const skillGap = reports.skillGap;
-    const careerReport = reports.career;
-    const avgScore = careerReport ? (careerReport.portfolioScore || 70) : 70;
 
-    const allSkills = [...(skillGap.detectedSkills || []), ...(skillGap.missingSkills || [])];
-    const uniqueSkills = Array.from(new Set(allSkills));
-    const skillComparisonData = [];
-    const gaps = [];
-
-    uniqueSkills.forEach((skillName) => {
-      const isMissing = skillGap.missingSkills.includes(skillName);
-      const benchmark = 80;
-
-      let current;
-      if (isMissing) {
-        current = Math.max(10, Math.min(45, Math.round(avgScore * 0.5)));
-      } else {
-        current = Math.max(70, Math.min(98, Math.round(65 + (avgScore - 50) * 0.6)));
-      }
-
-      skillComparisonData.push({
-        subject: skillName,
-        current,
-        benchmark,
-        fullMark: 100
-      });
-
-      if (isMissing) {
-        const gapVal = Math.max(0, benchmark - current);
-        const gap = `${gapVal}%`;
-        let level = 'Beginner';
-        if (current >= 30) level = 'Intermediate';
-
-        let recommend = `Complete more deliverables requiring ${skillName} to close the capability gap.`;
-        if (skillName.toLowerCase() === 'system design') {
-          recommend = 'Practice rate limiters, database indexes optimizations, and caching design patterns.';
-        } else if (skillName.toLowerCase() === 'testing' || skillName.toLowerCase() === 'unit testing') {
-          recommend = 'Write centralized testing scripts with Jest, Supertest, or PyTest and check code coverage.';
-        } else if (skillName.toLowerCase() === 'authentication' || skillName.toLowerCase() === 'jwt') {
-          recommend = 'Implement JWT-based session security cookies and secure password hashing flows.';
-        }
-
-        gaps.push({
-          skill: skillName,
-          gap,
-          level,
-          recommend
-        });
-      }
-    });
-
-    // Dynamic career recommended modules based on track
-    let careerPath = careerReport?.recommendedRoles?.[0];
-    if (!careerPath) {
-      const internshipObj = await Internship.findOne({ studentId });
-      const studentCareerObj = await StudentCareer.findOne({ studentId }).populate('careerId');
-      if (internshipObj?.internshipRole) {
-        careerPath = internshipObj.internshipRole;
-      } else if (internshipObj?.roleTitle) {
-        careerPath = internshipObj.roleTitle;
-      } else if (studentCareerObj?.careerId?.title) {
-        careerPath = studentCareerObj.careerId.title;
-      } else {
-        careerPath = 'Backend Developer';
-      }
-    }
-    const pathClean = careerPath.toLowerCase();
-    let recommendedModules = [];
-
-    if (pathClean.includes('ai') || pathClean.includes('machine learning') || pathClean.includes('data science') || pathClean.includes('artificial')) {
-      recommendedModules = [
-        { title: 'LLM Observability Masterclass', duration: '4 hrs' },
-        { title: 'Vector Database Search Tuning', duration: '3 hrs' }
-      ];
-    } else if (pathClean.includes('frontend') || pathClean.includes('react') || pathClean.includes('web')) {
-      recommendedModules = [
-        { title: 'React Performance & Virtualization', duration: '3 hrs' },
-        { title: 'Advanced CSS Grid & Glassmorphism', duration: '2 hrs' }
-      ];
-    } else if (pathClean.includes('cyber') || pathClean.includes('security')) {
-      recommendedModules = [
-        { title: 'API Penetration Testing Masterclass', duration: '5 hrs' },
-        { title: 'OAuth2 & Token Validation Flow', duration: '3 hrs' }
-      ];
-    } else if (pathClean.includes('data engineer') || pathClean.includes('etl') || pathClean.includes('warehouse') || pathClean.includes('lake') || pathClean.includes('data warehousing') || pathClean.includes('lakehouse')) {
-      recommendedModules = [
-        { title: 'AWS Glue & ETL Pipelines', duration: '4 hrs' },
-        { title: 'Big Data Processing with Apache Spark', duration: '5 hrs' }
-      ];
-    } else if (pathClean.includes('design') || pathClean.includes('ui') || pathClean.includes('ux') || pathClean.includes('product designer') || pathClean.includes('product design')) {
-      recommendedModules = [
-        { title: 'Advanced Figma Component Systems', duration: '3 hrs' },
-        { title: 'Web Accessibility & WCAG Standards', duration: '2 hrs' }
-      ];
-    } else {
-      recommendedModules = [
-        { title: 'Node.js Event Loop Tuning', duration: '4 hrs' },
-        { title: 'MongoDB Query Optimization & Indexing', duration: '3 hrs' }
-      ];
-    }
-
+    const recommendedModules = (reports.career.recommendedCertifications || []).map(cert => ({
+      title: cert,
+      duration: '3 hrs'
+    }));
 
     return sendResponse(res, 200, true, 'Skill analysis retrieved successfully', {
-      skillComparisonData,
-      gaps,
+      skillComparisonData: reports.skillComparisonData,
+      gaps: reports.gaps,
       recommendedModules
     });
   } catch (error) {

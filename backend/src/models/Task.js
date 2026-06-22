@@ -55,6 +55,14 @@ const taskSchema = new mongoose.Schema(
       type: [String],
       default: [],
     },
+    skillsImpacted: {
+      type: [String],
+      default: [],
+    },
+    careerPath: {
+      type: String,
+      default: '',
+    },
     resources: {
       type: [String],
       default: [],

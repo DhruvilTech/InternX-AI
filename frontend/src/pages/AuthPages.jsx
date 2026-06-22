@@ -390,9 +390,7 @@ export default function AuthPages() {
       {/* Left Column - Animated Showcase */}
       <div className="hidden lg:flex lg:col-span-5 relative flex-col justify-between p-12 border-r border-border bg-void/50 overflow-hidden">
         <div className="flex items-center gap-2">
-          <div className="h-7 w-7 rounded-lg bg-gradient-to-br from-accent to-violet flex items-center justify-center">
-            <span className="text-sm font-bold text-white">IX</span>
-          </div>
+          <img src="/logo.png" alt="InternX AI" className="h-7 w-7 object-contain" />
           <span className="text-md font-display font-semibold">InternX AI</span>
         </div>
 

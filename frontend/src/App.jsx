@@ -4,7 +4,7 @@ import { Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import useLenis from './hooks/useLenis';
 
 // ── Always-eager: layout shells & UI canvas (tiny, needed immediately) ──────
-import FuturisticBackground from './components/ui/FuturisticBackground';
+import NeuralBackground from './components/ui/NeuralBackground';
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
 import ToastContainer from './components/ui/ToastContainer';
@@ -106,8 +106,8 @@ export default function App() {
 
   return (
     <div className="relative min-h-screen bg-void text-text overflow-x-hidden transition-colors duration-500">
-      {/* Consolidated GPU Background system */}
-      <FuturisticBackground />
+      {/* Living AI Neural Network Background */}
+      <NeuralBackground />
       
       {/* Global Overlays and Dialog Controllers */}
       <Navbar />

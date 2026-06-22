@@ -446,6 +446,38 @@ export const getStudentDetails = async (college, studentId) => {
   const githubContributions = await GithubContribution.find({ userId });
   const certificates = await Certificate.find({ studentId: userId });
   const placements = await Placement.find({ studentId: userId }).sort({ createdAt: -1 });
+  const Task = mongoose.model('Task');
+  const tasks = await Task.find({ studentId: userId });
+
+  // Calculate dynamic progress based on task completion
+  if (career) {
+    const totalTasks = tasks.length;
+    const completedTasks = tasks.filter(t => t.status === 'completed').length;
+    const dynamicProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+    if (career.completionPercentage !== dynamicProgress) {
+      let currentLevel = 'Beginner';
+      let status = 'in-progress';
+      if (dynamicProgress >= 100) {
+        currentLevel = 'Expert';
+        status = 'completed';
+      } else if (dynamicProgress >= 50) {
+        currentLevel = 'Intermediate';
+      }
+      await StudentCareer.updateOne(
+        { studentId: userId },
+        {
+          $set: {
+            completionPercentage: dynamicProgress,
+            currentLevel,
+            status
+          }
+        }
+      );
+      career.completionPercentage = dynamicProgress;
+      career.currentLevel = currentLevel;
+      career.status = status;
+    }
+  }
 
   const CareerIntelligence = mongoose.model('CareerIntelligence');
   const intel = await CareerIntelligence.findOne({ studentId: userId });

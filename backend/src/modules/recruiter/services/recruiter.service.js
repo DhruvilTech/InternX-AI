@@ -336,6 +336,36 @@ export const getStudentDetails = async (recruiterUserId, studentUserIdOrStudentI
   const studentInterviews = await Interview.find({ studentId: userId, status: 'completed' });
   const interviewReports = await InterviewReport.find({ interviewId: { $in: studentInterviews.map(i => i._id) } });
 
+  // Calculate dynamic progress based on task completion
+  if (career) {
+    const totalTasks = tasks.length;
+    const completedTasks = tasks.filter(t => t.status === 'completed').length;
+    const dynamicProgress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
+    if (career.completionPercentage !== dynamicProgress) {
+      let currentLevel = 'Beginner';
+      let status = 'in-progress';
+      if (dynamicProgress >= 100) {
+        currentLevel = 'Expert';
+        status = 'completed';
+      } else if (dynamicProgress >= 50) {
+        currentLevel = 'Intermediate';
+      }
+      await StudentCareer.updateOne(
+        { studentId: userId },
+        {
+          $set: {
+            completionPercentage: dynamicProgress,
+            currentLevel,
+            status
+          }
+        }
+      );
+      career.completionPercentage = dynamicProgress;
+      career.currentLevel = currentLevel;
+      career.status = status;
+    }
+  }
+
   return {
     studentProfile: {
       _id: student._id,
