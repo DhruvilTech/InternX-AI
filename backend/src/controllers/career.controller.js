@@ -497,13 +497,26 @@ export const getCertificateProgress = async (req, res, next) => {
     // Get student's current internship to populate host details
     const internship = await Internship.findOne({ studentId });
     const company = internship ? internship.companyName : 'NeuralMind Technologies';
-    const roleTitle = internship ? internship.roleTitle : 'AI Research Intern';
+    const roleTitle = internship ? (internship.internshipRole || internship.roleTitle) : 'AI Research Intern';
     const manager = internship ? internship.managerName : 'Sarah Johnson';
 
     const isEligible = completionPercentage >= requiredPercentage;
-    let verificationCode = `IX-${studentId.toString().slice(-4)}-2026`;
+
+    let verificationCode = 'LOCKED';
+    let finalCompany = 'LOCKED';
+    let finalRole = 'LOCKED';
+    let finalManager = 'LOCKED';
+    let finalIssueDate = 'LOCKED';
+    let finalGrade = 0;
 
     if (isEligible) {
+      verificationCode = `IX-${studentId.toString().slice(-4)}-2026`;
+      finalCompany = company;
+      finalRole = roleTitle;
+      finalManager = manager;
+      finalIssueDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+      finalGrade = avgScore || 80;
+
       // Find the student's selected career
       const studentCareer = await StudentCareer.findOne({ studentId });
       const careerId = studentCareer ? studentCareer.careerId : null;
@@ -528,7 +541,8 @@ export const getCertificateProgress = async (req, res, next) => {
         let cert = await Certificate.findOne({ studentId });
         if (!cert) {
           const careerObj = await CareerPath.findById(careerId);
-          const finalRole = careerObj ? `${careerObj.title} Intern` : roleTitle;
+          const finalRoleTitle = careerObj ? `${careerObj.title} Intern` : roleTitle;
+          finalRole = finalRoleTitle;
           
           cert = await Certificate.create({
             studentId,
@@ -537,18 +551,20 @@ export const getCertificateProgress = async (req, res, next) => {
             certificateId: verificationCode,
             recipientName: req.user.fullName,
             companyName: company,
-            roleTitle: finalRole,
+            roleTitle: finalRoleTitle,
             grade: avgScore || 80,
             issueDate: new Date(),
             status: 'Active & Verified'
           });
+          finalGrade = cert.grade;
+          finalIssueDate = new Date(cert.issueDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
           // Trigger notifications for Certificate Generated
           await Notification.createUnique({
             recipientId: studentId,
             senderId: collegeId || req.user._id,
             title: 'Certificate Generated!',
-            message: `Your verified simulated internship certificate for ${finalRole} at ${company} has been generated.`,
+            message: `Your verified simulated internship certificate for ${finalRoleTitle} at ${company} has been generated.`,
             type: 'certificate_generated',
             entityId: cert._id
           });
@@ -558,7 +574,7 @@ export const getCertificateProgress = async (req, res, next) => {
               recipientId: collegeId,
               senderId: studentId,
               title: 'Certificate Issued',
-              message: `A verified internship certificate has been issued to ${req.user.fullName} for the role of ${finalRole}.`,
+              message: `A verified internship certificate has been issued to ${req.user.fullName} for the role of ${finalRoleTitle}.`,
               type: 'certificate_generated',
               entityId: cert._id
             });
@@ -566,6 +582,10 @@ export const getCertificateProgress = async (req, res, next) => {
         } else {
           // Use the certificateId from the database
           verificationCode = cert.certificateId;
+          finalCompany = cert.companyName;
+          finalRole = cert.roleTitle;
+          finalGrade = cert.grade;
+          finalIssueDate = new Date(cert.issueDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
         }
       }
     }
@@ -574,12 +594,12 @@ export const getCertificateProgress = async (req, res, next) => {
       completionPercentage,
       requiredPercentage,
       isEligible,
-      grade: avgScore || 0,
+      grade: finalGrade,
       verificationCode,
-      issueDate: new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }),
-      company,
-      roleTitle,
-      manager
+      issueDate: finalIssueDate,
+      company: finalCompany,
+      roleTitle: finalRole,
+      manager: finalManager
     });
   } catch (error) {
     next(error);
