@@ -10,8 +10,9 @@ import GithubProfile from '../../../models/GithubProfile.js';
 import GithubContribution from '../../../models/GithubContribution.js';
 import CareerPath from '../../../models/CareerPath.js';
 import Placement from '../../../models/Placement.js';
+import Notification from '../../../models/Notification.js';
 import Offer from '../../../models/Offer.js';
-import mongoose from 'mongoose';  
+import mongoose from 'mongoose';
 
 // Pre-hashed password for password123 (to speed up user seeding)
 const DEFAULT_HASHED_PASSWORD = '$2a$12$R.S/O57g.1w2G4m5k2pPkuGj5B79y5B1X.eN7y3K7G1K1Q1O5Wd9S';
@@ -236,11 +237,11 @@ export const refreshAnalytics = async (collegeId) => {
   // GitHub Connected Students
   const githubConnectedStudents = await GithubProfile.countDocuments({ userId: { $in: studentUserIds } });
 
-  // Placement Readiness Index (Average of actual CareerIntelligence placementReadiness values)
-  const CareerIntelligence = mongoose.model('CareerIntelligence');
-  const intelligences = await CareerIntelligence.find({ studentId: { $in: studentUserIds } });
-  const sumReadiness = intelligences.reduce((sum, i) => sum + (i.placementReadiness || 0), 0);
-  const readinessIndex = intelligences.length > 0 ? Math.round(sumReadiness / intelligences.length) : 0;
+  // Placement Readiness Index (Average Score + connected Github weight)
+  const readinessIndex = Math.min(
+    100,
+    Math.round(averageScore * 0.8 + (githubConnectedStudents / totalStudents) * 20)
+  );
 
   // Interview ready (e.g. readiness score > 75)
   const interviewReadyStudents = studentCareers.filter(sc => sc.completionPercentage >= 75).length;
@@ -793,7 +794,7 @@ export const getDashboardData = async (college) => {
     const progress = career?.completionPercentage || 0;
 
     const intel = intelMap.get(student.userId._id.toString());
-    const readinessIndex = intel ? intel.placementReadiness : 0;
+    const readinessIndex = intel ? intel.placementReadiness : Math.min(100, Math.round(progress * 0.8 + (hasGithub ? 20 : 0)));
 
     return {
       _id: student._id,
@@ -1008,3 +1009,20 @@ export const queryPlacements = async (college, queryParams) => {
   };
 };
 
+export const getNotifications = async (college) => {
+  return await Notification.find({ recipientId: college._id })
+    .populate('senderId', 'fullName email avatar')
+    .sort({ createdAt: -1 });
+};
+
+export const markNotificationAsRead = async (college, notificationId) => {
+  const notification = await Notification.findOneAndUpdate(
+    { _id: notificationId, recipientId: college._id },
+    { $set: { isRead: true } },
+    { returnDocument: 'after' }
+  );
+  if (!notification) {
+    throw new Error('Notification not found');
+  }
+  return notification;
+};

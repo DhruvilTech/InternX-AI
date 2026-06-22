@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Send, User, MessageSquare, Briefcase, Award, ShieldAlert, Sparkles, Building2 } from 'lucide-react'
+import { Send, Loader2, MessageSquare, Briefcase, Sparkles, Building2 } from 'lucide-react'
 import { useNavigation } from '../context/NavigationContext'
 import PulseDot from '../components/ui/PulseDot'
 import useAuth from '../hooks/useAuth'
@@ -56,7 +56,7 @@ export default function FeedbackCenterPage() {
     manager: [],
     career: []
   })
-  const [initialized, setInitialized] = useState(false)
+  const [isTyping, setIsTyping] = useState(false)
   const [inputText, setInputText] = useState('')
   const chatEndRef = useRef(null)
 
@@ -74,80 +74,63 @@ export default function FeedbackCenterPage() {
     ? companyInfo.manager.split(' ').map(n => n[0]).join('').toUpperCase()
     : 'SJ'
 
-
-  useEffect(() => {
-    if (initialized || !user) return
-
-    const fName = user.fullName ? user.fullName.split(' ')[0] : 'Student'
-    const roleTitle = companyInfo.roleTitle || 'Intern'
-    const companyName = companyInfo.name || 'InternX AI'
-    const track = user.track || 'ai'
-
-    let techMsg = `Hi ${fName}! I reviewed your codebase and architecture guidelines. Keep up the high standards for testing and compliance.`
-    if (track === 'ai') {
-      techMsg = `Hi ${fName}! I reviewed your semantic search design and model evaluations. Keep optimizing the retrieval parameters for the pipeline.`
-    } else if (track === 'frontend') {
-      techMsg = `Hi ${fName}! I reviewed your responsive grid layouts and design system. Focus on CSS performance and responsiveness across devices.`
-    } else if (track === 'backend') {
-      techMsg = `Hi ${fName}! I reviewed your database configuration and endpoint routing. Let's make sure our indexes and cache invalidation strategies are solid.`
-    } else if (track === 'cyber') {
-      techMsg = `Hi ${fName}! I reviewed your gateway audit and static scanner rules. Keep focus on credentials safety and token flow verification.`
-    } else if (track === 'data') {
-      techMsg = `Hi ${fName}! I reviewed your data pipeline and ETL configurations. Let's make sure the streaming jobs handle backpressure correctly.`
-    }
-
-    setChats({
-      technical: [
-        { sender: 'manager', text: techMsg, time: '10:30 AM' }
-      ],
-      manager: [
-        { sender: 'manager', text: `Welcome to the team! During your internship as a ${roleTitle} at ${companyName}, we focus on high compliance and production-ready deliveries. I will assign sprint tasks weekly. Let me know if you need any guidelines.`, time: 'Yesterday' }
-      ],
-      career: [
-        { sender: 'manager', text: `Hey ${fName}, I'm auditing your placement readiness metrics. We will synchronize your portfolio and mock interview scores for hiring managers once you submit the deliverables.`, time: '3 days ago' }
-      ]
-    })
-    setInitialized(true)
-  }, [user, internship, initialized, companyInfo])
-
-
-
   // Scroll to bottom on chats update
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [chats, activeChannel])
+  }, [chats, activeChannel, isTyping])
 
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     e.preventDefault()
-    if (!inputText.trim()) return
+    if (!inputText.trim() || isTyping) return
 
     const timeString = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-    const userMsg = { sender: 'user', text: inputText, time: timeString }
+    const userMsg = { sender: 'user', text: inputText.trim(), time: timeString }
 
-    // Add user message
-    setChats(prev => ({
-      ...prev,
-      [activeChannel]: [...prev[activeChannel], userMsg]
+    const newChats = {
+      ...chats,
+      [activeChannel]: [...chats[activeChannel], userMsg]
+    }
+    setChats(newChats)
+    setInputText('')
+    setIsTyping(true)
+
+    // Build conversation history for the AI (last 10 messages)
+    const history = newChats[activeChannel].slice(-10).map(msg => ({
+      role: msg.sender === 'user' ? 'user' : 'assistant',
+      content: msg.text
     }))
 
-    setInputText('')
-
-    // Simulate AI Manager Typing and response
-    setTimeout(() => {
-      let managerReply = 'That is an excellent point. I suggest we run a quick bench check on the staging environment to audit the latency curves.'
-      if (activeChannel === 'career') {
-        managerReply = 'I highly recommend exporting your certificate to LinkedIn. Recruiters check these verified scores frequently!'
-      } else if (activeChannel === 'manager') {
-        managerReply = 'Understood. Let\'s review our progress in our next weekly feedback check-in.'
+    try {
+      const res = await axiosInstance.post('/api/feedback/chat', {
+        channel: activeChannel,
+        history: history.slice(0, -1), // exclude the message we just added (it's sent as `message`)
+        message: userMsg.text
+      })
+      const aiText = res.data?.data?.reply || 'I received your message. Please check back shortly.'
+      const managerMsg = {
+        sender: 'manager',
+        text: aiText,
+        time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
       }
-
-      const managerMsg = { sender: 'manager', text: managerReply, time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) }
       setChats(prev => ({
         ...prev,
         [activeChannel]: [...prev[activeChannel], managerMsg]
       }))
       addToast(`New message from ${companyInfo.manager}`, 'info')
-    }, 1500)
+    } catch (err) {
+      console.error('[FeedbackCenter] AI chat failed:', err)
+      const fallbackMsg = {
+        sender: 'manager',
+        text: 'I\'m having trouble connecting right now. Please try again in a moment.',
+        time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      }
+      setChats(prev => ({
+        ...prev,
+        [activeChannel]: [...prev[activeChannel], fallbackMsg]
+      }))
+    } finally {
+      setIsTyping(false)
+    }
   }
 
   return (
@@ -217,7 +200,13 @@ export default function FeedbackCenterPage() {
             {/* Console Header */}
             <div className="px-5 py-4 border-b border-border bg-void/50 flex items-center justify-between text-xs">
               <span className="font-semibold text-text">#{activeChannel.toUpperCase()}_FEEDBACK</span>
-              <span className="text-dim text-[10px]">Secure LLM Session</span>
+              <span className="text-dim text-[10px] flex items-center gap-1.5">
+                {isTyping ? (
+                  <><Loader2 size={10} className="animate-spin text-accent" /> AI Generating...</>
+                ) : (
+                  'Secure LLM Session'
+                )}
+              </span>
             </div>
 
             {/* Chat Messages */}
@@ -245,6 +234,19 @@ export default function FeedbackCenterPage() {
                   </div>
                 )
               })}
+              {/* Typing indicator */}
+              {isTyping && (
+                <div className="flex gap-3 max-w-[80%] mr-auto">
+                  <div className="h-7 w-7 rounded-full flex items-center justify-center shrink-0 text-[10px] font-bold bg-violet/20 text-violet border border-violet/30">
+                    {managerInitials}
+                  </div>
+                  <div className="p-3 rounded-2xl bg-surface-muted border border-border rounded-tl-none flex items-center gap-1.5">
+                    <span className="h-1.5 w-1.5 rounded-full bg-violet/70 animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="h-1.5 w-1.5 rounded-full bg-violet/70 animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="h-1.5 w-1.5 rounded-full bg-violet/70 animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              )}
               <div ref={chatEndRef} />
             </div>
 
@@ -252,16 +254,18 @@ export default function FeedbackCenterPage() {
             <form onSubmit={handleSend} className="p-3 border-t border-border bg-void/50 flex gap-2">
               <input
                 type="text"
-                placeholder={`Ask ${managerFirstName} about your evaluation scorecard or architectural recommendations...`}
+                placeholder={isTyping ? 'AI is responding...' : `Ask ${managerFirstName} about your performance or career guidance...`}
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
-                className="w-full bg-void/50 border border-border focus:border-accent text-xs rounded-xl py-2 px-3 outline-none text-text"
+                disabled={isTyping}
+                className="w-full bg-void/50 border border-border focus:border-accent text-xs rounded-xl py-2 px-3 outline-none text-text disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <button
                 type="submit"
-                className="h-9 w-9 bg-gradient-to-r from-accent to-violet text-white rounded-xl flex items-center justify-center hover:shadow-md shrink-0 cursor-pointer"
+                disabled={isTyping || !inputText.trim()}
+                className="h-9 w-9 bg-gradient-to-r from-accent to-violet text-white rounded-xl flex items-center justify-center hover:shadow-md shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                <Send size={14} />
+                {isTyping ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
               </button>
             </form>
 
@@ -283,7 +287,7 @@ export default function FeedbackCenterPage() {
             </div>
           ) : evalError ? (
             <div className="glass border border-border rounded-2xl p-8 text-center text-xs text-muted bg-void/20">
-              <AlertCircle className="mx-auto text-amber h-6 w-6 mb-2" />
+              <Sparkles className="mx-auto text-amber h-6 w-6 mb-2" />
               <p className="whitespace-pre-line leading-relaxed">
                 No evaluation available yet.
                 Student has not completed any evaluated submissions.
