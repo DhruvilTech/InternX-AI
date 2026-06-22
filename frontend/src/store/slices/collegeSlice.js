@@ -7,7 +7,7 @@ export const fetchCollegeProfile = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await collegeApi.getProfile();
-      return response.data;
+      return response;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to fetch college profile.');
     }
@@ -19,7 +19,7 @@ export const updateCollegeProfile = createAsyncThunk(
   async (profileData, { rejectWithValue }) => {
     try {
       const response = await collegeApi.updateProfile(profileData);
-      return response.data;
+      return response;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to update college profile.');
     }
@@ -31,7 +31,7 @@ export const getDashboard = createAsyncThunk(
   async (force = false, { rejectWithValue }) => {
     try {
       const response = await collegeApi.getDashboard();
-      return response.data;
+      return response;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to load dashboard metrics.');
     }
@@ -66,7 +66,7 @@ export const getStudentDetails = createAsyncThunk(
   async (id, { rejectWithValue }) => {
     try {
       const response = await collegeApi.getStudentDetails(id);
-      return response.data;
+      return response;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to fetch student details.');
     }
@@ -78,7 +78,7 @@ export const getInternships = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await collegeApi.getInternships();
-      return response.data;
+      return response;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to load internship analytics.');
     }
@@ -97,7 +97,7 @@ export const getPlacementAnalytics = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await collegeApi.getPlacementReadiness();
-      return response.data;
+      return response;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to load placement analytics.');
     }
@@ -116,7 +116,7 @@ export const getSkillAnalytics = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await collegeApi.getSkills();
-      return response.data;
+      return response;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to load skill analytics.');
     }
@@ -135,7 +135,7 @@ export const getCertificates = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const response = await collegeApi.getCertificates();
-      return response.data;
+      return response;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to load certificates log.');
     }
@@ -154,7 +154,7 @@ export const getReports = createAsyncThunk(
   async (type, { rejectWithValue }) => {
     try {
       const response = await collegeApi.getReports(type);
-      return { type, data: response.data };
+      return { type, data: response };
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to compile report.');
     }
@@ -166,7 +166,7 @@ export const addDepartment = createAsyncThunk(
   async (deptData, { rejectWithValue }) => {
     try {
       const response = await collegeApi.createDepartment(deptData);
-      return response.data;
+      return response;
     } catch (err) {
       return rejectWithValue(err.response?.data?.message || 'Failed to create department.');
     }
