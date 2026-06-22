@@ -237,11 +237,11 @@ export const refreshAnalytics = async (collegeId) => {
   // GitHub Connected Students
   const githubConnectedStudents = await GithubProfile.countDocuments({ userId: { $in: studentUserIds } });
 
-  // Placement Readiness Index (Average Score + connected Github weight)
-  const readinessIndex = Math.min(
-    100,
-    Math.round(averageScore * 0.8 + (githubConnectedStudents / totalStudents) * 20)
-  );
+  // Placement Readiness Index (Average of actual CareerIntelligence placementReadiness values)
+  const CareerIntelligence = mongoose.model('CareerIntelligence');
+  const intelligences = await CareerIntelligence.find({ studentId: { $in: studentUserIds } });
+  const sumReadiness = intelligences.reduce((sum, i) => sum + (i.placementReadiness || 0), 0);
+  const readinessIndex = intelligences.length > 0 ? Math.round(sumReadiness / intelligences.length) : 0;
 
   // Interview ready (e.g. readiness score > 75)
   const interviewReadyStudents = studentCareers.filter(sc => sc.completionPercentage >= 75).length;
@@ -794,7 +794,7 @@ export const getDashboardData = async (college) => {
     const progress = career?.completionPercentage || 0;
 
     const intel = intelMap.get(student.userId._id.toString());
-    const readinessIndex = intel ? intel.placementReadiness : Math.min(100, Math.round(progress * 0.8 + (hasGithub ? 20 : 0)));
+    const readinessIndex = intel ? intel.placementReadiness : 0;
 
     return {
       _id: student._id,

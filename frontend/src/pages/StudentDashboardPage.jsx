@@ -416,7 +416,7 @@ export default function StudentDashboardPage() {
                 <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block mb-3">Portfolio Score</span>
                 <ScoreRing score={portfolioScore} size={85} strokeWidth={5} />
                 <span className="text-[9px] text-emerald font-semibold mt-2 block">
-                  {portfolioScore >= 80 ? 'Top 10% Cohort' : 'Building Track'}
+                  {careerIntel?.readinessLevel === 'Not Enough Data' ? 'Not Enough Data' : (portfolioScore >= 80 ? 'Top 10% Cohort' : 'Building Track')}
                 </span>
               </div>
 
@@ -424,7 +424,7 @@ export default function StudentDashboardPage() {
                 <span className="text-[10px] font-semibold text-muted uppercase tracking-wider block mb-3">Placement Ready</span>
                 <ScoreRing score={placementScore} size={85} strokeWidth={5} />
                 <span className="text-[9px] text-accent font-semibold mt-2 block">
-                  {placementScore >= 80 ? 'Placement Eligible' : 'Practice Needed'}
+                  {careerIntel?.readinessLevel === 'Not Enough Data' ? 'Not Enough Data' : (placementScore >= 80 ? 'Placement Eligible' : 'Practice Needed')}
                 </span>
               </div>
             </div>

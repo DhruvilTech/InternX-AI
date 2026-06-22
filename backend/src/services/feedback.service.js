@@ -184,7 +184,7 @@ export const generateCareerIntelligence = async (studentId, internshipId = null)
   intel.internshipId = internshipId;
   intel.portfolioScore = careerReport.portfolioScore || 0;
   intel.placementReadiness = careerReport.readinessScore || 0;
-  intel.careerReadiness = careerReport.careerLevel || 'Beginner';
+  intel.careerReadiness = (careerReport.careerLevel === 'Not Enough Data' || !careerReport.careerLevel) ? 'Beginner' : careerReport.careerLevel;
   intel.recommendedRoles = careerReport.recommendedRoles || [];
   intel.recommendedSkills = careerReport.recommendedSkills || [];
   intel.recommendedProjects = careerReport.recommendedProjects || [];

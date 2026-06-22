@@ -705,7 +705,7 @@ export const getAnalytics = async (recruiterUserId) => {
     // Calculate individual placement readiness score
     const hasGithub = githubUserIds.includes(student.userId.toString());
     const careerReport = careerReports.find(cr => cr.studentId.toString() === student.userId.toString());
-    const readinessIndex = careerReport ? (careerReport.readinessScore || 0) : Math.min(100, Math.round(progress * 0.8 + (hasGithub ? 20 : 0)));
+    const readinessIndex = careerReport ? (careerReport.readinessScore || 0) : 0;
 
     if (readinessIndex >= 85) {
       readinessCounts.High++;

@@ -418,7 +418,7 @@ export const getCareerIntelligence = async (req, res, next) => {
     const skillGapReport = reports.skillGap;
 
     return sendResponse(res, 200, true, 'Career intelligence retrieved successfully', {
-      readinessScore: careerReport.readinessScore || 70,
+      readinessScore: careerReport.readinessScore || 0,
       portfolioScore: careerReport.portfolioScore || 0,
       placementReadiness: careerReport.readinessScore || 0,
       careerReadiness: careerReport.careerLevel || 'Beginner',
