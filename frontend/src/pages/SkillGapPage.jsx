@@ -12,8 +12,30 @@ import {
 import { ShieldCheck, Target, ArrowUpRight, Award, Zap, AlertCircle } from 'lucide-react'
 import axiosInstance from '../api/axios.js'
 
-const defaultSkillData = []
+const DYNAMIC_SKILL_REGISTRY = {
+  'Cyber Security': [
+    'Network Security', 'Threat Intelligence', 'Incident Response', 'SIEM', 'Digital Forensics',
+    'Vulnerability Assessment', 'Penetration Testing', 'Cloud Security', 'IAM', 'Security Monitoring'
+  ],
+  'Frontend': [
+    'HTML', 'CSS', 'JavaScript', 'React', 'State Management', 'Responsive Design',
+    'Performance Optimization', 'Accessibility', 'API Integration', 'Testing'
+  ],
+  'Data Science': [
+    'Python', 'Statistics', 'EDA', 'Machine Learning', 'Feature Engineering',
+    'Model Evaluation', 'Data Visualization', 'SQL', 'Deep Learning'
+  ]
+};
 
+const normalizeCareerPath = (title) => {
+  const t = (title || '').toLowerCase();
+  if (t.includes('cyber') || t.includes('security') || t.includes('shield')) return 'Cyber Security';
+  if (t.includes('front')) return 'Frontend';
+  if (t.includes('data science') || t.includes('data scientist') || t.includes('statistic') || t.includes('analytics') || t.includes('ai') || t.includes('machine') || t.includes('ml')) return 'Data Science';
+  return 'Cyber Security';
+};
+
+const defaultSkillData = []
 const defaultGaps = []
 
 export default function SkillGapPage() {
@@ -29,28 +51,50 @@ export default function SkillGapPage() {
     if (!user) return
     const fetchSkillAnalysis = async () => {
       try {
+        setLoading(true)
         const studentId = user._id || user.id
-        const response = await axiosInstance.get(`/api/evaluation/student/${studentId}`)
-        const data = response.data
-        if (data) {
-          const identifiedSkills = data.identifiedSkills || []
-          const identifiedSkillGaps = data.identifiedSkillGaps || []
-          
+
+        // 1. Fetch current selected path
+        const careerRes = await axiosInstance.get('/api/careers/my-career')
+        const careerTitle = careerRes.data.career?.title || ''
+        const normPath = normalizeCareerPath(careerTitle)
+        const registrySkills = DYNAMIC_SKILL_REGISTRY[normPath] || []
+
+        // 2. Fetch evaluation report
+        let response = await axiosInstance.get(`/api/evaluation/student/${studentId}`)
+        let data = response.data
+
+        // 3. Self-Validation
+        const allFetchedSkills = [
+          ...(data.identifiedSkills || []),
+          ...(data.identifiedSkillGaps || []),
+          ...(data.skillComparisonData || []).map(s => s.subject)
+        ]
+
+        const hasMismatch = allFetchedSkills.some(skill => !registrySkills.includes(skill))
+
+        if (hasMismatch) {
+          console.warn(`[Self-Validation] Skill path mismatch detected. Regenerating profile...`)
+          response = await axiosInstance.get(`/api/evaluation/student/${studentId}?regenerate=true`)
+          data = response.data
+        }
+
+        // 4. Update state with dynamic scores
+        if (data.skillComparisonData && data.skillComparisonData.length > 0) {
+          setSkillComparisonData(data.skillComparisonData)
+        } else {
           const radarData = [
-            ...identifiedSkills.map(s => ({ subject: s, current: 85, benchmark: 80 })),
-            ...identifiedSkillGaps.map(s => ({ subject: s, current: 45, benchmark: 80 }))
+            ...(data.identifiedSkills || []).map(s => ({ subject: s, current: 85, benchmark: 80 })),
+            ...(data.identifiedSkillGaps || []).map(s => ({ subject: s, current: 45, benchmark: 80 }))
           ]
           setSkillComparisonData(radarData)
+        }
 
-          const compiledGaps = identifiedSkillGaps.map(skillName => {
-            let recommend = `Complete more deliverables requiring ${skillName} to close the capability gap.`;
-            if (skillName.toLowerCase() === 'system design') {
-              recommend = 'Practice rate limiters, database indexes optimizations, and caching design patterns.';
-            } else if (skillName.toLowerCase() === 'testing' || skillName.toLowerCase() === 'unit testing') {
-              recommend = 'Write centralized testing scripts with Jest, Supertest, or PyTest and check code coverage.';
-            } else if (skillName.toLowerCase() === 'authentication' || skillName.toLowerCase() === 'jwt') {
-              recommend = 'Implement JWT-based session security cookies and secure password hashing flows.';
-            }
+        if (data.gaps) {
+          setGaps(data.gaps)
+        } else {
+          const compiledGaps = (data.identifiedSkillGaps || []).map(skillName => {
+            let recommend = `Complete more deliverables requiring ${skillName} to close the capability gap.`
             return {
               skill: skillName,
               gap: '35%',
@@ -59,15 +103,14 @@ export default function SkillGapPage() {
             }
           })
           setGaps(compiledGaps)
-
-          // Compile certifications as modules
-          const suggestedModules = (data.careerRecommendations || []).map(cert => ({
-            title: cert,
-            duration: '3 hrs'
-          }))
-          setRecommendedModules(suggestedModules)
-          setEvalError('')
         }
+
+        const suggestedModules = (data.careerRecommendations || []).map(cert => ({
+          title: cert,
+          duration: '3 hrs'
+        }))
+        setRecommendedModules(suggestedModules)
+        setEvalError('')
       } catch (err) {
         console.error('Failed to load dynamic skill analysis from server:', err)
         setEvalError('No evaluation available yet.\nStudent has not completed any evaluated submissions.')

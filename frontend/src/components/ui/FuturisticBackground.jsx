@@ -1,11 +1,32 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTheme } from '../../context/ThemeContext';
+import { useLocation } from 'react-router-dom';
 
 export default function FuturisticBackground() {
   const { isDark } = useTheme();
+  const location = useLocation();
+  const path = location.pathname;
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   
+  // Track scroll for subtle parallax
+  const [scrollY, setScrollY] = useState(0);
+
+  useEffect(() => {
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          setScrollY(window.scrollY);
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   // Track mouse coordinates for CSS Spotlight Glow
   useEffect(() => {
     const container = containerRef.current;
@@ -76,7 +97,6 @@ export default function FuturisticBackground() {
 
     // Animation Loop
     const draw = () => {
-      // Pause animation if browser tab is hidden to save CPU/GPU resources
       if (document.hidden) {
         animationFrameId = requestAnimationFrame(draw);
         return;
@@ -133,6 +153,13 @@ export default function FuturisticBackground() {
     };
   }, [isDark]);
 
+  // Parallax translation styling (5-10px maximum smooth scroll displacement)
+  const parallaxStyle = {
+    transform: `translateY(${Math.min(10, scrollY * 0.02)}px)`,
+    transition: 'transform 0.2s cubic-bezier(0.25, 1, 0.5, 1)',
+    willChange: 'transform',
+  };
+
   return (
     <div
       ref={containerRef}
@@ -142,16 +169,79 @@ export default function FuturisticBackground() {
         '--mouse-y': '50vh',
       }}
     >
-      {/* 1. Animated Aurora Gradients (Radial colors shifting on CSS GPU keyframes) */}
-      <div className="absolute inset-0 z-[1] opacity-40 mix-blend-screen dark:mix-blend-normal">
-        <div className="absolute top-[-20%] left-[-10%] w-[80vw] h-[80vw] rounded-full bg-radial from-accent/15 via-accent/5 to-transparent blur-[120px] animate-aurora-slow" />
-        <div className="absolute bottom-[-30%] right-[-10%] w-[90vw] h-[90vw] rounded-full bg-radial from-violet/10 via-violet/3 to-transparent blur-[140px] animate-aurora-delayed" />
-        <div className="absolute top-[30%] right-[20%] w-[50vw] h-[50vw] rounded-full bg-radial from-cyan/8 via-cyan/2 to-transparent blur-[100px] animate-aurora-fast" />
+      {/* Layer 1: Animated Aurora Gradients (Radial colors shifting on CSS GPU keyframes, 5-8% opacity) */}
+      <div 
+        className="absolute inset-0 z-[1] dark:mix-blend-normal mix-blend-screen"
+        style={parallaxStyle}
+      >
+        {/* Top Left: Large floating glow */}
+        <div className="absolute top-[-15%] left-[-15%] w-[60vw] h-[60vw] rounded-full bg-radial from-accent/15 via-accent/5 to-transparent blur-[120px] pointer-events-none opacity-[0.06] animate-aurora-slow" />
+        
+        {/* Top Right: Secondary floating glow */}
+        <div className="absolute top-[-15%] right-[-15%] w-[50vw] h-[50vw] rounded-full bg-radial from-violet/15 via-violet/5 to-transparent blur-[120px] pointer-events-none opacity-[0.05] animate-aurora-delayed" />
+        
+        {/* Bottom Center: Soft ambient glow */}
+        <div className="absolute bottom-[-25%] left-[50%] -translate-x-1/2 w-[70vw] h-[70vw] rounded-full bg-radial from-cyan/15 via-cyan/5 to-transparent blur-[140px] pointer-events-none opacity-[0.06] animate-aurora-fast" />
       </div>
 
-      {/* 2. Interactive Spotlight Glow Overlay (Completely CSS computed, 0% CPU overhead) */}
+      {/* Layer 2: Subtle Grid Pattern (Light AI/SaaS style grid, net opacity 2-4% - barely visible) */}
       <div 
-        className="absolute inset-0 z-[2]"
+        className="absolute inset-0 z-[2] pointer-events-none select-none opacity-[0.03]"
+        style={{
+          backgroundImage: isDark 
+            ? `linear-gradient(rgba(255, 255, 255, 0.8) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.8) 1px, transparent 1px)`
+            : `linear-gradient(rgba(15, 23, 42, 0.8) 1px, transparent 1px), linear-gradient(90deg, rgba(15, 23, 42, 0.8) 1px, transparent 1px)`,
+          backgroundSize: '36px 36px',
+        }}
+      />
+
+      {/* Layer 3: Noise Texture (Subtle grain overlay, 1-2% opacity) */}
+      <div 
+        className="absolute inset-0 z-[3] pointer-events-none mix-blend-overlay opacity-[0.012]"
+        style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")`,
+        }}
+      />
+
+      {/* Layer 4: Route-Specific Ambient Glows */}
+      <div className="absolute inset-0 z-[4]" style={parallaxStyle}>
+        {/* Dashboard: Soft glow behind analytics section */}
+        {path.startsWith('/student/dashboard') && (
+          <div className="absolute top-[25%] left-[50%] -translate-x-1/2 w-[60vw] h-[400px] rounded-full bg-radial from-accent/8 via-cyan/2 to-transparent blur-[120px] pointer-events-none transition-opacity duration-1000" />
+        )}
+        
+        {/* Interview Module: Very subtle spotlight behind AI avatar */}
+        {(path.includes('/interview') || path.includes('/interview_simulator')) && (
+          <div className="absolute top-[15%] left-[50%] -translate-x-1/2 w-[45vw] h-[350px] rounded-full bg-radial from-violet/8 via-accent/2 to-transparent blur-[100px] pointer-events-none transition-opacity duration-1000" />
+        )}
+        
+        {/* Task Dashboard: Subtle glow around active task area */}
+        {path.startsWith('/kanban') && (
+          <div className="absolute top-[30%] left-[30%] w-[50vw] h-[400px] rounded-full bg-radial from-accent/6 via-violet/2 to-transparent blur-[120px] pointer-events-none transition-opacity duration-1000" />
+        )}
+        
+        {/* Recruiter Dashboard: Ambient glow behind candidate analytics */}
+        {path.startsWith('/recruiter') && (
+          <div className="absolute top-[20%] left-[60%] -translate-x-1/2 w-[55vw] h-[400px] rounded-full bg-radial from-cyan/8 via-accent/2 to-transparent blur-[110px] pointer-events-none transition-opacity duration-1000" />
+        )}
+        
+        {/* College Dashboard: Soft glow behind statistics section */}
+        {path.startsWith('/college') && (
+          <div className="absolute top-[25%] left-[40%] w-[60vw] h-[450px] rounded-full bg-radial from-emerald/6 via-accent/2 to-transparent blur-[130px] pointer-events-none transition-opacity duration-1000" />
+        )}
+      </div>
+
+      {/* Hero Section Enhancement: Large blurred top glow behind page titles (5% opacity) */}
+      {['/student/dashboard', '/skill_gap', '/my-career', '/dashboard/interview'].some(p => path.startsWith(p)) && (
+        <div 
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-[80vw] h-[250px] rounded-full bg-radial from-accent/5 via-violet/2 to-transparent blur-[90px] pointer-events-none transition-opacity duration-1000 z-[1]"
+          style={parallaxStyle}
+        />
+      )}
+
+      {/* Interactive Spotlight Glow Overlay (Completely CSS computed, 0% CPU overhead) */}
+      <div 
+        className="absolute inset-0 z-[5]"
         style={{
           background: `radial-gradient(550px circle at var(--mouse-x) var(--mouse-y), ${
             isDark ? 'rgba(129, 140, 248, 0.08)' : 'rgba(99, 102, 241, 0.05)'
@@ -159,20 +249,8 @@ export default function FuturisticBackground() {
         }}
       />
 
-      {/* 3. AI HUD Grid Lines (Hardware-accelerated CSS Grid Pattern) */}
-      <div 
-        className={`absolute inset-0 z-[3] opacity-[0.25] ${isDark ? 'bg-grid-dark' : 'bg-grid-light'}`}
-        style={{
-          backgroundImage: `
-            linear-gradient(${isDark ? 'rgba(255,255,255,0.015)' : 'rgba(15, 23, 42, 0.035)'} 1px, transparent 1px),
-            linear-gradient(90deg, ${isDark ? 'rgba(255,255,255,0.015)' : 'rgba(15, 23, 42, 0.035)'} 1px, transparent 1px)
-          `,
-          backgroundSize: '36px 36px',
-        }}
-      />
-
-      {/* 4. Canvas particles representing Neural Nodes */}
-      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full z-[4] opacity-70" />
+      {/* Canvas particles representing Neural Nodes */}
+      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full z-[6] opacity-70" />
     </div>
   );
 }

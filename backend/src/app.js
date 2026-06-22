@@ -25,6 +25,7 @@ import skillsRoutes from './routes/skills.routes.js';
 import careerIntelRoutes from './routes/careerIntel.routes.js';
 import evaluationRoutes from './routes/evaluation.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
+import chatRoutes from './routes/chat.routes.js';
 import { setupSwagger } from './config/swagger.js';
 import { callGroq } from './services/groq.service.js';
 
@@ -117,6 +118,7 @@ app.use('/api/skills', skillsRoutes);
 app.use('/api/career', careerIntelRoutes);
 app.use('/api/evaluation', evaluationRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/mentor-chat', chatRoutes);
 
 
 // GET /api/debug/groq

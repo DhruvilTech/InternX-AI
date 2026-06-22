@@ -48,7 +48,10 @@ const fallbackMockData = {
         expectedOutput: 'A detailed DB Schema design document and initialization script.',
         evaluationCriteria: 'Optimal index selection and correct metadata filters.',
         category: 'Architecture',
-        deadlineDays: 2
+        deadlineDays: 2,
+        requiredSkills: ['SQL', 'Feature Engineering'],
+        skillsImpacted: ['SQL', 'Feature Engineering'],
+        careerPath: 'Data Science'
       },
       {
         title: 'Fine-tune Embeddings Model',
@@ -59,7 +62,10 @@ const fallbackMockData = {
         expectedOutput: 'Python training script and validation metrics graph.',
         evaluationCriteria: 'Finetuning execution without errors and correct hyperparameter selection.',
         category: 'Development',
-        deadlineDays: 3
+        deadlineDays: 3,
+        requiredSkills: ['Deep Learning', 'Machine Learning'],
+        skillsImpacted: ['Deep Learning', 'Machine Learning'],
+        careerPath: 'Data Science'
       },
       {
         title: 'Implement RAG Search Route',
@@ -70,7 +76,10 @@ const fallbackMockData = {
         expectedOutput: 'Express/FastAPI endpoints with stream integration.',
         evaluationCriteria: 'Successful retrieval integration and clean error recovery.',
         category: 'Integration',
-        deadlineDays: 4
+        deadlineDays: 4,
+        requiredSkills: ['Python', 'Machine Learning'],
+        skillsImpacted: ['Python', 'Machine Learning'],
+        careerPath: 'Data Science'
       },
       {
         title: 'Deploy Model to GPU Instances',
@@ -81,7 +90,10 @@ const fallbackMockData = {
         expectedOutput: 'Docker configuration and deployment YAML files.',
         evaluationCriteria: 'Dockerfile layers are optimized and endpoints respond correctly.',
         category: 'DevOps',
-        deadlineDays: 5
+        deadlineDays: 5,
+        requiredSkills: ['Machine Learning', 'Model Evaluation'],
+        skillsImpacted: ['Machine Learning', 'Model Evaluation'],
+        careerPath: 'Data Science'
       },
       {
         title: 'Benchmark Search Latency',
@@ -92,7 +104,10 @@ const fallbackMockData = {
         expectedOutput: 'Performance report with latency graphs and optimizations list.',
         evaluationCriteria: 'Proper identification of slow paths and correct cache configurations.',
         category: 'Performance',
-        deadlineDays: 6
+        deadlineDays: 6,
+        requiredSkills: ['Model Evaluation', 'Statistics'],
+        skillsImpacted: ['Model Evaluation', 'Statistics'],
+        careerPath: 'Data Science'
       }
     ]
   },
@@ -123,7 +138,10 @@ const fallbackMockData = {
         expectedOutput: 'Global CSS variables file and design token JSON config.',
         evaluationCriteria: 'Theme switching works seamlessly and layouts align perfectly to grids.',
         category: 'Styling',
-        deadlineDays: 2
+        deadlineDays: 2,
+        requiredSkills: ['CSS', 'Responsive Design'],
+        skillsImpacted: ['CSS', 'Responsive Design'],
+        careerPath: 'Frontend'
       },
       {
         title: 'Create Reusable TiltCard Component',
@@ -134,7 +152,10 @@ const fallbackMockData = {
         expectedOutput: 'React TiltCard component file with prop types.',
         evaluationCriteria: 'Smooth interactions without layout shifts.',
         category: 'Animation',
-        deadlineDays: 3
+        deadlineDays: 3,
+        requiredSkills: ['CSS', 'React'],
+        skillsImpacted: ['CSS', 'React'],
+        careerPath: 'Frontend'
       },
       {
         title: 'Setup Command Palette Modal',
@@ -145,7 +166,10 @@ const fallbackMockData = {
         expectedOutput: 'React modal component and keypress listener hook.',
         evaluationCriteria: 'Modal opens reliably and handles search state correctly.',
         category: 'Interaction',
-        deadlineDays: 4
+        deadlineDays: 4,
+        requiredSkills: ['JavaScript', 'React'],
+        skillsImpacted: ['JavaScript', 'React'],
+        careerPath: 'Frontend'
       },
       {
         title: 'Optimize Core Web Vitals',
@@ -156,7 +180,10 @@ const fallbackMockData = {
         expectedOutput: 'Vite code-splitting configuration and Lighthouse report comparison.',
         evaluationCriteria: 'Successful code splitting and verified paint speed improvements.',
         category: 'Performance',
-        deadlineDays: 5
+        deadlineDays: 5,
+        requiredSkills: ['Performance Optimization', 'JavaScript'],
+        skillsImpacted: ['Performance Optimization', 'JavaScript'],
+        careerPath: 'Frontend'
       },
       {
         title: 'Integrate Theme Context Provider',
@@ -167,7 +194,10 @@ const fallbackMockData = {
         expectedOutput: 'ThemeContext wrapper file and useTheme custom hook.',
         evaluationCriteria: 'State persists across reloads and theme toggling is instantaneous.',
         category: 'State Management',
-        deadlineDays: 6
+        deadlineDays: 6,
+        requiredSkills: ['State Management', 'React'],
+        skillsImpacted: ['State Management', 'React'],
+        careerPath: 'Frontend'
       }
     ]
   },
@@ -198,7 +228,10 @@ const fallbackMockData = {
         expectedOutput: 'Migration script adding indexes and query performance comparison report.',
         evaluationCriteria: 'Query search time reduced by 50% without database locks.',
         category: 'Database',
-        deadlineDays: 2
+        deadlineDays: 2,
+        requiredSkills: ['Cloud Security', 'Vulnerability Assessment'],
+        skillsImpacted: ['Cloud Security', 'Vulnerability Assessment'],
+        careerPath: 'Cyber Security'
       },
       {
         title: 'Implement Redis Caching Layer',
@@ -209,7 +242,10 @@ const fallbackMockData = {
         expectedOutput: 'Express caching middleware script and test suite.',
         evaluationCriteria: 'API serves cached data correctly and handles service offline states.',
         category: 'Performance',
-        deadlineDays: 3
+        deadlineDays: 3,
+        requiredSkills: ['Cloud Security', 'Security Monitoring'],
+        skillsImpacted: ['Cloud Security', 'Security Monitoring'],
+        careerPath: 'Cyber Security'
       },
       {
         title: 'Auth Token Rotation Handler',
@@ -220,7 +256,10 @@ const fallbackMockData = {
         expectedOutput: 'Authentication service controller and rotation routes code.',
         evaluationCriteria: 'Expired/reused tokens are caught and revoked instantly.',
         category: 'Security',
-        deadlineDays: 4
+        deadlineDays: 4,
+        requiredSkills: ['IAM', 'Network Security'],
+        skillsImpacted: ['IAM', 'Network Security'],
+        careerPath: 'Cyber Security'
       },
       {
         title: 'Configure Docker Development Setup',
@@ -231,7 +270,10 @@ const fallbackMockData = {
         expectedOutput: 'Dockerfile and docker-compose configurations.',
         evaluationCriteria: 'Services spin up and connect automatically using standard credentials.',
         category: 'DevOps',
-        deadlineDays: 5
+        deadlineDays: 5,
+        requiredSkills: ['Cloud Security', 'Vulnerability Assessment'],
+        skillsImpacted: ['Cloud Security', 'Vulnerability Assessment'],
+        careerPath: 'Cyber Security'
       },
       {
         title: 'Add Global Error Handling Middleware',
@@ -242,7 +284,10 @@ const fallbackMockData = {
         expectedOutput: 'Error handler middleware file and test route triggers.',
         evaluationCriteria: 'Exceptions are caught cleanly and return standard error JSON payloads.',
         category: 'Error Management',
-        deadlineDays: 6
+        deadlineDays: 6,
+        requiredSkills: ['Security Monitoring', 'Incident Response'],
+        skillsImpacted: ['Security Monitoring', 'Incident Response'],
+        careerPath: 'Cyber Security'
       }
     ]
   },
@@ -273,7 +318,10 @@ const fallbackMockData = {
         expectedOutput: 'Configured boilerplate workspace ready for dev.',
         evaluationCriteria: 'Bootstrapping runs without dependency errors.',
         category: 'Architecture',
-        deadlineDays: 2
+        deadlineDays: 2,
+        requiredSkills: ['JavaScript', 'React'],
+        skillsImpacted: ['JavaScript', 'React'],
+        careerPath: 'Frontend'
       },
       {
         title: 'Create Task Database Schema',
@@ -284,7 +332,10 @@ const fallbackMockData = {
         expectedOutput: 'Mongoose schema file and seeding scripts.',
         evaluationCriteria: 'Correct relation mapping and error checks.',
         category: 'Database',
-        deadlineDays: 3
+        deadlineDays: 3,
+        requiredSkills: ['JavaScript', 'Testing'],
+        skillsImpacted: ['JavaScript', 'Testing'],
+        careerPath: 'Frontend'
       },
       {
         title: 'Write REST endpoints for Tasks',
@@ -295,7 +346,10 @@ const fallbackMockData = {
         expectedOutput: 'Express task router and controller handlers.',
         evaluationCriteria: 'API returns correct payload structure with valid statuses.',
         category: 'Development',
-        deadlineDays: 4
+        deadlineDays: 4,
+        requiredSkills: ['API Integration', 'JavaScript'],
+        skillsImpacted: ['API Integration', 'JavaScript'],
+        careerPath: 'Frontend'
       },
       {
         title: 'Build Frontend Kanban Board',
@@ -306,7 +360,10 @@ const fallbackMockData = {
         expectedOutput: 'React Kanban board component files.',
         evaluationCriteria: 'Interface renders all states cleanly without layout shift.',
         category: 'Frontend',
-        deadlineDays: 5
+        deadlineDays: 5,
+        requiredSkills: ['React', 'CSS'],
+        skillsImpacted: ['React', 'CSS'],
+        careerPath: 'Frontend'
       },
       {
         title: 'Implement drag-and-drop state syncing',
@@ -317,7 +374,10 @@ const fallbackMockData = {
         expectedOutput: 'State update handlers and axios api patch hooks.',
         evaluationCriteria: 'Card repositioning saves immediately without losing state.',
         category: 'Integration',
-        deadlineDays: 6
+        deadlineDays: 6,
+        requiredSkills: ['React', 'State Management'],
+        skillsImpacted: ['React', 'State Management'],
+        careerPath: 'Frontend'
       }
     ]
   },
@@ -348,7 +408,10 @@ const fallbackMockData = {
         expectedOutput: 'Jupyter notebook and python parser script.',
         evaluationCriteria: 'Cleaned dataset contains no null records and is ready for modeling.',
         category: 'Data Engineering',
-        deadlineDays: 2
+        deadlineDays: 2,
+        requiredSkills: ['Python', 'Feature Engineering'],
+        skillsImpacted: ['Python', 'Feature Engineering'],
+        careerPath: 'Data Science'
       },
       {
         title: 'Exploratory Data Analysis',
@@ -359,7 +422,10 @@ const fallbackMockData = {
         expectedOutput: 'EDA markdown report with Seaborn/Matplotlib graphs.',
         evaluationCriteria: 'Insightful graphs explaining correlation coefficients.',
         category: 'Statistics',
-        deadlineDays: 3
+        deadlineDays: 3,
+        requiredSkills: ['EDA', 'Data Visualization'],
+        skillsImpacted: ['EDA', 'Data Visualization'],
+        careerPath: 'Data Science'
       },
       {
         title: 'Train Fraud Classifier Model',
@@ -370,7 +436,10 @@ const fallbackMockData = {
         expectedOutput: 'Training pipeline script and saved pickle model file.',
         evaluationCriteria: 'High accuracy and precision logs on validation split.',
         category: 'Machine Learning',
-        deadlineDays: 4
+        deadlineDays: 4,
+        requiredSkills: ['Machine Learning', 'Model Evaluation'],
+        skillsImpacted: ['Machine Learning', 'Model Evaluation'],
+        careerPath: 'Data Science'
       },
       {
         title: 'Build Model Inference API',
@@ -381,7 +450,10 @@ const fallbackMockData = {
         expectedOutput: 'FastAPI router script and integration tests.',
         evaluationCriteria: 'Predict endpoints return correct classifications.',
         category: 'Integration',
-        deadlineDays: 5
+        deadlineDays: 5,
+        requiredSkills: ['Python', 'SQL'],
+        skillsImpacted: ['Python', 'SQL'],
+        careerPath: 'Data Science'
       },
       {
         title: 'Design Analytics Dashboard Charts',
@@ -392,7 +464,10 @@ const fallbackMockData = {
         expectedOutput: 'Aggregation endpoint and chart configuration details.',
         evaluationCriteria: 'Correct schema structure mapping cleanly to Recharts components.',
         category: 'Visualization',
-        deadlineDays: 6
+        deadlineDays: 6,
+        requiredSkills: ['Data Visualization', 'Statistics'],
+        skillsImpacted: ['Data Visualization', 'Statistics'],
+        careerPath: 'Data Science'
       }
     ]
   },
@@ -423,7 +498,10 @@ const fallbackMockData = {
         expectedOutput: 'UX audit review slides and analysis report.',
         evaluationCriteria: 'Comprehensive research and clear feature list recommendations.',
         category: 'UX Research',
-        deadlineDays: 2
+        deadlineDays: 2,
+        requiredSkills: ['HTML', 'CSS'],
+        skillsImpacted: ['HTML', 'CSS'],
+        careerPath: 'Frontend'
       },
       {
         title: 'Establish Spacings & Typography Tokens',
@@ -434,7 +512,10 @@ const fallbackMockData = {
         expectedOutput: 'Figma design tokens library link and specs document.',
         evaluationCriteria: 'Well-structured styles with names aligned to CSS specs.',
         category: 'Design Systems',
-        deadlineDays: 3
+        deadlineDays: 3,
+        requiredSkills: ['CSS', 'Responsive Design'],
+        skillsImpacted: ['CSS', 'Responsive Design'],
+        careerPath: 'Frontend'
       },
       {
         title: 'Design Mid-Fidelity Wireframes',
@@ -445,7 +526,10 @@ const fallbackMockData = {
         expectedOutput: 'Interactive Figma wireframe flows.',
         evaluationCriteria: 'Intuitive task flows and clean user navigation.',
         category: 'Information Architecture',
-        deadlineDays: 4
+        deadlineDays: 4,
+        requiredSkills: ['HTML', 'CSS'],
+        skillsImpacted: ['HTML', 'CSS'],
+        careerPath: 'Frontend'
       },
       {
         title: 'Create High-Fidelity UI Mockups',
@@ -456,7 +540,10 @@ const fallbackMockData = {
         expectedOutput: 'High-fidelity Figma files and design specification sheets.',
         evaluationCriteria: 'Premium visuals matching contemporary design standards.',
         category: 'UI Design',
-        deadlineDays: 5
+        deadlineDays: 5,
+        requiredSkills: ['React', 'Responsive Design'],
+        skillsImpacted: ['React', 'Responsive Design'],
+        careerPath: 'Frontend'
       },
       {
         title: 'Assemble Interactive Figma Prototype',
@@ -467,7 +554,10 @@ const fallbackMockData = {
         expectedOutput: 'Figma interactive prototype share link and user feedback notes.',
         evaluationCriteria: 'Transitions feel natural and represent final coding layouts.',
         category: 'Prototyping',
-        deadlineDays: 6
+        deadlineDays: 6,
+        requiredSkills: ['React', 'State Management'],
+        skillsImpacted: ['React', 'State Management'],
+        careerPath: 'Frontend'
       }
     ]
   },
@@ -498,7 +588,10 @@ const fallbackMockData = {
         expectedOutput: 'Vulnerability assessment checklist and report.',
         evaluationCriteria: 'Proper identification of insecure settings and misconfigurations.',
         category: 'SecOps',
-        deadlineDays: 2
+        deadlineDays: 2,
+        requiredSkills: ['Network Security', 'Vulnerability Assessment'],
+        skillsImpacted: ['Network Security', 'Vulnerability Assessment'],
+        careerPath: 'Cyber Security'
       },
       {
         title: 'Perform Static Code Analysis',
@@ -509,7 +602,10 @@ const fallbackMockData = {
         expectedOutput: 'Security code audit logs and recommended code patch changes.',
         evaluationCriteria: 'Accurate categorization of OWASP Top 10 vulnerabilities.',
         category: 'Code Audit',
-        deadlineDays: 3
+        deadlineDays: 3,
+        requiredSkills: ['Cloud Security', 'Vulnerability Assessment'],
+        skillsImpacted: ['Cloud Security', 'Vulnerability Assessment'],
+        careerPath: 'Cyber Security'
       },
       {
         title: 'Model Network Threat Vectors',
@@ -520,7 +616,10 @@ const fallbackMockData = {
         expectedOutput: 'Threat model diagram and remediation roadmap.',
         evaluationCriteria: 'Realistic attack paths identified with feasible counters.',
         category: 'Threat Modeling',
-        deadlineDays: 4
+        deadlineDays: 4,
+        requiredSkills: ['Threat Intelligence', 'Incident Response'],
+        skillsImpacted: ['Threat Intelligence', 'Incident Response'],
+        careerPath: 'Cyber Security'
       },
       {
         title: 'Analyze Packet Capture Logs',
@@ -531,7 +630,10 @@ const fallbackMockData = {
         expectedOutput: 'Wireshark filter scripts and traffic summary document.',
         evaluationCriteria: 'Precise isolation of bad actors requests packets.',
         category: 'Network Auditing',
-        deadlineDays: 5
+        deadlineDays: 5,
+        requiredSkills: ['Security Monitoring', 'Digital Forensics'],
+        skillsImpacted: ['Security Monitoring', 'Digital Forensics'],
+        careerPath: 'Cyber Security'
       },
       {
         title: 'Draft Red Team Security Advisory',
@@ -542,7 +644,10 @@ const fallbackMockData = {
         expectedOutput: 'Official Security Advisory PDF/Markdown document.',
         evaluationCriteria: 'Professional presentation with actionable fixes.',
         category: 'Reporting',
-        deadlineDays: 6
+        deadlineDays: 6,
+        requiredSkills: ['Incident Response', 'Penetration Testing'],
+        skillsImpacted: ['Incident Response', 'Penetration Testing'],
+        careerPath: 'Cyber Security'
       }
     ]
   }
@@ -759,6 +864,8 @@ estimatedHours
 
 requiredSkills
 
+skillsImpacted (array of skills impacted by this task selected from the pathway skill registry)
+
 expectedOutput
 
 evaluationCriteria
@@ -825,6 +932,7 @@ Your response must be a single raw JSON object matching the following structure:
       "difficulty": "Easy",
       "estimatedHours": 8,
       "requiredSkills": ["Skill 1"],
+      "skillsImpacted": ["Skill 1", "Skill 2"],
       "expectedOutput": "Expected Output",
       "evaluationCriteria": "Evaluation Criteria",
       "deadlineDays": 2,
@@ -907,25 +1015,37 @@ Return ONLY valid JSON. No markdown blocks, no conversational preamble.`;
     console.log(`[GENERATOR] Internship saved successfully. ID: ${internship._id}`);
 
     // 7. Save Tasks in MongoDB (linked to user and internship)
-    const taskDocs = generatedData.tasks.map(task => ({
-      studentId: userId,
-      internshipId: internship._id,
-      title: task.title,
-      description: task.description,
-      difficulty: task.difficulty || 'Medium',
-      estimatedHours: task.estimatedHours || 8,
-      status: 'todo', // Required starting status
-      progress: 0,
-      objective: task.objective || '',
-      businessPurpose: task.businessPurpose || '',
-      requiredSkills: task.requiredSkills || [],
-      resources: task.resources || [],
-      requirements: task.requirements || [],
-      expectedOutput: task.expectedOutput || '',
-      evaluationCriteria: task.evaluationCriteria || '',
-      category: task.category || 'General',
-      deadlineDays: task.deadlineDays || 3
-    }));
+    const taskDocs = generatedData.tasks.map(task => {
+      let normalizedPath = 'Cyber Security';
+      const cleanPath = (careerPath || '').toLowerCase();
+      if (cleanPath.includes('front')) {
+        normalizedPath = 'Frontend';
+      } else if (cleanPath.includes('data science') || cleanPath.includes('data scientist') || cleanPath.includes('ai') || cleanPath.includes('analytics')) {
+        normalizedPath = 'Data Science';
+      }
+
+      return {
+        studentId: userId,
+        internshipId: internship._id,
+        title: task.title,
+        description: task.description,
+        difficulty: task.difficulty || 'Medium',
+        estimatedHours: task.estimatedHours || 8,
+        status: 'todo', // Required starting status
+        progress: 0,
+        objective: task.objective || '',
+        businessPurpose: task.businessPurpose || '',
+        requiredSkills: task.requiredSkills || [],
+        skillsImpacted: task.skillsImpacted || task.requiredSkills || [],
+        careerPath: normalizedPath,
+        resources: task.resources || [],
+        requirements: task.requirements || [],
+        expectedOutput: task.expectedOutput || '',
+        evaluationCriteria: task.evaluationCriteria || '',
+        category: task.category || 'General',
+        deadlineDays: task.deadlineDays || 3
+      };
+    });
 
     const savedTasks = await Task.insertMany(taskDocs);
     console.log(`[GENERATOR] Tasks saved successfully.`);

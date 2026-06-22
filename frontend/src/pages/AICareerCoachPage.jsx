@@ -3,18 +3,7 @@ import { motion } from 'framer-motion'
 import { Send, Sparkles, Map, Compass, BookOpen, Award, CheckSquare, MessageSquare } from 'lucide-react'
 import { useNavigation } from '../context/NavigationContext'
 import useAuth from '../hooks/useAuth'
-
-const roadmapSteps = [
-  { step: '1', title: 'Vector DB Index pre-warming configurations', status: 'Completed' },
-  { step: '2', title: 'SentenceTransformers custom finetuning loops', status: 'In Progress' },
-  { step: '3', title: 'LLM observability and Prometheus logging', status: 'Locked' },
-  { step: '4', title: 'Autoscaling serverless GPU deployments', status: 'Locked' }
-]
-
-const recommendedProjects = [
-  { name: 'Multimodal Semantic Image Indexer', desc: 'Build CLIP-based semantic image indexing models.', tech: 'PyTorch · Pinecone' },
-  { name: 'Self-RAG Prompt Corrector routing', desc: 'Deploy LangChain pipelines with feedback validation loop.', tech: 'LangChain · FastAPI' }
-]
+import axiosInstance from '../api/axios.js'
 
 export default function AICareerCoachPage() {
   const { addToast } = useNavigation()
@@ -22,39 +11,166 @@ export default function AICareerCoachPage() {
   const firstName = user?.fullName ? user.fullName.split(' ')[0] : 'Arjun'
   const initials = user?.fullName ? user.fullName.split(' ').map(n => n[0]).join('').toUpperCase() : 'AK'
 
-  const [messages, setMessages] = useState(() => [
-    { sender: 'coach', text: `Hello ${firstName}! I am your AI Career Coach. I analyzed your evaluation scorecard (92/100) and Vector DB skills. Based on current industry benchmarks, I generated a custom learning roadmap and project list. What career milestones should we discuss today?`, time: '11:00 AM' }
-  ])
+  const [messages, setMessages] = useState([])
   const [inputText, setInputText] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [roadmap, setRoadmap] = useState([])
+  const [projects, setProjects] = useState([])
   const chatEndRef = useRef(null)
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  const handleSend = (e) => {
-    e.preventDefault()
-    if (!inputText.trim()) return
+  useEffect(() => {
+    const fetchChatHistory = async () => {
+      try {
+        const res = await axiosInstance.get('/api/mentor-chat/history')
+        if (res.data?.success && Array.isArray(res.data?.data)) {
+          const history = res.data.data
+          if (history.length === 0) {
+            setMessages([
+              {
+                sender: 'coach',
+                text: `Hello ${firstName}! I am Rahul Patel, your AI Lead Mentor. I have analyzed your internship track and current task pipeline. What questions or milestones would you like to discuss today?`,
+                time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+              }
+            ])
+          } else {
+            const mapped = history.map(h => ({
+              sender: h.role === 'student' ? 'user' : 'coach',
+              text: h.message,
+              time: new Date(h.timestamp).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+            }))
+            setMessages(mapped)
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load mentor chat history:', err)
+        setMessages([
+          {
+            sender: 'coach',
+            text: `Hello ${firstName}! I am Rahul Patel, your AI Lead Mentor. Let's discuss your internship track.`,
+            time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+          }
+        ])
+      }
+    }
+    fetchChatHistory()
+  }, [firstName])
 
+  useEffect(() => {
+    const fetchCareerAndIntelligence = async () => {
+      try {
+        const careerRes = await axiosInstance.get('/api/careers/my-career')
+        let progressPercent = 0
+        let learningRoadmap = []
+        if (careerRes.data?.success && careerRes.data?.data) {
+          progressPercent = careerRes.data.data.progress || 0
+          learningRoadmap = careerRes.data.data.career?.learningRoadmap || []
+        }
+
+        if (learningRoadmap.length > 0) {
+          const steps = learningRoadmap.map((item, idx) => {
+            let status = 'Locked'
+            if (idx === 0) {
+              status = progressPercent >= 30 ? 'Completed' : 'In Progress'
+            } else if (idx === 1) {
+              status = progressPercent >= 60 ? 'Completed' : (progressPercent >= 30 ? 'In Progress' : 'Locked')
+            } else if (idx === 2) {
+              status = progressPercent >= 90 ? 'Completed' : (progressPercent >= 60 ? 'In Progress' : 'Locked')
+            } else {
+              status = progressPercent >= 100 ? 'Completed' : (progressPercent >= 90 ? 'In Progress' : 'Locked')
+            }
+            return {
+              step: String(item.phase || (idx + 1)),
+              title: item.title,
+              status
+            }
+          })
+          setRoadmap(steps)
+        } else {
+          setRoadmap([
+            { step: '1', title: 'Onboarding and basic project setup tasks', status: progressPercent >= 30 ? 'Completed' : 'In Progress' },
+            { step: '2', title: 'Implementation of core functional requirements', status: progressPercent >= 60 ? 'Completed' : (progressPercent >= 30 ? 'In Progress' : 'Locked') },
+            { step: '3', title: 'Integration testing and system optimizations', status: progressPercent >= 90 ? 'Completed' : (progressPercent >= 60 ? 'In Progress' : 'Locked') },
+            { step: '4', title: 'Final project review and submission audits', status: progressPercent >= 100 ? 'Completed' : (progressPercent >= 90 ? 'In Progress' : 'Locked') }
+          ])
+        }
+
+        const intelRes = await axiosInstance.get('/api/careers/career-intelligence')
+        if (intelRes.data?.success && intelRes.data?.data) {
+          const intelProjects = intelRes.data.data.recommendedProjects || []
+          if (intelProjects.length > 0) {
+            const mappedProj = intelProjects.map(projStr => {
+              if (typeof projStr !== 'string') return { name: 'Project Blueprint', desc: String(projStr), tech: '' }
+              const colonIdx = projStr.indexOf(':')
+              if (colonIdx === -1) {
+                return { name: 'Project Blueprint', desc: projStr, tech: '' }
+              }
+              const name = projStr.substring(0, colonIdx).trim()
+              let remainder = projStr.substring(colonIdx + 1).trim()
+              
+              const techIdx = remainder.toLowerCase().indexOf('tech:')
+              if (techIdx === -1) {
+                return { name, desc: remainder, tech: '' }
+              }
+              const desc = remainder.substring(0, techIdx).trim()
+              const tech = remainder.substring(techIdx + 5).trim()
+              return { name, desc, tech }
+            })
+            setProjects(mappedProj)
+          } else {
+            setProjects([
+              { name: 'Standard Path Sandbox', desc: 'Complete path-aligned codebase scenarios and verify metrics.', tech: 'GitHub · Vite' }
+            ])
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load career roadmap and intelligence:', err)
+      }
+    }
+    fetchCareerAndIntelligence()
+  }, [])
+
+  const handleSend = async (e) => {
+    e.preventDefault()
+    if (!inputText.trim() || isLoading) return
+
+    const userMessageText = inputText.trim()
     const timeString = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-    const userMsg = { sender: 'user', text: inputText, time: timeString }
+    const userMsg = { sender: 'user', text: userMessageText, time: timeString }
     
     setMessages(prev => [...prev, userMsg])
     setInputText('')
+    setIsLoading(true)
 
-    // Coach reply simulation
-    setTimeout(() => {
-      let reply = 'To prepare for Series-B startup recruitments, I recommend prioritizing vector schema indices. Let\'s make sure you document the latency parameters clearly in your projects.'
-      if (inputText.toLowerCase().includes('roadmap') || inputText.toLowerCase().includes('path')) {
-        reply = 'I have loaded your custom learning roadmap on the right panel. Step 2 (SentenceTransformers finetuning) is your next major milestone!'
-      } else if (inputText.toLowerCase().includes('project') || inputText.toLowerCase().includes('idea')) {
-        reply = 'The recommended project templates are loaded on the right. Both CLIP indexers and Self-RAG routes are highly valued by recruitment teams right now!'
+    try {
+      const res = await axiosInstance.post('/api/mentor-chat/send', { message: userMessageText })
+      if (res.data?.success && res.data?.data) {
+        const reply = res.data.data.message || 'Analysis unavailable'
+        const coachMsg = {
+          sender: 'coach',
+          text: reply,
+          time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+        }
+        setMessages(prev => [...prev, coachMsg])
+        addToast('New advice from AI Lead Mentor', 'info')
+      } else {
+        throw new Error('Invalid response payload')
       }
-
-      const coachMsg = { sender: 'coach', text: reply, time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) }
-      setMessages(prev => [...prev, coachMsg])
-      addToast('New advice from AI Career Coach', 'info')
-    }, 1500)
+    } catch (err) {
+      console.error('Failed to send message to mentor:', err)
+      const errorMsg = {
+        sender: 'coach',
+        text: 'Sorry, I encountered an issue connecting to the AI Mentor. Please try again.',
+        time: new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+      }
+      setMessages(prev => [...prev, errorMsg])
+      addToast('Mentor connection error', 'error')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
@@ -144,25 +260,29 @@ export default function AICareerCoachPage() {
               </div>
 
               <div className="space-y-2">
-                {roadmapSteps.map((s) => (
-                  <div key={s.step} className="flex gap-3 items-start text-[11px] text-muted">
-                    <span className={`h-5 w-5 rounded-md flex items-center justify-center text-[9px] font-bold shrink-0 border ${
-                      s.status === 'Completed'
-                        ? 'bg-emerald/10 border-emerald/30 text-emerald'
-                        : s.status === 'In Progress'
-                        ? 'bg-accent/10 border-accent/30 text-accent animate-pulse'
-                        : 'bg-void border-border text-dim'
-                    }`}>
-                      {s.step}
-                    </span>
-                    <div className="pt-0.5 flex-1 flex justify-between gap-2">
-                      <span className={s.status === 'Completed' ? 'line-through text-dim' : 'text-text'}>{s.title}</span>
-                      <span className={`text-[8px] font-semibold uppercase ${
-                        s.status === 'Completed' ? 'text-emerald' : s.status === 'In Progress' ? 'text-accent' : 'text-dim'
-                      }`}>{s.status}</span>
+                {roadmap.length === 0 ? (
+                  <div className="text-center py-4 text-xs text-muted">Loading learning roadmap...</div>
+                ) : (
+                  roadmap.map((s) => (
+                    <div key={s.step} className="flex gap-3 items-start text-[11px] text-muted">
+                      <span className={`h-5 w-5 rounded-md flex items-center justify-center text-[9px] font-bold shrink-0 border ${
+                        s.status === 'Completed'
+                          ? 'bg-emerald/10 border-emerald/30 text-emerald'
+                          : s.status === 'In Progress'
+                          ? 'bg-accent/10 border-accent/30 text-accent animate-pulse'
+                          : 'bg-void border-border text-dim'
+                      }`}>
+                        {s.step}
+                      </span>
+                      <div className="pt-0.5 flex-1 flex justify-between gap-2">
+                        <span className={s.status === 'Completed' ? 'line-through text-dim' : 'text-text'}>{s.title}</span>
+                        <span className={`text-[8px] font-semibold uppercase ${
+                          s.status === 'Completed' ? 'text-emerald' : s.status === 'In Progress' ? 'text-accent' : 'text-dim'
+                        }`}>{s.status}</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </div>
             </div>
 
@@ -174,13 +294,17 @@ export default function AICareerCoachPage() {
               </div>
 
               <div className="space-y-2.5">
-                {recommendedProjects.map((p) => (
-                  <div key={p.name} className="p-3 bg-surface-muted/20 border border-border rounded-xl space-y-1">
-                    <span className="text-xs font-bold text-text block">{p.name}</span>
-                    <p className="text-[10px] text-muted leading-relaxed">{p.desc}</p>
-                    <span className="text-[8px] font-mono text-accent block font-semibold pt-1">{p.tech}</span>
-                  </div>
-                ))}
+                {projects.length === 0 ? (
+                  <div className="text-center py-4 text-xs text-muted">Loading recommended projects...</div>
+                ) : (
+                  projects.map((p) => (
+                    <div key={p.name} className="p-3 bg-surface-muted/20 border border-border rounded-xl space-y-1">
+                      <span className="text-xs font-bold text-text block">{p.name}</span>
+                      <p className="text-[10px] text-muted leading-relaxed">{p.desc}</p>
+                      {p.tech && <span className="text-[8px] font-mono text-accent block font-semibold pt-1">{p.tech}</span>}
+                    </div>
+                  ))
+                )}
               </div>
             </div>
 

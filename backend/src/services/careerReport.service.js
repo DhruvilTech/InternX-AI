@@ -16,250 +16,272 @@ import CareerReport from '../models/CareerReport.js';
 import axios from 'axios';
 import { callGroq } from './groq.service.js';
 
-const CORE_TECH_WHITELIST = new Set([
-  'javascript', 'typescript', 'react', 'vue', 'angular', 'next.js', 'nuxt.js', 'svelte',
-  'node.js', 'node', 'express', 'koa', 'fastapi', 'django', 'flask', 'nest.js', 'nestjs',
-  'python', 'java', 'c++', 'c#', 'golang', 'go', 'rust', 'ruby', 'php', 'kotlin', 'swift', 'scala',
-  'mongodb', 'postgresql', 'postgres', 'mysql', 'sqlite', 'redis', 'cassandra', 'dynamodb',
-  'mariadb', 'oracle', 'sql', 'nosql', 'neo4j', 'influxdb',
-  'docker', 'kubernetes', 'k8s', 'terraform', 'ansible', 'jenkins', 'github actions', 'circleci',
-  'aws', 'amazon web services', 'google cloud', 'gcp', 'azure', 'heroku', 'vercel', 'netlify',
-  'aws glue', 'aws lake formation', 'lake formation', 'apache spark', 'spark', 'hadoop', 'hive',
-  'kafka', 'rabbitmq', 'activemq', 'sqs', 'sns',
-  'pytorch', 'tensorflow', 'keras', 'scikit-learn', 'pandas', 'numpy', 'scipy', 'matplotlib',
-  'langchain', 'pinecone', 'weaviate', 'milvus', 'chromadb', 'huggingface', 'transformers',
-  'html', 'css', 'sass', 'less', 'tailwindcss', 'tailwind', 'bootstrap', 'material-ui', 'mui',
-  'graphql', 'apollo', 'rest api', 'rest apis', 'rest', 'soap', 'grpc',
-  'jest', 'mocha', 'chai', 'cypress', 'selenium', 'junit', 'pytest',
-  'git', 'github', 'gitlab', 'bitbucket',
-  'jwt', 'oauth', 'oauth2', 'saml', 'okta', 'auth0',
-  'system design', 'testing', 'unit testing', 'ci/cd', 'devops', 'microservices', 'serverless',
-  'ai/ml'
-]);
-
-/**
- * Fallback heuristic report generator
- */
-export const getFallbackHeuristicData = (
-  studentProfile,
-  internship,
-  careerPath,
-  completedTasks,
-  avgTaskScore,
-  avgInterviewScore,
-  githubProfile,
-  missingSkills,
-  demonstratedSkills,
-  readinessScore
-) => {
-  let recommendedRoles = [];
-  let recommendedCertifications = [];
-  let recommendedSkills = [];
-  let recommendedProjects = [];
-  let salaryRange = '';
-  
-  const pathClean = (careerPath || 'Backend Developer').toLowerCase();
-  
-  if (pathClean.includes('ai') || pathClean.includes('machine learning') || pathClean.includes('data science') || pathClean.includes('artificial')) {
-    recommendedRoles = ['AI Engineer', 'ML Engineer', 'NLP Specialist', 'AI Software Developer'];
-    recommendedCertifications = ['TensorFlow Developer Certificate', 'DeepLearning.AI ML Specialization', 'AWS Machine Learning Specialty'];
-    recommendedSkills = ['Vector Databases', 'Transformers', 'LangChain', 'Python'];
-    recommendedProjects = ['Real-time Embedding Cache Layer', 'Vector Database Search API', 'LLM Fine-Tuning Pipeline'];
-    salaryRange = '$95,000 - $120,000';
-  } else if (pathClean.includes('frontend') || pathClean.includes('react') || pathClean.includes('web')) {
-    recommendedRoles = ['Frontend Engineer', 'React Developer', 'UI Specialist', 'Full Stack Developer'];
-    recommendedCertifications = ['Meta Front-End Developer Professional Certificate', 'AWS Certified Cloud Practitioner'];
-    recommendedSkills = ['React', 'JavaScript', 'TailwindCSS', 'Framer Motion'];
-    recommendedProjects = ['Interactive Dashboard Widget SDK', 'Tactile Canvas Editor', 'Glassmorphic Component Library'];
-    salaryRange = '$75,000 - $95,000';
-  } else if (pathClean.includes('cyber') || pathClean.includes('security')) {
-    recommendedRoles = ['Cybersecurity Analyst', 'Information Security Engineer', 'Security Consultant'];
-    recommendedCertifications = ['CompTIA Security+', 'Certified Ethical Hacker (CEH)', 'Google Cybersecurity Certificate'];
-    recommendedSkills = ['Network Security', 'Cryptography', 'Penetration Testing', 'SIEM'];
-    recommendedProjects = ['Vulnerability Scanner', 'Intrusion Detection System', 'Encrypted Chat Application'];
-    salaryRange = '$80,000 - $105,000';
-  } else if (pathClean.includes('data engineer') || pathClean.includes('etl') || pathClean.includes('warehouse') || pathClean.includes('lake') || pathClean.includes('data warehousing') || pathClean.includes('lakehouse')) {
-    recommendedRoles = ['Data Engineer', 'Analytics Engineer', 'Big Data Developer', 'ETL Developer'];
-    recommendedCertifications = ['Google Cloud Certified Professional Data Engineer', 'AWS Certified Data Engineer - Associate', 'Databricks Certified Professional Data Engineer'];
-    recommendedSkills = ['AWS Glue', 'Apache Spark', 'Python', 'SQL', 'Snowflake'];
-    recommendedProjects = ['Real-time Event Streaming Pipeline', 'Lakehouse Medallion Data Platform', 'Serverless ETL Orchestrator'];
-    salaryRange = '$90,000 - $115,000';
-  } else if (pathClean.includes('design') || pathClean.includes('ui') || pathClean.includes('ux') || pathClean.includes('product designer') || pathClean.includes('product design')) {
-    recommendedRoles = ['Product Designer', 'UI/UX Designer', 'UX Researcher', 'Interaction Designer'];
-    recommendedCertifications = ['Google UX Design Professional Certificate', 'Interaction Design Foundation Certified'];
-    recommendedSkills = ['Figma', 'User Research', 'Wireframing', 'Prototyping', 'Design Systems'];
-    recommendedProjects = ['Spatially Responsive Canvas Interface', 'Design System Tokens Library', 'Interactive SaaS Dashboard Prototype'];
-    salaryRange = '$70,000 - $95,000';
-  } else {
-    // Default Backend
-    recommendedRoles = ['Backend Developer', 'Node.js Engineer', 'API Specialist', 'Software Engineer'];
-    recommendedCertifications = ['AWS Developer Associate', 'MongoDB Associate Developer', 'Node.js Certification'];
-    recommendedSkills = ['Testing', 'System Design', 'Docker', 'REST API'];
-    recommendedProjects = ['Job Portal', 'Microservices Backend', 'Inventory Management System', 'AI Resume Analyzer'];
-    salaryRange = '$85,000 - $105,000';
-  }
-
-
-  let strengths = [];
-  if (demonstratedSkills.length > 0) {
-    strengths.push(`Good implementation of core technologies including ${demonstratedSkills.slice(0, 3).join(', ')}.`);
-  } else {
-    strengths.push("Good initial understanding of task requirements.");
-  }
-  if (avgTaskScore > 75) {
-    strengths.push("Strong task execution quality and high code compliance.");
-  }
-  if (githubProfile) {
-    strengths.push("Consistent GitHub repository commitment patterns.");
-  }
-
-  let weaknesses = [];
-  if (missingSkills.length > 0) {
-    weaknesses.push(`Lacks demonstrated experience in ${missingSkills.slice(0, 3).join(', ')}.`);
-  } else {
-    weaknesses.push("Limited project scope demonstration.");
-  }
-  if (avgTaskScore < 70 && completedTasks.length > 0) {
-    weaknesses.push("Inconsistent task score performance requiring closer compliance check.");
-  }
-  if (!githubProfile) {
-    weaknesses.push("Missing integrated GitHub repository trace history.");
-  }
-
-  let recommendations = [];
-  if (missingSkills.length > 0) {
-    recommendations.push(`Build a dedicated sandbox project using ${missingSkills[0]}.`);
-  }
-  recommendations.push("Conduct mock interviews to refine technical communication flow.");
-  if (!githubProfile) {
-    recommendations.push("Connect your GitHub profile to unlock repository metrics analytics.");
-  }
-
-  let careerAdvice = `Based on your performance diagnostic on the ${careerPath} path, your readiness stands at ${readinessScore}%. `;
-  if (missingSkills.length > 0) {
-    careerAdvice += `Your largest capability gap is currently in ${missingSkills.slice(0, 2).join(' and ')}. Focus on building targeted projects in these areas. `;
-  } else {
-    careerAdvice += `You have demonstrated all required baseline skills. Focus on expanding your project complexity and system design skills. `;
-  }
-  careerAdvice += `We recommend pursuing ${recommendedCertifications[0]} to validate your experience for recruiters.`;
-
-  const roleTitle = internship?.roleTitle || careerPath || 'Software Intern';
-  let managerFeedback = `Excellent initiative shown during the sprint tasks as a ${roleTitle}. `;
-  if (missingSkills.length > 0) {
-    managerFeedback += `To prepare for production workloads, focus on finishing deliverables requiring ${missingSkills.slice(0, 2).join(' and ')}. `;
-  } else {
-    managerFeedback += `Continue maintaining high code compliance and test coverage setups. `;
-  }
-  managerFeedback += `Overall, a solid learning journey progress.`;
-
-  let careerLevel = 'Beginner';
-  if (readinessScore >= 85) {
-    careerLevel = 'Industry Ready';
-  } else if (readinessScore >= 70) {
-    careerLevel = 'Job Ready';
-  } else if (readinessScore >= 45) {
-    careerLevel = 'Intermediate';
-  }
-
-  return {
-    strengths,
-    weaknesses,
-    recommendations,
-    managerFeedback,
-    careerLevel,
-    recommendedRoles,
-    recommendedCertifications,
-    salaryRange,
-    careerAdvice,
-    recommendedSkills,
-    recommendedProjects
-  };
+export const DYNAMIC_SKILL_REGISTRY = {
+  'Cyber Security': [
+    'Network Security',
+    'Threat Intelligence',
+    'Incident Response',
+    'SIEM',
+    'Digital Forensics',
+    'Vulnerability Assessment',
+    'Penetration Testing',
+    'Cloud Security',
+    'IAM',
+    'Security Monitoring'
+  ],
+  'Frontend': [
+    'HTML',
+    'CSS',
+    'JavaScript',
+    'React',
+    'State Management',
+    'Responsive Design',
+    'Performance Optimization',
+    'Accessibility',
+    'API Integration',
+    'Testing'
+  ],
+  'Data Science': [
+    'Python',
+    'Statistics',
+    'EDA',
+    'Machine Learning',
+    'Feature Engineering',
+    'Model Evaluation',
+    'Data Visualization',
+    'SQL',
+    'Deep Learning'
+  ]
 };
 
-const mapToValidCareerLevel = (level) => {
-  const allowed = ['Beginner', 'Intermediate', 'Job Ready', 'Industry Ready', 'Not Enough Data'];
-  if (!level) return 'Beginner';
-  const clean = level.trim();
-  if (allowed.includes(clean)) return clean;
-  
-  // Normalization mapping
-  const lower = clean.toLowerCase();
-  if (lower.includes('not enough data') || lower.includes('insufficient')) return 'Not Enough Data';
-  if (lower.includes('begin') || lower.includes('entry') || lower.includes('junior')) return 'Beginner';
-  if (lower.includes('inter') || lower.includes('mid')) return 'Intermediate';
-  if (lower.includes('job') || lower.includes('ready')) return 'Job Ready';
-  if (lower.includes('industry') || lower.includes('senior') || lower.includes('expert')) return 'Industry Ready';
-  
-  return 'Beginner'; // Safe fallback
+export const DYNAMIC_BENCHMARKS = {
+  'Cyber Security': {
+    'Network Security': 85,
+    'Threat Intelligence': 85,
+    'Incident Response': 80,
+    'SIEM': 80,
+    'Digital Forensics': 75,
+    'Vulnerability Assessment': 80,
+    'Penetration Testing': 85,
+    'Cloud Security': 80,
+    'IAM': 75,
+    'Security Monitoring': 80
+  },
+  'Frontend': {
+    'HTML': 90,
+    'CSS': 90,
+    'JavaScript': 85,
+    'React': 85,
+    'State Management': 80,
+    'Responsive Design': 85,
+    'Performance Optimization': 80,
+    'Accessibility': 75,
+    'API Integration': 80,
+    'Testing': 75
+  },
+  'Data Science': {
+    'Python': 90,
+    'Statistics': 85,
+    'EDA': 80,
+    'Machine Learning': 85,
+    'Feature Engineering': 80,
+    'Model Evaluation': 80,
+    'Data Visualization': 80,
+    'SQL': 85,
+    'Deep Learning': 75
+  }
 };
 
-/**
- * Interfaces with Groq completions endpoint to generate a report.
- */
-const callGroqForReport = async (
-  studentProfile,
-  internship,
-  careerPath,
-  tasks,
-  avgTaskScore,
-  avgInterviewScore,
-  githubProfile,
-  missingSkills,
-  demonstratedSkills,
-  readinessScore
-) => {
-  const systemPrompt = `You are an AI Career Intelligence Coach and Tech Recruiter.
-Based on the student's metrics, task submissions, GitHub profile, and mock interview scores, you must generate a constructive, realistic evaluation report.
-You must return a raw JSON object matching the following structure:
-{
-  "strengths": [String],
-  "weaknesses": [String],
-  "recommendations": [String],
-  "managerFeedback": String,
-  "careerLevel": String,
-  "recommendedRoles": [String],
-  "recommendedCertifications": [String],
-  "recommendedSkills": [String],
-  "recommendedProjects": [String],
-  "salaryRange": String,
-  "careerAdvice": String
-}
-CRITICAL CRITERIA:
-- "careerLevel" must strictly be one of: "Beginner", "Intermediate", "Job Ready", "Industry Ready". Do not use any other values.
-- Do not mention LangChain, Prometheus, or PyTorch unless they exist in missingSkills or demonstratedSkills.
-- Skill gaps/weaknesses should focus strictly on the missing skills: ${JSON.stringify(missingSkills)}.
-- The recommended roles and certifications must match the career path: ${careerPath}.
-- Format the response as standard parseable JSON. Do not include markdown code block syntax.`;
-
-  const userPrompt = `
-Student: ${studentProfile?.fullName}
-Career Track: ${careerPath}
-Internship Department: ${internship?.department || 'N/A'}
-Internship Industry: ${internship?.industry || 'N/A'}
-Readiness Score: ${readinessScore}%
-Task Average Score: ${avgTaskScore}%
-Interview Average Score: ${avgInterviewScore || 'N/A'}%
-GitHub Repos Count: ${githubProfile?.publicRepos || 0}
-Demonstrated Skills: ${JSON.stringify(demonstratedSkills)}
-Missing Required Skills: ${JSON.stringify(missingSkills)}
-  `;
-
-  const parsedJson = await callGroq({
-    model: 'qwen/qwen3-32b',
-    messages: [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content: userPrompt }
-    ],
-    temperature: 0.3,
-    jsonMode: true
-  });
-
-  return parsedJson;
+export const DYNAMIC_RECOMMENDATIONS = {
+  'Network Security': {
+    title: 'Packet Filter Firewall',
+    recommend: 'Implement a network packet analysis script to filter unauthorized ports.'
+  },
+  'Threat Intelligence': {
+    title: 'Threat Feed Aggregator',
+    recommend: 'Build an ingestion pipeline for open threat feeds (OTX/MISP).'
+  },
+  'Incident Response': {
+    title: 'Alert Incident Playbook',
+    recommend: 'Define automated security incident workflow tasks for phishing outbreaks.'
+  },
+  'SIEM': {
+    title: 'SIEM Log Parser',
+    recommend: 'Build a log collector parsing authentication events into a structured SIEM feed.'
+  },
+  'Digital Forensics': {
+    title: 'Memory Dump Audit',
+    recommend: 'Extract and analyze memory image artifacts from a compromised node.'
+  },
+  'Vulnerability Assessment': {
+    title: 'Port Vulnerability Scanner',
+    recommend: 'Develop a socket-based port scanner highlighting out-of-date service banners.'
+  },
+  'Penetration Testing': {
+    title: 'Exploit Payload Lab',
+    recommend: 'Simulate web parameter tampering attacks in a sandbox environment.'
+  },
+  'Cloud Security': {
+    title: 'IAM Policy Auditor',
+    recommend: 'Script an AWS IAM checker parsing permissive policy wildcards.'
+  },
+  'IAM': {
+    title: 'RBAC Model Designer',
+    recommend: 'Model Role-Based Access Control logic with fine-grained API gates.'
+  },
+  'Security Monitoring': {
+    title: 'Traffic Volume Analyzer',
+    recommend: 'Monitor network interfaces and alert on bandwidth spikes.'
+  },
+  'HTML': {
+    title: 'Semantic Document Layout',
+    recommend: 'Refactor generic divs to semantic HTML5 elements for SEO optimization.'
+  },
+  'CSS': {
+    title: 'Glassmorphic Theme Customizer',
+    recommend: 'Create interactive glass effect layouts using CSS variables.'
+  },
+  'JavaScript': {
+    title: 'Event Debounce Utility',
+    recommend: 'Write utility functions throttling search input requests.'
+  },
+  'React': {
+    title: 'Dashboard UI',
+    recommend: 'Assemble complex multi-pane application layout using React.'
+  },
+  'State Management': {
+    title: 'Global Context Store',
+    recommend: 'Implement decentralized context selectors using Zustand or Redux.'
+  },
+  'Responsive Design': {
+    title: 'Responsive Navigation Drawer',
+    recommend: 'Create fluid media queries adjusting menu drawers on mobile viewports.'
+  },
+  'Performance Optimization': {
+    title: 'Lazy Route Splitting',
+    recommend: 'Split page code using React Lazy loading wrapper routes.'
+  },
+  'Accessibility': {
+    title: 'Screen Reader Form Controller',
+    recommend: 'Add ARIA labels and focus management trap for form modals.'
+  },
+  'API Integration': {
+    title: 'Axios Interceptor Handler',
+    recommend: 'Inject JWT bearer tokens and capture expired responses automatically.'
+  },
+  'Testing': {
+    title: 'Component Render Test Suite',
+    recommend: 'Write Jest test assertions verifying button hover triggers.'
+  },
+  'Python': {
+    title: 'CSV Parsing Utility',
+    recommend: 'Write python scripts processing bulk logs with standard file streams.'
+  },
+  'Statistics': {
+    title: 'Hypothesis Testing Lab',
+    recommend: 'Perform A/B split testing analysis on user conversion metrics.'
+  },
+  'EDA': {
+    title: 'Outlier Detection Script',
+    recommend: 'Identify anomalies in numeric columns using Z-Score bounds.'
+  },
+  'Machine Learning': {
+    title: 'Supervised Classifier Training',
+    recommend: 'Train classification models predicting user conversion probability.'
+  },
+  'Feature Engineering': {
+    title: 'One-Hot Encoder Pipeline',
+    recommend: 'Encode high-cardinality text categories into numeric features.'
+  },
+  'Model Evaluation': {
+    title: 'Confusion Matrix Plotter',
+    recommend: 'Assess model performance with ROC-AUC curves and F1-Scores.'
+  },
+  'Data Visualization': {
+    title: 'Distribution Histogram Grid',
+    recommend: 'Draw distribution maps using Matplotlib subplots.'
+  },
+  'SQL': {
+    title: 'Aggregate CTE Queries',
+    recommend: 'Write Common Table Expressions grouping user sessions metrics.'
+  },
+  'Deep Learning': {
+    title: 'Sequential Neural Net',
+    recommend: 'Build dense classification layer models using TensorFlow/Keras.'
+  }
 };
 
-/**
- * Main service to compile career report details and update reports database.
- */
+export const DYNAMIC_CERTIFICATIONS = {
+  'Cyber Security': [
+    { title: 'CompTIA Security+', trigger: 'Network Security' },
+    { title: 'Certified Ethical Hacker (CEH)', trigger: 'Penetration Testing' },
+    { title: 'CompTIA CySA+', trigger: 'Threat Intelligence' }
+  ],
+  'Frontend': [
+    { title: 'React Certification (Meta)', trigger: 'React' },
+    { title: 'W3C Frontend Web Developer', trigger: 'HTML' },
+    { title: 'Frontend Masters Professional Cert', trigger: 'Performance Optimization' }
+  ],
+  'Data Science': [
+    { title: 'Google Data Analytics Professional', trigger: 'SQL' },
+    { title: 'DeepLearning.AI Machine Learning Specialization', trigger: 'Machine Learning' },
+    { title: 'TensorFlow Developer Certificate', trigger: 'Deep Learning' }
+  ]
+};
+
+export const normalizeCareerPath = (title) => {
+  const t = (title || '').toLowerCase();
+  if (t.includes('cyber') || t.includes('security') || t.includes('shield')) {
+    return 'Cyber Security';
+  }
+  if (t.includes('front')) {
+    return 'Frontend';
+  }
+  if (t.includes('data science') || t.includes('data scientist') || t.includes('statistic') || t.includes('analytics') || t.includes('ai') || t.includes('machine learning')) {
+    return 'Data Science';
+  }
+  return 'Cyber Security'; // Default fallback
+};
+
+export const validateReportPath = (reports, selectedPath) => {
+  if (!reports || !reports.skillGap || !reports.career || !reports.feedback) return false;
+  const normalizedPath = normalizeCareerPath(selectedPath);
+  const registrySkills = DYNAMIC_SKILL_REGISTRY[normalizedPath] || [];
+
+  // 1. Verify skills in skillGap belong to the registry
+  const missing = reports.skillGap.missingSkills || [];
+  const detected = reports.skillGap.detectedSkills || [];
+  const allSkills = [...missing, ...detected];
+  for (const s of allSkills) {
+    if (!registrySkills.includes(s)) return false;
+  }
+
+  // 2. Verify certifications belong to the domain
+  const certTitles = (DYNAMIC_CERTIFICATIONS[normalizedPath] || []).map(c => c.title);
+  const recommendedCerts = reports.career.recommendedCertifications || [];
+  for (const c of recommendedCerts) {
+    if (!certTitles.includes(c)) return false;
+  }
+
+  // 3. Verify recommendations are generated from the registry
+  const recommendations = reports.feedback.recommendations || [];
+  for (const r of recommendations) {
+    const parts = r.split(':');
+    const recTitle = parts[0]?.trim();
+    let found = false;
+    for (const skill of registrySkills) {
+      const recItem = DYNAMIC_RECOMMENDATIONS[skill];
+      if (recItem && recItem.title === recTitle) {
+        found = true;
+        break;
+      }
+    }
+    if (!found && recommendations.length > 0) return false;
+  }
+
+  return true;
+};
+
 export const generateCareerReports = async (studentId) => {
   const user = await User.findById(studentId);
   if (!user) throw new Error('User not found');
@@ -268,9 +290,9 @@ export const generateCareerReports = async (studentId) => {
   const internship = await Internship.findOne({ studentId });
   const tasks = await Task.find({ studentId });
   const studentCareer = await StudentCareer.findOne({ studentId }).populate('careerId');
-  
+
   // Calculate career path
-  let careerPath = 'Backend Developer';
+  let careerPath = 'Cybersecurity Analyst';
   if (internship?.internshipRole) {
     careerPath = internship.internshipRole;
   } else if (internship?.roleTitle) {
@@ -279,92 +301,112 @@ export const generateCareerReports = async (studentId) => {
     careerPath = studentCareer.careerId.title;
   }
 
-  // Calculate required skills
-  const fallbackRequiredSkills = studentCareer?.careerId?.requiredSkills || [];
-  const requiredSkills = internship?.technicalRequirements?.length 
-    ? internship.technicalRequirements 
-    : (fallbackRequiredSkills.length ? fallbackRequiredSkills : ['JavaScript', 'Node.js', 'MongoDB', 'React', 'REST APIs']);
+  const normalizedPath = normalizeCareerPath(careerPath);
+  const registrySkills = DYNAMIC_SKILL_REGISTRY[normalizedPath];
+  const benchmarks = DYNAMIC_BENCHMARKS[normalizedPath];
 
-  // Extract demonstrated skills
-  const submissions = await Submission.find({ studentId });
-  const githubContributions = await GithubContribution.find({ userId: studentId });
-  const githubProfile = await GithubProfile.findOne({ userId: studentId });
-
-  const demonstratedSkills = new Set();
-  const addIfAllowed = (skill) => {
-    if (!skill) return;
-    const clean = skill.trim();
-    if (CORE_TECH_WHITELIST.has(clean.toLowerCase()) || 
-        requiredSkills.some(req => req.toLowerCase() === clean.toLowerCase())) {
-      demonstratedSkills.add(clean);
-    }
-  };
-
-  // Helper to map technologies to canonical whitelisted skills
-  const mapTechnologyToCanonical = (tech) => {
-    const t = tech.toLowerCase().trim();
-    if (t === 'react' || t.includes('reactjs') || t.includes('react.js')) return 'React';
-    if (t === 'node' || t === 'node.js' || t === 'nodejs') return 'Node.js';
-    if (t === 'mongodb' || t === 'mongo') return 'MongoDB';
-    if (t === 'python' || t === 'py') return 'Python';
-    if (t === 'java' && t !== 'javascript') return 'Java';
-    if (t === 'typescript' || t === 'ts') return 'TypeScript';
-    if (t === 'docker') return 'Docker';
-    if (t === 'ai' || t === 'ml' || t.includes('pytorch') || t.includes('tensorflow') || t.includes('huggingface') || t.includes('transformers') || t.includes('machine learning') || t.includes('artificial intelligence')) return 'AI/ML';
-    return null;
-  };
-
+  // Fetch all completed tasks
   const completedTasks = tasks.filter(t => t.status === 'completed');
-  completedTasks.forEach(t => {
-    if (t.requiredSkills) {
-      t.requiredSkills.forEach(s => addIfAllowed(s));
-    }
-  });
-  submissions.forEach(sub => {
-    if (sub.extractedMetadata?.technologies) {
-      sub.extractedMetadata.technologies.forEach(t => {
-        addIfAllowed(t);
-        const mapped = mapTechnologyToCanonical(t);
-        if (mapped) addIfAllowed(mapped);
-      });
-    }
-  });
-  githubContributions.forEach(c => {
-    if (c.languageBreakdown) {
-      Object.keys(c.languageBreakdown).forEach(lang => {
-        addIfAllowed(lang);
-        const mapped = mapTechnologyToCanonical(lang);
-        if (mapped) addIfAllowed(mapped);
-      });
-    }
-  });
-  if (studentProfile?.skills) {
-    studentProfile.skills.forEach(s => {
-      addIfAllowed(s);
-      const mapped = mapTechnologyToCanonical(s);
-      if (mapped) addIfAllowed(mapped);
-    });
-  }
-
-  const demonstratedArray = Array.from(demonstratedSkills);
-  
-  // Calculate missing skills (requiredSkills minus demonstratedSkills)
-  const missingSkills = requiredSkills.filter(reqSkill => 
-    !demonstratedArray.some(demSkill => demSkill.toLowerCase() === reqSkill.toLowerCase())
-  );
-
-  const gapPercentage = Math.round((missingSkills.length / Math.max(requiredSkills.length, 1)) * 100);
-
-  // Fetch all evaluations for all submissions by this student
+  const submissions = await Submission.find({ studentId });
   const allSubIds = submissions.map(s => s._id);
   const allEvaluations = await Evaluation.find({ submissionId: { $in: allSubIds } });
 
-  // 1. Task Completion Score (taskCompletion)
+  // Calculate skill scores based on completed tasks, difficulty, submission quality, and evaluation score
+  const skillScores = {};
+  registrySkills.forEach(skillName => {
+    // Find all completed tasks that target this skill (via skillsImpacted or requiredSkills)
+    const matchingTasks = completedTasks.filter(t => {
+      const impacted = t.skillsImpacted || [];
+      const required = t.requiredSkills || [];
+      return impacted.some(s => s.toLowerCase() === skillName.toLowerCase()) || 
+             required.some(s => s.toLowerCase() === skillName.toLowerCase());
+    });
+
+    if (matchingTasks.length === 0) {
+      skillScores[skillName] = 0;
+    } else {
+      let sumScaledScores = 0;
+      matchingTasks.forEach(t => {
+        const taskScore = t.score || 0;
+        let difficultyMultiplier = 1.0;
+        if (t.difficulty === 'Easy') difficultyMultiplier = 0.9;
+        if (t.difficulty === 'Hard') difficultyMultiplier = 1.1;
+
+        // Try to locate evaluation to compute submission quality
+        const sub = submissions.find(s => s.taskId.toString() === t._id.toString());
+        let submissionQuality = taskScore;
+        if (sub) {
+          const evalDoc = allEvaluations.find(e => e.submissionId.toString() === sub._id.toString());
+          if (evalDoc) {
+            submissionQuality = (
+              (evalDoc.codeQualityScore || taskScore) +
+              (evalDoc.architectureScore || taskScore) +
+              (evalDoc.documentationScore || taskScore)
+            ) / 3;
+          }
+        }
+
+        const taskContribution = (taskScore * 0.7) + (submissionQuality * 0.3);
+        const scaledScore = Math.min(100, Math.round(taskContribution * difficultyMultiplier));
+        sumScaledScores += scaledScore;
+      });
+
+      skillScores[skillName] = Math.round(sumScaledScores / matchingTasks.length);
+    }
+  });
+
+  // Calculate missingSkills (genuine gaps where StudentScore < Benchmark)
+  const missingSkills = [];
+  const detectedSkills = [];
+  const skillComparisonData = [];
+  const gaps = [];
+
+  registrySkills.forEach(skillName => {
+    const studentScore = skillScores[skillName] || 0;
+    const benchmark = benchmarks[skillName] || 80;
+    const gapVal = benchmark - studentScore;
+
+    skillComparisonData.push({
+      subject: skillName,
+      current: studentScore,
+      benchmark,
+      fullMark: 100
+    });
+
+    if (gapVal > 0) {
+      missingSkills.push(skillName);
+      
+      let level = 'Beginner';
+      if (studentScore >= 60) {
+        level = 'Job Ready';
+      } else if (studentScore >= 30) {
+        level = 'Intermediate';
+      }
+
+      const recTemplate = DYNAMIC_RECOMMENDATIONS[skillName] || {
+        title: `Improve ${skillName}`,
+        recommend: `Practice building systems using ${skillName} in your projects.`
+      };
+
+      gaps.push({
+        skill: skillName,
+        gap: `${gapVal}%`,
+        level,
+        recommend: `${recTemplate.title}: ${recTemplate.recommend}`
+      });
+    } else {
+      detectedSkills.push(skillName);
+    }
+  });
+
+  const gapPercentage = Math.round((missingSkills.length / registrySkills.length) * 100);
+
+  // 1. Task Completion Score
   const totalTasks = tasks.length;
   const completedTasksCount = completedTasks.length;
   const taskCompletion = totalTasks > 0 ? (completedTasksCount / totalTasks) * 100 : 0;
 
-  // 2. Submission Quality Score (submissionQuality)
+  // 2. Submission Quality
   let submissionQuality = 0;
   if (allEvaluations.length > 0) {
     const sum = allEvaluations.reduce((acc, e) => {
@@ -377,9 +419,10 @@ export const generateCareerReports = async (studentId) => {
     submissionQuality = sum / allEvaluations.length;
   }
 
-  // 3. GitHub Score (githubScore)
+  // 3. GitHub Score
   let githubScore = 0;
   const githubSubmissions = submissions.filter(s => s.submissionType === 'github');
+  const githubProfile = await GithubProfile.findOne({ userId: studentId });
   if (githubProfile && githubSubmissions.length > 0) {
     const gitSubIds = githubSubmissions.map(s => s._id);
     const gitEvaluations = allEvaluations.filter(e => gitSubIds.some(id => id.toString() === e.submissionId.toString()));
@@ -389,7 +432,7 @@ export const generateCareerReports = async (studentId) => {
     }
   }
 
-  // 4. Interview Score (interviewScore)
+  // 4. Interview Score
   const interviews = await Interview.find({ studentId, status: 'completed' });
   const interviewReports = await InterviewReport.find({ interviewId: { $in: interviews.map(i => i._id) } });
   let interviewScore = 0;
@@ -402,150 +445,100 @@ export const generateCareerReports = async (studentId) => {
   let portfolioScore = (taskCompletion * 0.30) + (submissionQuality * 0.30) + (githubScore * 0.20) + (interviewScore * 0.20);
   portfolioScore = Math.min(100, Math.max(0, Math.round(portfolioScore)));
 
-  // 6. Placement Ready Score (readinessScore)
-  const skillCoverage = requiredSkills.length > 0 
-    ? Math.round(((requiredSkills.length - missingSkills.length) / requiredSkills.length) * 100) 
+  // 6. Placement Ready Score
+  const skillCoverage = registrySkills.length > 0
+    ? Math.round(((registrySkills.length - missingSkills.length) / registrySkills.length) * 100)
     : 0;
   const internshipProgress = taskCompletion;
   let readinessScore = (portfolioScore * 0.40) + (skillCoverage * 0.20) + (internshipProgress * 0.20) + (interviewScore * 0.20);
   readinessScore = Math.min(100, Math.max(0, Math.round(readinessScore)));
 
-  // Insufficient Data Check
-  const noEvaluations = allEvaluations.length === 0;
-  const noSubmissions = submissions.length === 0;
-  const noInterviews = interviewReports.length === 0;
-  const hasInsufficientData = noEvaluations && noSubmissions && noInterviews;
-
-  if (hasInsufficientData) {
+  if (allEvaluations.length === 0 && submissions.length === 0 && interviewReports.length === 0) {
     portfolioScore = 0;
     readinessScore = 0;
   }
 
-  // Generate metrics
-  let reportData;
-  if (hasInsufficientData) {
-    reportData = {
-      strengths: [],
-      weaknesses: [],
-      recommendations: [],
-      managerFeedback: "Not enough tasks completed or evaluations conducted yet.",
-      careerLevel: "Not Enough Data",
-      recommendedRoles: [],
-      recommendedCertifications: [],
-      recommendedSkills: [],
-      recommendedProjects: [],
-      salaryRange: "N/A",
-      careerAdvice: "Please submit tasks and link your GitHub repository to generate career insights."
-    };
-  } else {
-    // Compute temporary average task score for heuristic reports
-    const avgTaskScore = completedTasks.length > 0
-      ? completedTasks.reduce((acc, t) => acc + (t.score || 0), 0) / completedTasks.length
-      : 0;
-    const avgInterviewScore = interviewScore;
+  // Select domain-aligned certifications dynamically
+  const certsForPath = DYNAMIC_CERTIFICATIONS[normalizedPath] || [];
+  const recommendedCertifications = [];
+  const avgScore = completedTasks.length > 0 ? (completedTasks.reduce((acc, t) => acc + (t.score || 0), 0) / completedTasks.length) : 0;
 
-    const isMock = !process.env.GROQ_API_KEY;
-    if (!isMock) {
-      try {
-        reportData = await callGroqForReport(
-          studentProfile,
-          internship,
-          careerPath,
-          tasks,
-          avgTaskScore,
-          avgInterviewScore,
-          githubProfile,
-          missingSkills,
-          demonstratedArray,
-          readinessScore
-        );
-      } catch (err) {
-        console.error('[AI Career Report] Groq failed, using heuristic fallback:', err.message);
-        reportData = getFallbackHeuristicData(
-          studentProfile,
-          internship,
-          careerPath,
-          completedTasks,
-          avgTaskScore,
-          avgInterviewScore,
-          githubProfile,
-          missingSkills,
-          demonstratedArray,
-          readinessScore
-        );
-      }
-    } else {
-      reportData = getFallbackHeuristicData(
-        studentProfile,
-        internship,
-        careerPath,
-        completedTasks,
-        avgTaskScore,
-        avgInterviewScore,
-        githubProfile,
-        missingSkills,
-        demonstratedArray,
-        readinessScore
-      );
-    }
+  if (avgScore < 50) {
+    if (certsForPath[0]) recommendedCertifications.push(certsForPath[0].title);
+  } else if (avgScore < 80) {
+    if (certsForPath[1]) recommendedCertifications.push(certsForPath[1].title);
+  } else {
+    if (certsForPath[2]) recommendedCertifications.push(certsForPath[2].title);
   }
 
+  certsForPath.forEach(c => {
+    if (missingSkills.includes(c.trigger) && !recommendedCertifications.includes(c.title)) {
+      recommendedCertifications.push(c.title);
+    }
+  });
+
+  if (recommendedCertifications.length === 0 && certsForPath.length > 0) {
+    recommendedCertifications.push(certsForPath[0].title);
+  }
+
+  // Create recommendations from gaps
+  const recommendationsList = gaps.map(g => g.recommend);
+
   // Save/Update in database collections
-  
-  // 1. Save feedback_reports
   await FeedbackReport.deleteMany({ studentId });
   const feedbackReport = new FeedbackReport({
     studentId,
-    strengths: reportData.strengths,
-    weaknesses: reportData.weaknesses,
-    recommendations: reportData.recommendations,
-    managerFeedback: reportData.managerFeedback,
+    strengths: completedTasks.length > 0 ? [`Demonstrated skill in ${completedTasks[0].title}`] : ['Onboarded successfully'],
+    weaknesses: missingSkills.slice(0, 3),
+    recommendations: recommendationsList,
+    managerFeedback: missingSkills.length > 0 
+      ? `Student needs to focus on key areas: ${missingSkills.slice(0, 2).join(', ')}.`
+      : `Outstanding performance! Student has met all benchmark expectations.`,
   });
   await feedbackReport.save();
 
-  // 2. Save skill_gap_reports
   await SkillGapReport.deleteMany({ studentId });
   const skillGapReport = new SkillGapReport({
     studentId,
     missingSkills,
-    detectedSkills: demonstratedArray,
+    detectedSkills,
     gapPercentage,
     generatedAt: new Date(),
   });
   await skillGapReport.save();
 
-  // 3. Save career_reports
   await CareerReport.deleteMany({ studentId });
   const careerReport = new CareerReport({
     studentId,
     readinessScore,
     portfolioScore,
     githubScore,
-    careerLevel: mapToValidCareerLevel(reportData.careerLevel),
-    recommendedRoles: reportData.recommendedRoles,
-    recommendedSkills: reportData.recommendedSkills || [],
-    recommendedProjects: reportData.recommendedProjects || [],
-    recommendedCertifications: reportData.recommendedCertifications,
-    salaryRange: reportData.salaryRange,
-    careerAdvice: reportData.careerAdvice,
+    careerLevel: readinessScore >= 80 ? 'Industry Ready' : readinessScore >= 60 ? 'Job Ready' : readinessScore >= 40 ? 'Intermediate' : 'Beginner',
+    recommendedRoles: [normalizedPath + ' Analyst', normalizedPath + ' Engineer'],
+    recommendedSkills: registrySkills,
+    recommendedProjects: gaps.slice(0, 2).map(g => g.skill + ' Project'),
+    recommendedCertifications,
+    salaryRange: '$70,000 - $110,000',
+    careerAdvice: missingSkills.length > 0 
+      ? `Work on resolving the identified gaps in ${missingSkills.slice(0, 3).join(', ')} by starting new targeted tasks.`
+      : `You are in a great position. Focus on obtaining certifications like ${recommendedCertifications.join(', ')}.`,
   });
   await careerReport.save();
 
-  console.log(`[Career Intelligence Engine] Successfully generated dynamic reports for student ${studentId}`);
-  
+  console.log(`[Career Intelligence Engine] Successfully generated dynamic reports for student ${studentId} on path ${normalizedPath}`);
+
   return {
     feedback: feedbackReport,
     skillGap: skillGapReport,
     career: careerReport,
+    skillComparisonData,
+    gaps
   };
 };
 
-/**
- * Cache validator helper checks timestamps of source elements against report generated time
- */
 export const checkReportCache = async (studentId) => {
   const latestCareer = await CareerReport.findOne({ studentId }).sort({ updatedAt: -1 });
-  if (!latestCareer) return null; // No cache
+  if (!latestCareer) return null;
 
   const latestFeedback = await FeedbackReport.findOne({ studentId }).sort({ updatedAt: -1 });
   if (!latestFeedback) return null;
@@ -555,15 +548,12 @@ export const checkReportCache = async (studentId) => {
 
   const reportTime = latestCareer.updatedAt;
 
-  // Check submissions
   const latestSub = await Submission.findOne({ studentId }).sort({ updatedAt: -1 });
   if (latestSub && latestSub.updatedAt > reportTime) return null;
 
-  // Check github profile
   const latestGit = await GithubProfile.findOne({ userId: studentId }).sort({ updatedAt: -1 });
   if (latestGit && latestGit.updatedAt > reportTime) return null;
 
-  // Check interview reports
   const interviews = await Interview.find({ studentId, status: 'completed' });
   const latestIntReport = await InterviewReport.findOne({ interviewId: { $in: interviews.map(i => i._id) } }).sort({ updatedAt: -1 });
   if (latestIntReport && latestIntReport.updatedAt > reportTime) return null;

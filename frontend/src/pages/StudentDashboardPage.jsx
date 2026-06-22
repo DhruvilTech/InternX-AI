@@ -108,6 +108,19 @@ export default function StudentDashboardPage() {
     )
   }
 
+  const easyTasks = tasks.filter(t => t.difficulty === 'Easy')
+  const mediumTasks = tasks.filter(t => t.difficulty === 'Medium')
+  const hardTasks = tasks.filter(t => t.difficulty === 'Hard')
+
+  const easyCompleted = easyTasks.length > 0 && easyTasks.every(t => t.status === 'completed')
+  const mediumCompleted = easyCompleted && mediumTasks.length > 0 && mediumTasks.every(t => t.status === 'completed')
+  const hardCompleted = mediumCompleted && hardTasks.length > 0 && hardTasks.every(t => t.status === 'completed')
+
+  // Week statuses
+  const week12Status = easyCompleted ? 'Complete' : 'Active'
+  const week34Status = easyCompleted ? (mediumCompleted ? 'Complete' : 'Active') : 'Locked'
+  const week56Status = mediumCompleted ? (hardCompleted ? 'Complete' : 'Active') : 'Locked'
+
   return (
     <div className="min-h-screen pt-24 pb-16 px-4 sm:px-6 lg:px-8 bg-void relative overflow-hidden">
       {/* Glow overlays */}
@@ -337,20 +350,49 @@ export default function StudentDashboardPage() {
 
               {/* Progress Steps */}
               <div className="grid grid-cols-3 gap-4 text-center">
-                <div className="p-3 bg-surface-muted/20 border border-border/60 rounded-xl">
+                {/* Week 1-2 */}
+                <div className={`p-3 bg-surface-muted/20 border border-border/60 rounded-xl ${week12Status === 'Locked' ? 'opacity-50' : ''}`}>
                   <span className="text-[9px] uppercase tracking-wider text-muted block mb-1">Week 1-2</span>
                   <span className="text-xs font-semibold text-text">Onboarding & Setup</span>
-                  <span className="text-[9px] font-semibold text-emerald bg-emerald/10 border border-emerald/20 px-2 py-0.5 rounded-full mt-2 inline-block">Complete</span>
+                  {week12Status === 'Complete' && (
+                    <span className="text-[9px] font-semibold text-emerald bg-emerald/10 border border-emerald/20 px-2 py-0.5 rounded-full mt-2 inline-block">Complete</span>
+                  )}
+                  {week12Status === 'Active' && (
+                    <span className="text-[9px] font-semibold text-amber bg-amber/10 border border-amber/20 px-2 py-0.5 rounded-full mt-2 inline-block">Active Sprint</span>
+                  )}
+                  {week12Status === 'Locked' && (
+                    <span className="text-[9px] font-semibold text-dim bg-void border border-border px-2 py-0.5 rounded-full mt-2 inline-block">Locked</span>
+                  )}
                 </div>
-                <div className="p-3 bg-surface-muted/20 border border-border/60 rounded-xl">
+
+                {/* Week 3-4 */}
+                <div className={`p-3 bg-surface-muted/20 border border-border/60 rounded-xl ${week34Status === 'Locked' ? 'opacity-50' : ''}`}>
                   <span className="text-[9px] uppercase tracking-wider text-muted block mb-1">Week 3-4</span>
                   <span className="text-xs font-semibold text-text">Core Tasks Sprint</span>
-                  <span className="text-[9px] font-semibold text-amber bg-amber/10 border border-amber/20 px-2 py-0.5 rounded-full mt-2 inline-block">Active Sprint</span>
+                  {week34Status === 'Complete' && (
+                    <span className="text-[9px] font-semibold text-emerald bg-emerald/10 border border-emerald/20 px-2 py-0.5 rounded-full mt-2 inline-block">Complete</span>
+                  )}
+                  {week34Status === 'Active' && (
+                    <span className="text-[9px] font-semibold text-amber bg-amber/10 border border-amber/20 px-2 py-0.5 rounded-full mt-2 inline-block">Active Sprint</span>
+                  )}
+                  {week34Status === 'Locked' && (
+                    <span className="text-[9px] font-semibold text-dim bg-void border border-border px-2 py-0.5 rounded-full mt-2 inline-block">Locked</span>
+                  )}
                 </div>
-                <div className="p-3 bg-surface-muted/20 border border-border/60 rounded-xl opacity-50">
+
+                {/* Week 5-6 */}
+                <div className={`p-3 bg-surface-muted/20 border border-border/60 rounded-xl ${week56Status === 'Locked' ? 'opacity-50' : ''}`}>
                   <span className="text-[9px] uppercase tracking-wider text-muted block mb-1">Week 5-6</span>
                   <span className="text-xs font-semibold text-text">Final Review & Cert</span>
-                  <span className="text-[9px] font-semibold text-dim bg-void border border-border px-2 py-0.5 rounded-full mt-2 inline-block">Locked</span>
+                  {week56Status === 'Complete' && (
+                    <span className="text-[9px] font-semibold text-emerald bg-emerald/10 border border-emerald/20 px-2 py-0.5 rounded-full mt-2 inline-block">Complete</span>
+                  )}
+                  {week56Status === 'Active' && (
+                    <span className="text-[9px] font-semibold text-amber bg-amber/10 border border-amber/20 px-2 py-0.5 rounded-full mt-2 inline-block">Active Sprint</span>
+                  )}
+                  {week56Status === 'Locked' && (
+                    <span className="text-[9px] font-semibold text-dim bg-void border border-border px-2 py-0.5 rounded-full mt-2 inline-block">Locked</span>
+                  )}
                 </div>
               </div>
             </div>

@@ -27,7 +27,7 @@ export default function Footer() {
           <div className="col-span-2 md:col-span-4 lg:col-span-2">
             <a href="#/" onClick={(e) => handleLinkClick(e, 'landing')} className="flex items-center gap-2.5 group">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-accent to-violet">
-                <span className="text-sm font-bold text-white font-display">IX</span>
+                <img src="/logo.png" alt="InternX AI" className="h-8 w-8 object-contain" />
               </div>
               <span className="text-lg font-display font-semibold text-text">InternX AI</span>
             </a>
