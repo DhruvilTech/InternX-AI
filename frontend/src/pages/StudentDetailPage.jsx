@@ -25,7 +25,8 @@ import {
   Loader2,
   FileCheck,
   Sparkles,
-  CheckCircle2
+  CheckCircle2,
+  AlertCircle
 } from 'lucide-react';
 import { FaGithub } from 'react-icons/fa6';
 import { useNavigation } from '../context/NavigationContext';
@@ -497,9 +498,6 @@ export default function StudentDetailPage() {
                     </div>
                   </div>
                 </div>
-              </div>
-            )
-          )}
 
               {/* Tasks List Table */}
               <div className="glass border border-border rounded-2xl p-6 bg-void/25 space-y-4">
@@ -530,7 +528,8 @@ export default function StudentDetailPage() {
                 </div>
               </div>
             </div>
-          )}
+          )
+        )}
 
           {/* TAB 2: Skills & Gaps */}
           {activeTab === 'skills' && (
